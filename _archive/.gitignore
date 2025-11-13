@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+.env
+.env.local
+.env.*.local
+dist/
+build/
+.DS_Store
+.cursor/
+*.log
+*.sqlite
+*.db
+postgres-data/
+pgdata/
+docker-compose.override.yml
+coverage/
+tmp/
