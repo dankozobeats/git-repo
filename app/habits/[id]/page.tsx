@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import MonthAccordion from './MonthAccordion'
+import DeleteButton from './DeleteButton'
 
 export default async function HabitDetailPage({
   params,
@@ -139,7 +140,7 @@ export default async function HabitDetailPage({
             >
               {habit.icon || (isBadHabit ? '🔥' : '✨')}
             </div>
-            <div>
+            <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-bold">{habit.name}</h1>
                 <span className={`text-xs px-2 py-1 rounded-full ${
@@ -154,6 +155,17 @@ export default async function HabitDetailPage({
                 <p className="text-gray-400 mt-1">{habit.description}</p>
               )}
             </div>
+          </div>
+
+          {/* Boutons Modifier et Supprimer */}
+          <div className="flex gap-3 mt-4">
+            <Link
+              href={`/habits/${id}/edit`}
+              className="flex-1 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg font-medium transition border border-gray-700 text-center"
+            >
+              ✏️ Modifier
+            </Link>
+            <DeleteButton habitId={id} habitName={habit.name} />
           </div>
         </div>
       </div>
