@@ -7,9 +7,9 @@ import DeleteButton from './DeleteButton'
 export default async function HabitDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,7 +26,20 @@ export default async function HabitDetailPage({
     .single()
 
   if (!habit) {
-    redirect('/')
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">❌ Habitude non trouvée</h1>
+          <p className="text-gray-400 mb-6">Cette habitude n'existe pas ou a été supprimée.</p>
+          <Link 
+            href="/" 
+            className="inline-block bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium transition"
+          >
+            ← Retour au dashboard
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   const ninetyDaysAgo = new Date()
