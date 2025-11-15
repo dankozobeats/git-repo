@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 
 const BAD_HABIT_PRESETS = [
   { name: 'Fast-food', icon: '🍔', color: '#EF4444' },
@@ -22,8 +22,8 @@ const GOOD_HABIT_PRESETS = [
   { name: 'Fruits & légumes', icon: '🥗', color: '#10B981' },
 ]
 
-export default function EditHabitPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function EditHabitPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [icon, setIcon] = useState('🔥')

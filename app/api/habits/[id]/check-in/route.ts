@@ -1,19 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params
+
   const supabase = await createClient()
-  
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   if (!user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
 
-  const habitId = params.id
+  const habitId = id
   const today = new Date().toISOString().split('T')[0]
 
   // Vérifier si déjà logué aujourd'hui
@@ -29,7 +30,6 @@ export async function POST(
     return NextResponse.json({ message: 'Déjà logué aujourd\'hui' })
   }
 
-  // Créer le log
   const { error } = await supabase
     .from('logs')
     .insert({

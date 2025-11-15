@@ -1,16 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  const { id } = await context.params
+
   const supabase = await createClient()
-  
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   if (!user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
@@ -27,7 +27,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Habitude non trouvée' }, { status: 404 })
   }
 
-  // Supprimer l'habitude (les logs seront supprimés en cascade grâce à ON DELETE CASCADE)
+  // Suppression
   const { error } = await supabase
     .from('habits')
     .delete()
