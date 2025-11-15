@@ -1,43 +1,35 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { NextRequest } from 'next/server'
 
-export async function DELETE(
+export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params
-
+  const { id } = await params
   const supabase = await createClient()
+
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    redirect('/login')
   }
 
-  // Vérifier que l'habitude appartient à l'utilisateur
-  const { data: habit } = await supabase
-    .from('habits')
-    .select('id')
-    .eq('id', id)
+  // Supprime d'abord tous les logs associés
+  await supabase
+    .from('logs')
+    .delete()
+    .eq('habit_id', id)
     .eq('user_id', user.id)
-    .single()
 
-  if (!habit) {
-    return NextResponse.json({ error: 'Habitude non trouvée' }, { status: 404 })
-  }
-
-  // Suppression
-  const { error } = await supabase
+  // Puis supprime l'habitude
+  await supabase
     .from('habits')
     .delete()
     .eq('id', id)
     .eq('user_id', user.id)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
   revalidatePath('/')
-  return NextResponse.json({ success: true })
+  redirect('/')
 }
