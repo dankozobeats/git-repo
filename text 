@@ -1,0 +1,18 @@
+bash# ==============================================
+# SUPABASE
+# ==============================================
+NEXT_PUBLIC_SUPABASE_URL=https://xkdjckqsye.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3M...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3M...
+
+# ==============================================
+# OPENAI
+# ==============================================
+OPENAI_API_KEY=sk-svcacct-wzRbnq4o787Schvb96BP0tSsVK1EubRCvnb8Fu9KeTCFlnRuCQ4h-i-S-CBIgkBYMbh1gOxQ4zT3BlbkFJy5LM-
+V1o1Izfr40zU0P4lHJJhqp8t3pBKTQIN9dyoz15MKIfICPgH_GFWPDK5kFIoHgmHzM78A
+
+
+# ==============================================
+# NEXT.JS
+# ==============================================
+NEXT_PUBLIC_APP_URL=http://localhost:3001

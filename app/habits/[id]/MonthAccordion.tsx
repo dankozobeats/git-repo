@@ -48,11 +48,11 @@ export default function MonthAccordion({ months, isBadHabit, actionText }: Props
           <div key={month.key} className="border border-gray-800 rounded-lg overflow-hidden">
             <button
               onClick={() => toggleMonth(month.key)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-800/50 transition"
+              className="w-full flex items-center justify-between p-3 md:p-4 hover:bg-gray-800/50 transition"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
+                  className={`w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-transform flex-shrink-0 ${
                     isOpen ? 'rotate-90' : ''
                   }`}
                   fill="none"
@@ -66,14 +66,17 @@ export default function MonthAccordion({ months, isBadHabit, actionText }: Props
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-                <span className="font-medium text-lg">📅 {month.name}</span>
+                <span className="font-medium text-base md:text-lg truncate">📅 {month.name}</span>
               </div>
               
-              <div className="flex items-center gap-3">
-                <span className={`text-sm ${textColor} font-medium`}>
-                  {month.loggedCount}/{month.totalDays} jours ({month.percentage}%)
+              <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                <span className={`text-xs md:text-sm ${textColor} font-medium hidden sm:inline`}>
+                  {month.loggedCount}/{month.totalDays} ({month.percentage}%)
                 </span>
-                <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                <span className={`text-xs ${textColor} font-medium sm:hidden`}>
+                  {month.percentage}%
+                </span>
+                <div className="w-12 md:w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${activeColor} transition-all`}
                     style={{ width: `${month.percentage}%` }}
@@ -83,12 +86,12 @@ export default function MonthAccordion({ months, isBadHabit, actionText }: Props
             </button>
 
             {isOpen && (
-              <div className="p-4 border-t border-gray-800 bg-gray-800/30">
-                <div className="grid grid-cols-7 gap-2">
+              <div className="p-3 md:p-4 border-t border-gray-800 bg-gray-800/30">
+                <div className="grid grid-cols-7 gap-1 md:gap-2">
                   {month.days.map((day) => (
                     <div
                       key={day.date}
-                      className={`aspect-square rounded flex items-center justify-center text-sm font-medium ${
+                      className={`aspect-square rounded flex items-center justify-center text-xs md:text-sm font-medium ${
                         day.hasLog
                           ? `${activeColor} text-white`
                           : 'bg-gray-800 text-gray-600'
@@ -97,7 +100,7 @@ export default function MonthAccordion({ months, isBadHabit, actionText }: Props
                     >
                       {day.dayNumber}
                       
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-950 text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10 border border-gray-700">
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-950 text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none z-10 border border-gray-700 hidden md:block">
                         {day.dayNumber} {month.name.split(' ')[0]}
                         {day.hasLog && ` - ${actionText}`}
                       </div>
