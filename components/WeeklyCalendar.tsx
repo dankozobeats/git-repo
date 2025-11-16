@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { getTodayDateISO, isFutureDate } from '@/lib/date-utils'
 
 interface WeeklyCalendarProps {
-  habitId: string
   habitType: 'good' | 'bad'
   calendarData: Record<string, number>
   trackingMode: 'binary' | 'counter'
@@ -12,13 +12,13 @@ interface WeeklyCalendarProps {
 }
 
 export function WeeklyCalendar({ 
-  habitId, 
   habitType, 
   calendarData, 
   trackingMode,
   onDayClick 
 }: WeeklyCalendarProps) {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+  const todayIso = getTodayDateISO()
 
   // Générer les 4 dernières semaines
   const weeks = generateWeeks(4, currentWeekOffset)
@@ -61,15 +61,27 @@ export function WeeklyCalendar({
     return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)
   }
 
-  function getCellStyle(count: number, isToday: boolean) {
-    if (count === 0) {
-      return `bg-gray-800 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+  function getCellStyle(dateStr: string, count: number, isToday: boolean) {
+    if (isFutureDate(dateStr)) {
+      return `bg-gray-900/50 border border-gray-800 cursor-not-allowed ${
+        isToday ? 'ring-2 ring-blue-500' : ''
+      }`
     }
 
     if (trackingMode === 'binary') {
+      if (count > 0) {
+        return habitType === 'good'
+          ? `bg-green-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+          : `bg-red-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+      }
+
       return habitType === 'good'
-        ? `bg-green-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-        : `bg-red-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+        ? `bg-red-900/40 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+        : `bg-green-900/30 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+    }
+
+    if (count === 0) {
+      return `bg-gray-800 ${isToday ? 'ring-2 ring-blue-500' : ''}`
     }
 
     // Mode counter - intensité
@@ -119,12 +131,15 @@ export function WeeklyCalendar({
               {week.days.map((day) => (
                 <button
                   key={day.date}
-                  onClick={() => onDayClick(day.date)}
+                  onClick={() => {
+                    if (isFutureDate(day.date)) return
+                    onDayClick(day.date)
+                  }}
                   className={`
                     aspect-square rounded-lg transition-all duration-200
                     hover:scale-105 active:scale-95
                     flex flex-col items-center justify-center
-                    ${getCellStyle(day.count, day.isToday)}
+                    ${getCellStyle(day.date, day.count, day.isToday)}
                   `}
                 >
                   <div className="text-xs font-medium opacity-70">{day.dayName}</div>
@@ -140,14 +155,37 @@ export function WeeklyCalendar({
       </div>
 
       <div className="flex items-center justify-end gap-3 mt-4 text-xs text-gray-400">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gray-800 rounded"></div>
-          <span>Vide</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${habitType === 'good' ? 'bg-green-600' : 'bg-red-600'}`}></div>
-          <span>{habitType === 'good' ? 'Fait' : 'Craqué'}</span>
-        </div>
+        {trackingMode === 'binary' ? (
+          <>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-4 h-4 rounded ${
+                  habitType === 'good' ? 'bg-red-900/40' : 'bg-green-900/30'
+                }`}
+              ></div>
+              <span>{habitType === 'good' ? 'À faire' : 'OK'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-4 h-4 rounded ${
+                  habitType === 'good' ? 'bg-green-600' : 'bg-red-600'
+                }`}
+              ></div>
+              <span>{habitType === 'good' ? 'Validée' : 'Craquage'}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-800 rounded"></div>
+              <span>Vide</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded ${habitType === 'good' ? 'bg-green-600' : 'bg-red-600'}`}></div>
+              <span>{habitType === 'good' ? 'Fait' : 'Craqué'}</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

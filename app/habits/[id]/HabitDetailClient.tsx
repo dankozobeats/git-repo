@@ -33,6 +33,7 @@ type Props = {
   habit: Habit
   calendarData: Record<string, number>
   todayEvents: HabitEvent[]
+  todayCount: number
   totalCount: number
   last7DaysCount: number
   currentStreak: number
@@ -42,13 +43,14 @@ export default function HabitDetailClient({
   habit,
   calendarData,
   todayEvents,
+  todayCount,
   totalCount,
   last7DaysCount,
   currentStreak,
 }: Props) {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [count, setCount] = useState(todayEvents.length)
+  const [count, setCount] = useState(todayCount)
 
   const isBadHabit = habit.type === 'bad'
   const statColor = isBadHabit ? 'text-red-500' : 'text-green-500'

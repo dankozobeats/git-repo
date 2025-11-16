@@ -2,26 +2,62 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
+import { getTodayDateISO } from '@/lib/date-utils'
 
-async function checkInHabit(habitId: string) {
+async function setHabitStatus(habitId: string, action: 'complete' | 'clear') {
   'use server'
-  
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayDateISO()
 
-  await supabase
+  const { data: habit } = await supabase
+    .from('habits')
+    .select('id, tracking_mode')
+    .eq('id', habitId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!habit || habit.tracking_mode !== 'binary') {
+    return
+  }
+
+  const { data: existingLogs } = await supabase
     .from('logs')
-    .insert({
-      habit_id: habitId,
-      user_id: user.id,
-      completed_date: today,
-    })
+    .select('id')
+    .eq('habit_id', habitId)
+    .eq('user_id', user.id)
+    .eq('completed_date', today)
+    .limit(1)
+
+  const existingLogId = existingLogs?.[0]?.id
+
+  if (action === 'complete') {
+    await supabase
+      .from('logs')
+      .upsert(
+        {
+          habit_id: habitId,
+          user_id: user.id,
+          completed_date: today,
+          value: 1,
+        },
+        {
+          onConflict: 'habit_id,completed_date',
+          ignoreDuplicates: true,
+        }
+      )
+  } else if (existingLogId) {
+    await supabase.from('logs').delete().eq('id', existingLogId)
+  }
 
   revalidatePath('/')
+  redirect('/')
 }
 
 export default async function Home() {
@@ -49,7 +85,7 @@ export default async function Home() {
     .eq('type', 'good')
     .order('created_at', { ascending: false })
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayDateISO()
   const { data: todayLogs } = await supabase
     .from('logs')
     .select('habit_id')
@@ -217,6 +253,15 @@ export default async function Home() {
             <div className="space-y-3 md:space-y-4">
               {badHabits.map((habit) => {
                 const hasLoggedToday = loggedHabitIds.has(habit.id)
+                const statusConfig = hasLoggedToday
+                  ? {
+                      label: 'Craquage',
+                      classes: 'bg-red-900/40 text-red-200 border border-red-800',
+                    }
+                  : {
+                      label: 'Aucun craquage',
+                      classes: 'bg-green-900/30 text-green-200 border border-green-800',
+                    }
                 
                 return (
                   <div
@@ -246,19 +291,39 @@ export default async function Home() {
                         </div>
                       </Link>
                       
-                      <form action={checkInHabit.bind(null, habit.id)} className="w-full sm:w-auto">
-                        <button
-                          type="submit"
-                          disabled={hasLoggedToday}
-                          className={`w-full sm:w-auto px-4 md:px-6 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
-                            hasLoggedToday
-                              ? 'bg-gray-800 text-gray-500 cursor-not-allowed scale-95'
-                              : 'bg-red-600 hover:bg-red-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-500/50'
-                          }`}
-                        >
-                          {hasLoggedToday ? '✓ Fait' : 'J\'ai craqué'}
-                        </button>
-                      </form>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <span className={`text-xs md:text-sm px-3 py-2 rounded-lg text-center ${statusConfig.classes}`}>
+                          {statusConfig.label}
+                        </span>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <form action={setHabitStatus.bind(null, habit.id, 'clear')} className="flex-1 sm:flex-none">
+                            <button
+                              type="submit"
+                              disabled={!hasLoggedToday}
+                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base border ${
+                                hasLoggedToday
+                                  ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 hover:scale-105 active:scale-95'
+                                  : 'border-gray-800 text-gray-500 cursor-not-allowed bg-gray-900'
+                              }`}
+                            >
+                              Corriger
+                            </button>
+                          </form>
+                          <form action={setHabitStatus.bind(null, habit.id, 'complete')} className="flex-1 sm:flex-none">
+                            <button
+                              type="submit"
+                              disabled={hasLoggedToday}
+                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
+                                hasLoggedToday
+                                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800'
+                                  : 'bg-red-600 hover:bg-red-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-500/50'
+                              }`}
+                            >
+                              + Craquage
+                            </button>
+                          </form>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )
@@ -276,6 +341,15 @@ export default async function Home() {
             <div className="space-y-3 md:space-y-4">
               {goodHabits.map((habit) => {
                 const hasLoggedToday = loggedHabitIds.has(habit.id)
+                const statusConfig = hasLoggedToday
+                  ? {
+                      label: 'Validée',
+                      classes: 'bg-green-900/40 text-green-200 border border-green-800',
+                    }
+                  : {
+                      label: 'À faire',
+                      classes: 'bg-red-900/30 text-red-200 border border-red-800',
+                    }
                 
                 return (
                   <div
@@ -305,19 +379,39 @@ export default async function Home() {
                         </div>
                       </Link>
                       
-                      <form action={checkInHabit.bind(null, habit.id)} className="w-full sm:w-auto">
-                        <button
-                          type="submit"
-                          disabled={hasLoggedToday}
-                          className={`w-full sm:w-auto px-4 md:px-6 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
-                            hasLoggedToday
-                              ? 'bg-gray-800 text-gray-500 cursor-not-allowed scale-95'
-                              : 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-green-500/50'
-                          }`}
-                        >
-                          {hasLoggedToday ? '✓ Fait' : 'C\'est fait !'}
-                        </button>
-                      </form>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <span className={`text-xs md:text-sm px-3 py-2 rounded-lg text-center ${statusConfig.classes}`}>
+                          {statusConfig.label}
+                        </span>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <form action={setHabitStatus.bind(null, habit.id, 'clear')} className="flex-1 sm:flex-none">
+                            <button
+                              type="submit"
+                              disabled={!hasLoggedToday}
+                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base border ${
+                                hasLoggedToday
+                                  ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 hover:scale-105 active:scale-95'
+                                  : 'border-gray-800 text-gray-500 cursor-not-allowed bg-gray-900'
+                              }`}
+                            >
+                              Annuler
+                            </button>
+                          </form>
+                          <form action={setHabitStatus.bind(null, habit.id, 'complete')} className="flex-1 sm:flex-none">
+                            <button
+                              type="submit"
+                              disabled={hasLoggedToday}
+                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
+                                hasLoggedToday
+                                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800'
+                                  : 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-green-500/50'
+                              }`}
+                            >
+                              Valider
+                            </button>
+                          </form>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import HabitDetailClient from './HabitDetailClient'
 import DeleteButton from './DeleteButton'
+import { getTodayDateISO, toUtcDate } from '@/lib/date-utils'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -41,13 +42,15 @@ export default async function HabitDetailPage({ params }: PageProps) {
     )
   }
 
-  const today = new Date()
-  const fourWeeksAgo = new Date(today)
-  fourWeeksAgo.setDate(today.getDate() - 28)
+  const todayStr = getTodayDateISO()
+  const todayDate = toUtcDate(todayStr)
+  const fourWeeksAgo = new Date(todayDate)
+  fourWeeksAgo.setUTCDate(todayDate.getUTCDate() - 28)
 
   // Récupérer les données pour le calendrier
   let calendarData: Record<string, number> = {}
-  let todayEvents: any[] = []
+  let todayEvents: { id: string }[] = []
+  let todayCount = 0
 
   if (habit.tracking_mode === 'counter') {
     const { data: events } = await supabase
@@ -64,8 +67,8 @@ export default async function HabitDetailPage({ params }: PageProps) {
       return acc
     }, {} as Record<string, number>)
 
-    const todayStr = today.toISOString().split('T')[0]
     todayEvents = (events || []).filter(e => e.event_date === todayStr)
+    todayCount = todayEvents.length
 
   } else {
     const { data: logs } = await supabase
@@ -79,27 +82,30 @@ export default async function HabitDetailPage({ params }: PageProps) {
       acc[log.completed_date] = 1
       return acc
     }, {} as Record<string, number>)
+
+    const hasLogToday = (logs || []).some(log => log.completed_date === todayStr)
+    todayCount = hasLogToday ? 1 : 0
   }
 
   // Calculer les stats
   const totalCount = Object.values(calendarData).reduce((sum, count) => sum + count, 0)
   
-  const sevenDaysAgo = new Date(today)
-  sevenDaysAgo.setDate(today.getDate() - 7)
+  const sevenDaysAgo = new Date(todayDate)
+  sevenDaysAgo.setUTCDate(todayDate.getUTCDate() - 7)
   const last7DaysCount = Object.entries(calendarData)
-    .filter(([date]) => new Date(date) >= sevenDaysAgo)
+    .filter(([date]) => toUtcDate(date) >= sevenDaysAgo)
     .reduce((sum, [_, count]) => sum + count, 0)
 
   // Calculer le streak
   let currentStreak = 0
-  let checkDate = new Date(today)
+  let checkDate = new Date(todayDate)
   for (let i = 0; i < 90; i++) {
     const dateStr = checkDate.toISOString().split('T')[0]
     if (calendarData[dateStr] && calendarData[dateStr] > 0) {
       currentStreak++
-      checkDate.setDate(checkDate.getDate() - 1)
+      checkDate.setUTCDate(checkDate.getUTCDate() - 1)
     } else if (i === 0) {
-      checkDate.setDate(checkDate.getDate() - 1)
+      checkDate.setUTCDate(checkDate.getUTCDate() - 1)
       continue
     } else {
       break
@@ -163,6 +169,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
         habit={habit}
         calendarData={calendarData}
         todayEvents={todayEvents}
+        todayCount={todayCount}
         totalCount={totalCount}
         last7DaysCount={last7DaysCount}
         currentStreak={currentStreak}

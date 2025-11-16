@@ -1,142 +1,225 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getTodayDateISO } from '@/lib/date-utils'
+
+type RouteContext = { params: Promise<{ id: string }> }
+
+const getToday = () => getTodayDateISO()
 
 export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: RouteContext
 ) {
-  const { id } = await context.params
-
+  const { id: habitId } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (authError || !user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
 
-  // Get the habit to check its type
-  const { data: habit } = await supabase
+  console.log('[check-in]', { habitId, userId: user.id })
+
+  const {
+    data: habit,
+    error: habitError,
+  } = await supabase
     .from('habits')
-    .select('type, goal_value, goal_type')
-    .eq('id', id)
+    .select('id, type, tracking_mode, goal_value')
+    .eq('id', habitId)
     .eq('user_id', user.id)
     .single()
 
-  if (!habit) {
+  if (habitError || !habit) {
+    console.error('[check-in error]', habitError ?? new Error('Habit missing'))
     return NextResponse.json({ error: 'Habitude non trouvée' }, { status: 404 })
   }
 
-  const habitId = id
-  const today = new Date().toISOString().split('T')[0]
-  const now = new Date().toISOString()
-
-  // For bad habits, allow multiple entries per day
-  // For good habits, allow multiple but track them separately
-  const { error } = await supabase
-    .from('logs')
-    .insert({
-      habit_id: habitId,
-      user_id: user.id,
-      completed_date: today,
-      created_at: now,
-    })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (habit.tracking_mode !== 'binary') {
+    return NextResponse.json(
+      { error: 'Habitude invalide pour ce type de suivi' },
+      { status: 400 }
+    )
   }
 
-  // Get updated count for today
-  const { data: todayLogs } = await supabase
+  const completedDate = getToday()
+
+  const { error: upsertError } = await supabase
     .from('logs')
-    .select('id')
+    .upsert(
+      {
+        habit_id: habitId,
+        user_id: user.id,
+        completed_date: completedDate,
+        value: 1,
+        notes: null,
+      },
+      {
+        onConflict: 'habit_id,completed_date',
+        ignoreDuplicates: true,
+      }
+    )
+
+  if (upsertError) {
+    console.error('[check-in error]', upsertError)
+    return NextResponse.json(
+      { error: 'Impossible d’enregistrer le check-in' },
+      { status: 500 }
+    )
+  }
+
+  const {
+    count: todayCount,
+    error: countError,
+  } = await supabase
+    .from('logs')
+    .select('id', { count: 'exact', head: true })
     .eq('habit_id', habitId)
     .eq('user_id', user.id)
-    .eq('completed_date', today)
+    .eq('completed_date', completedDate)
 
-  const goalReached = habit.goal_value ? (todayLogs?.length || 0) >= habit.goal_value : false
+  if (countError) {
+    console.error('[check-in error]', countError)
+    return NextResponse.json(
+      { error: 'Impossible de récupérer le compteur' },
+      { status: 500 }
+    )
+  }
 
-  return NextResponse.json({ 
+  const goalReached =
+    habit.type === 'good' && typeof habit.goal_value === 'number'
+      ? (todayCount ?? 0) >= habit.goal_value
+      : false
+
+  return NextResponse.json({
     success: true,
-    count: todayLogs?.length || 1,
-    goalReached
+    count: todayCount ?? 1,
+    goalReached,
   })
 }
 
 export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: RouteContext
 ) {
-  const { id } = await context.params
+  const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (authError || !user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getToday()
 
-  // Get today's logs count
-  const { data: todayLogs } = await supabase
+  const {
+    data: todayLogs,
+    error: todayLogsError,
+  } = await supabase
     .from('logs')
     .select('id, created_at')
     .eq('habit_id', id)
     .eq('user_id', user.id)
     .eq('completed_date', today)
 
+  if (todayLogsError) {
+    console.error('[check-in error]', todayLogsError)
+    return NextResponse.json(
+      { error: 'Impossible de récupérer les logs' },
+      { status: 500 }
+    )
+  }
+
   return NextResponse.json({
     count: todayLogs?.length || 0,
-    logs: todayLogs || []
+    logs: todayLogs || [],
   })
 }
 
 export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: RouteContext
 ) {
-  const { id } = await context.params
+  const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (authError || !user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getToday()
 
-  // Get the most recent log for today
-  const { data: logs } = await supabase
+  const {
+    data: logs,
+    error: logsError,
+  } = await supabase
     .from('logs')
-    .select('id')
+    .select('id, created_at')
     .eq('habit_id', id)
     .eq('user_id', user.id)
     .eq('completed_date', today)
     .order('created_at', { ascending: false })
     .limit(1)
 
-  if (!logs || logs.length === 0) {
-    return NextResponse.json({ error: 'Aucun log à supprimer' }, { status: 404 })
+  if (logsError) {
+    console.error('[check-in error]', logsError)
+    return NextResponse.json(
+      { error: 'Impossible de récupérer le log à supprimer' },
+      { status: 500 }
+    )
   }
 
-  const { error } = await supabase
+  if (!logs || logs.length === 0) {
+    return NextResponse.json({
+      success: true,
+      count: 0,
+      message: 'Aucun log à supprimer',
+    })
+  }
+
+  const { error: deleteError } = await supabase
     .from('logs')
     .delete()
     .eq('id', logs[0].id)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (deleteError) {
+    console.error('[check-in error]', deleteError)
+    return NextResponse.json(
+      { error: 'Impossible de supprimer le log' },
+      { status: 500 }
+    )
   }
 
-  // Get updated count
-  const { data: remainingLogs } = await supabase
+  const {
+    count,
+    error: remainingError,
+  } = await supabase
     .from('logs')
-    .select('id')
+    .select('id', { count: 'exact', head: true })
     .eq('habit_id', id)
     .eq('user_id', user.id)
     .eq('completed_date', today)
 
+  if (remainingError) {
+    console.error('[check-in error]', remainingError)
+    return NextResponse.json(
+      { error: 'Impossible de recalculer le compteur' },
+      { status: 500 }
+    )
+  }
+
   return NextResponse.json({
     success: true,
-    count: remainingLogs?.length || 0,
+    count: count ?? 0,
   })
 }
