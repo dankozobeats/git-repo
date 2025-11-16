@@ -13,6 +13,10 @@ export type Database = {
           type: string
           created_at: string
           updated_at: string
+          // Goal tracking (for good habits only)
+          goal_value: number | null
+          goal_type: 'daily' | 'weekly' | 'monthly' | null
+          goal_description: string | null
         }
         Insert: {
           id?: string
@@ -23,6 +27,9 @@ export type Database = {
           color?: string
           is_archived?: boolean
           type?: string
+          goal_value?: number | null
+          goal_type?: 'daily' | 'weekly' | 'monthly' | null
+          goal_description?: string | null
         }
       }
       logs: {
