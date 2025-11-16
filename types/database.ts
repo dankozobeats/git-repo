@@ -10,10 +10,12 @@ export type Database = {
           icon: string | null
           color: string
           is_archived: boolean
-          type: string
+          type: 'good' | 'bad' | string
           created_at: string
           updated_at: string
-          // Goal tracking (for good habits only)
+          tracking_mode: 'binary' | 'counter' | null
+          daily_goal_value: number | null
+          daily_goal_type: 'minimum' | 'maximum' | null
           goal_value: number | null
           goal_type: 'daily' | 'weekly' | 'monthly' | null
           goal_description: string | null
@@ -26,7 +28,10 @@ export type Database = {
           icon?: string | null
           color?: string
           is_archived?: boolean
-          type?: string
+          type?: 'good' | 'bad' | string
+          tracking_mode?: 'binary' | 'counter' | null
+          daily_goal_value?: number | null
+          daily_goal_type?: 'minimum' | 'maximum' | null
           goal_value?: number | null
           goal_type?: 'daily' | 'weekly' | 'monthly' | null
           goal_description?: string | null
@@ -51,6 +56,22 @@ export type Database = {
           value?: number | null
           notes?: string | null
           type?: string
+        }
+      }
+      habit_events: {
+        Row: {
+          id: string
+          habit_id: string
+          user_id: string
+          event_date: string
+          occurred_at: string
+        }
+        Insert: {
+          id?: string
+          habit_id: string
+          user_id: string
+          event_date: string
+          occurred_at?: string
         }
       }
     }
