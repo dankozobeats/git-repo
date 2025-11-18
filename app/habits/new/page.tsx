@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -23,6 +23,12 @@ const GOOD_PRESETS = [
   { name: 'Fruits & légumes', icon: '🥗', color: '#22c55e' },
 ]
 
+type Category = {
+  id: string
+  name: string
+  color: string | null
+}
+
 export default function NewHabitPage() {
   const router = useRouter()
   const [habitType, setHabitType] = useState<'bad' | 'good'>('bad')
@@ -33,9 +39,21 @@ export default function NewHabitPage() {
   const [color, setColor] = useState('#ef4444')
   const [description, setDescription] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryId, setCategoryId] = useState('')
 
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const res = await fetch('/api/categories')
+      if (!res.ok) return
+      const data = await res.json()
+      setCategories(data.categories || [])
+    }
+    fetchCategories()
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -60,6 +78,8 @@ export default function NewHabitPage() {
       habitData.daily_goal_type = dailyGoalType
       habitData.daily_goal_value = dailyGoalValue
     }
+
+    habitData.category_id = categoryId || null
 
     const { error } = await supabase
       .from('habits')
@@ -198,6 +218,22 @@ export default function NewHabitPage() {
               </p>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium mb-3">Catégorie</label>
+            <select
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">Sans catégorie</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Presets */}
           <div>

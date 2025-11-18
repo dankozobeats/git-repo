@@ -19,6 +19,7 @@ export type Database = {
           goal_value: number | null
           goal_type: 'daily' | 'weekly' | 'monthly' | null
           goal_description: string | null
+          category_id: string | null
         }
         Insert: {
           id?: string
@@ -35,6 +36,7 @@ export type Database = {
           goal_value?: number | null
           goal_type?: 'daily' | 'weekly' | 'monthly' | null
           goal_description?: string | null
+          category_id?: string | null
         }
       }
       logs: {
@@ -72,6 +74,21 @@ export type Database = {
           user_id: string
           event_date: string
           occurred_at?: string
+        }
+      }
+      categories: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          color: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          color?: string | null
         }
       }
     }

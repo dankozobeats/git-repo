@@ -30,6 +30,12 @@ export default async function HabitEditPage({ params }: PageProps) {
     redirect('/')
   }
 
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('name', { ascending: true })
+
   return (
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-10">
@@ -55,7 +61,7 @@ export default async function HabitEditPage({ params }: PageProps) {
           </div>
         </div>
 
-        <HabitEditForm habit={habit} />
+        <HabitEditForm habit={habit} categories={categories || []} />
       </div>
     </main>
   )

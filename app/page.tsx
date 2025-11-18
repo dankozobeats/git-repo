@@ -3,6 +3,12 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTodayDateISO } from '@/lib/date-utils'
 import HabitQuickActions from '@/components/HabitQuickActions'
+import CategoryAccordion from '@/components/CategoryAccordion'
+import CategoryManager from '@/components/CategoryManager'
+import type { Database } from '@/types/database'
+
+type CategoryRow = Database['public']['Tables']['categories']['Row']
+type HabitRow = Database['public']['Tables']['habits']['Row']
 
 export default async function Home() {
   const supabase = await createClient()
@@ -29,6 +35,12 @@ export default async function Home() {
     .eq('type', 'good')
     .order('created_at', { ascending: false })
 
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('name', { ascending: true })
+
   const today = getTodayDateISO()
   const { data: todayLogs } = await supabase
     .from('logs')
@@ -42,6 +54,13 @@ export default async function Home() {
     .eq('user_id', user.id)
     .eq('event_date', today)
 
+  const categoriesList = categories ?? []
+  const categoriesMap = new Map<string, CategoryRow>(
+    categoriesList.map(category => [category.id, category])
+  )
+  const safeBadHabits = badHabits ?? []
+  const safeGoodHabits = goodHabits ?? []
+
   const todayCounts = new Map<string, number>()
   ;(todayLogs || []).forEach(log => {
     todayCounts.set(log.habit_id, 1)
@@ -51,10 +70,45 @@ export default async function Home() {
   })
 
   const badHabitsLoggedToday =
-    badHabits?.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
+    safeBadHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
   const goodHabitsLoggedToday =
-    goodHabits?.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
+    safeGoodHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
   const hasActivityToday = badHabitsLoggedToday + goodHabitsLoggedToday > 0
+
+  const getCategoryMeta = (categoryId: string | null): CategoryRow | null => {
+    if (!categoryId) return null
+    return categoriesMap.get(categoryId) ?? null
+  }
+
+  const groupByCategory = (habitsList: HabitRow[]) => {
+    const map = new Map<
+      string,
+      {
+        category: CategoryRow | null
+        habits: HabitRow[]
+      }
+    >()
+
+    habitsList.forEach(habit => {
+      const key = habit.category_id ?? 'uncategorized'
+      if (!map.has(key)) {
+        map.set(key, {
+          category: getCategoryMeta(habit.category_id ?? null),
+          habits: [],
+        })
+      }
+      map.get(key)!.habits.push(habit)
+    })
+
+    return Array.from(map.values()).sort((a, b) =>
+      (a.category?.name || 'Sans catégorie').localeCompare(
+        b.category?.name || 'Sans catégorie'
+      )
+    )
+  }
+
+  const groupedBadHabits = groupByCategory(safeBadHabits)
+  const groupedGoodHabits = groupByCategory(safeGoodHabits)
 
   const getSmartMessage = () => {
     const totalToday = badHabitsLoggedToday + goodHabitsLoggedToday
@@ -198,112 +252,141 @@ export default async function Home() {
           </div>
         )}
 
-        {badHabits && badHabits.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
-              🔥 Mauvaises habitudes
-              <span className="text-xs md:text-sm font-normal text-gray-500">à réduire</span>
-            </h2>
-            <div className="space-y-3 md:space-y-4">
-              {badHabits.map((habit) => {
-                const todayCount = todayCounts.get(habit.id) ?? 0
-                const hasLoggedToday = todayCount > 0
-                
-                return (
-                  <div
-                    key={habit.id}
-                    className={`bg-gray-900 rounded-lg p-4 md:p-6 border transition-all duration-300 ${
-                      hasLoggedToday 
-                        ? 'border-red-700 shadow-lg shadow-red-900/20' 
-                        : 'border-gray-800 hover:border-red-900/30'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                      <Link 
-                        href={`/habits/${habit.id}`}
-                        className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
+        <CategoryManager />
+
+        {groupedBadHabits.length > 0 ? (
+          <details open className="mb-8 border border-red-800/40 rounded-2xl bg-gray-900/40">
+            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer text-sm md:text-base font-semibold">
+              <span>🔥 Mauvaises habitudes ({safeBadHabits.length})</span>
+              <span className="text-xs text-gray-400">Cliquer pour réduire</span>
+            </summary>
+            <div className="p-4 space-y-4">
+              {groupedBadHabits.map(group => (
+                <CategoryAccordion
+                  key={group.category?.id || 'bad-uncategorized'}
+                  title={group.category?.name ?? 'Sans catégorie'}
+                  color={group.category?.color}
+                  count={group.habits.length}
+                  defaultOpen
+                >
+                  {group.habits.map(habit => {
+                    const todayCount = todayCounts.get(habit.id) ?? 0
+                    const hasLoggedToday = todayCount > 0
+                    return (
+                      <div
+                        key={habit.id}
+                        className={`bg-gray-900 rounded-lg p-4 md:p-5 border transition-all duration-300 ${
+                          hasLoggedToday
+                            ? 'border-red-700 shadow-lg shadow-red-900/20'
+                            : 'border-gray-800 hover:border-red-900/30'
+                        }`}
                       >
-                        <div 
-                          className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
-                          style={{ backgroundColor: habit.color + '20' }}
-                        >
-                          {habit.icon || '🔥'}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+                          <Link
+                            href={`/habits/${habit.id}`}
+                            className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
+                          >
+                            <div
+                              className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
+                              style={{ backgroundColor: habit.color + '20' }}
+                            >
+                              {habit.icon || '🔥'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg md:text-xl font-semibold truncate">{habit.name}</h3>
+                              {habit.description && (
+                                <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-1">{habit.description}</p>
+                              )}
+                            </div>
+                          </Link>
+
+                          <HabitQuickActions
+                            habitId={habit.id}
+                            habitType="bad"
+                            trackingMode={habit.tracking_mode}
+                            initialCount={todayCount}
+                          />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg md:text-xl font-semibold truncate">{habit.name}</h3>
-                          {habit.description && (
-                            <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-1">{habit.description}</p>
-                          )}
-                        </div>
-                      </Link>
-                      <HabitQuickActions
-                        habitId={habit.id}
-                        habitType="bad"
-                        trackingMode={habit.tracking_mode}
-                        initialCount={todayCount}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
+                      </div>
+                    )
+                  })}
+                </CategoryAccordion>
+              ))}
             </div>
+          </details>
+        ) : (
+          <div className="mb-8 text-sm text-gray-500 bg-gray-900/40 border border-gray-800 rounded-2xl px-4 py-6">
+            Aucune mauvaise habitude active.
           </div>
         )}
 
-        {goodHabits && goodHabits.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
-              ✨ Bonnes habitudes
-              <span className="text-xs md:text-sm font-normal text-gray-500">à maintenir</span>
-            </h2>
-            <div className="space-y-3 md:space-y-4">
-              {goodHabits.map((habit) => {
-                const todayCount = todayCounts.get(habit.id) ?? 0
-                const hasLoggedToday = todayCount > 0
-
-                return (
-                  <div
-                    key={habit.id}
-                    className={`bg-gray-900 rounded-lg p-4 md:p-6 border transition-all duration-300 ${
-                      hasLoggedToday
-                        ? 'border-green-700 shadow-lg shadow-green-900/20'
-                        : 'border-gray-800 hover:border-green-900/30'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                      <Link
-                        href={`/habits/${habit.id}`}
-                        className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
+        {groupedGoodHabits.length > 0 ? (
+          <details open className="mb-8 border border-green-800/40 rounded-2xl bg-gray-900/40">
+            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer text-sm md:text-base font-semibold">
+              <span>✨ Bonnes habitudes ({safeGoodHabits.length})</span>
+              <span className="text-xs text-gray-400">Cliquer pour réduire</span>
+            </summary>
+            <div className="p-4 space-y-4">
+              {groupedGoodHabits.map(group => (
+                <CategoryAccordion
+                  key={group.category?.id || 'good-uncategorized'}
+                  title={group.category?.name ?? 'Sans catégorie'}
+                  color={group.category?.color}
+                  count={group.habits.length}
+                  defaultOpen
+                >
+                  {group.habits.map(habit => {
+                    const todayCount = todayCounts.get(habit.id) ?? 0
+                    const hasLoggedToday = todayCount > 0
+                    return (
+                      <div
+                        key={habit.id}
+                        className={`bg-gray-900 rounded-lg p-4 md:p-5 border transition-all duration-300 ${
+                          hasLoggedToday
+                            ? 'border-green-700 shadow-lg shadow-green-900/20'
+                            : 'border-gray-800 hover:border-green-900/30'
+                        }`}
                       >
-                        <div
-                          className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
-                          style={{ backgroundColor: habit.color + '20' }}
-                        >
-                          {habit.icon || '✨'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg md:text-xl font-semibold truncate">{habit.name}</h3>
-                          {habit.description && (
-                            <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-1">{habit.description}</p>
-                          )}
-                        </div>
-                      </Link>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+                          <Link
+                            href={`/habits/${habit.id}`}
+                            className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
+                          >
+                            <div
+                              className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
+                              style={{ backgroundColor: habit.color + '20' }}
+                            >
+                              {habit.icon || '✨'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg md:text-xl font-semibold truncate">{habit.name}</h3>
+                              {habit.description && (
+                                <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-1">{habit.description}</p>
+                              )}
+                            </div>
+                          </Link>
 
-                      <HabitQuickActions
-                        habitId={habit.id}
-                        habitType="good"
-                        trackingMode={habit.tracking_mode}
-                        initialCount={todayCount}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
+                          <HabitQuickActions
+                            habitId={habit.id}
+                            habitType="good"
+                            trackingMode={habit.tracking_mode}
+                            initialCount={todayCount}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </CategoryAccordion>
+              ))}
             </div>
+          </details>
+        ) : (
+          <div className="mb-8 text-sm text-gray-500 bg-gray-900/40 border border-gray-800 rounded-2xl px-4 py-6">
+            Aucune bonne habitude active.
           </div>
         )}
 
-        {(!badHabits || badHabits.length === 0) && (!goodHabits || goodHabits.length === 0) && (
+        {safeBadHabits.length === 0 && safeGoodHabits.length === 0 && (
           <div className="text-center py-12">
             <div className="text-5xl md:text-6xl mb-4">🎯</div>
             <h2 className="text-xl md:text-2xl font-bold mb-2">Aucune habitude pour l'instant</h2>

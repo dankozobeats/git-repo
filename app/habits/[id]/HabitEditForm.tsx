@@ -25,11 +25,14 @@ const GOOD_PRESETS = [
   { name: 'Fruits & légumes', icon: '🥗', color: '#22c55e' },
 ]
 
+type Category = Database['public']['Tables']['categories']['Row']
+
 type HabitEditFormProps = {
   habit: Habit
+  categories: Category[]
 }
 
-export default function HabitEditForm({ habit }: HabitEditFormProps) {
+export default function HabitEditForm({ habit, categories }: HabitEditFormProps) {
   const router = useRouter()
   const [habitType, setHabitType] = useState<'good' | 'bad'>(
     (habit.type as 'good' | 'bad') || 'bad'
@@ -44,6 +47,7 @@ export default function HabitEditForm({ habit }: HabitEditFormProps) {
   const [icon, setIcon] = useState(habit.icon || '')
   const [color, setColor] = useState(habit.color || '#ef4444')
   const [description, setDescription] = useState(habit.description || '')
+  const [categoryId, setCategoryId] = useState(habit.category_id || '')
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -79,6 +83,7 @@ export default function HabitEditForm({ habit }: HabitEditFormProps) {
       description: description.trim(),
       type: habitType,
       tracking_mode: trackingMode,
+      category_id: categoryId || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -114,6 +119,22 @@ export default function HabitEditForm({ habit }: HabitEditFormProps) {
           {errorMessage}
         </div>
       )}
+
+      <section>
+        <label className="block text-sm font-medium mb-2">Catégorie</label>
+        <select
+          value={categoryId}
+          onChange={e => setCategoryId(e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        >
+          <option value="">Sans catégorie</option>
+          {categories.map(category => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </section>
 
       <section>
         <label className="block text-sm font-medium mb-3">
