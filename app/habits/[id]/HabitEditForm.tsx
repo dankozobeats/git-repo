@@ -95,15 +95,23 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
       updates.daily_goal_type = null
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('habits')
       .update(updates)
       .eq('id', habit.id)
       .eq('user_id', user.id)
+      .select()
 
     if (error) {
-      console.error('Error updating habit:', error)
+      console.error('Supabase update error:', error)
       setErrorMessage('Impossible de mettre à jour cette habitude.')
+      setIsLoading(false)
+      return
+    }
+
+    if (!data || data.length === 0) {
+      console.error('No habit updated')
+      setErrorMessage('Aucune mise à jour appliquée.')
       setIsLoading(false)
       return
     }

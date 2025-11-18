@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import HabitEditForm from '../HabitEditForm'
+import { cookies } from 'next/headers'
+import CategoryManager from '@/components/CategoryManager'
 
 interface PageProps {
   params: Promise<{ id: string }>
