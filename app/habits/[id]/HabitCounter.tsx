@@ -13,7 +13,6 @@ type HabitCounterProps = {
   goalValue?: number | null
   goalType?: string | null
   todayCount: number
-  todayEvents?: { id: string }[]
   onCountChange?: (newCount: number) => void
 }
 
@@ -24,13 +23,11 @@ export default function HabitCounter({
   goalValue,
   goalType,
   todayCount: initialCount,
-  todayEvents = [] as { id: string }[],
   onCountChange,
 }: HabitCounterProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [count, setCount] = useState(initialCount)
-  const [events, setEvents] = useState<{ id: string }[]>(todayEvents ?? [])
   const [isLoading, setIsLoading] = useState(false)
   const { showToast, ToastComponent } = useToast()
 
@@ -114,48 +111,49 @@ export default function HabitCounter({
 
   const handleAddRepetition = async () => {
     if (!isCounterMode || isMutating) return
+    const previousCount = count
     const optimisticCount = count + 1
     setCount(optimisticCount)
     setIsLoading(true)
 
     try {
-      const res = await fetch(`/api/habits/${habitId}/events`, {
+      const res = await fetch(`/api/habits/${habitId}/check-in`, {
         method: 'POST',
       })
 
-      if (res.ok) {
-        const data = await res.json()
-        setEvents(prev => [...prev, data])
-
-        if (isBadHabit) {
-          if (optimisticCount === 1) {
-            showToast('Premier craquage... ça arrive 😏', 'info')
-          } else if (optimisticCount >= 5) {
-            showToast(`${optimisticCount} craquages ! Tu te lâches là 💀`, 'error')
-          } else {
-            showToast(`Craquage n°${optimisticCount}`, 'info')
-          }
-        } else {
-          if (goalValue && optimisticCount >= goalValue) {
-            showToast('🎯 Objectif atteint ! Bien joué !', 'success')
-          } else if (goalValue) {
-            const remaining = goalValue - optimisticCount
-            showToast(`+1 ! Encore ${remaining} pour l'objectif`, 'success')
-          } else {
-            showToast(`+1 ! Continue comme ça ! ✨`, 'success')
-          }
-        }
-
-        onCountChange?.(optimisticCount)
-        startTransition(() => router.refresh())
-      } else {
-        setCount(count)
-        showToast('Erreur lors de l\'enregistrement', 'error')
+      if (!res.ok) {
+        throw new Error('check-in failed')
       }
+
+      const data = await res.json()
+      const newCount = typeof data.count === 'number' ? data.count : optimisticCount
+      setCount(newCount)
+
+      if (isBadHabit) {
+        if (newCount === 1) {
+          showToast('Premier craquage... ça arrive 😏', 'info')
+        } else if (newCount >= 5) {
+          showToast(`${newCount} craquages ! Tu te lâches là 💀`, 'error')
+        } else {
+          showToast(`Craquage n°${newCount}`, 'info')
+        }
+      } else if (goalValue) {
+        if (newCount >= goalValue) {
+          showToast('🎯 Objectif atteint ! Bien joué !', 'success')
+        } else {
+          const remaining = goalValue - newCount
+          showToast(`+1 ! Encore ${remaining} pour l'objectif`, 'success')
+        }
+      } else {
+        showToast(`+1 ! Continue comme ça ! ✨`, 'success')
+      }
+
+      onCountChange?.(newCount)
+      startTransition(() => router.refresh())
     } catch (error) {
       console.error('Erreur:', error)
-      setCount(count)
-      showToast('Erreur réseau', 'error')
+      setCount(previousCount)
+      showToast('Erreur lors de l\'enregistrement', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -164,35 +162,30 @@ export default function HabitCounter({
   const handleRemoveRepetition = async () => {
     if (!isCounterMode || count === 0 || isMutating) return
 
-    const optimisticCount = count - 1
+    const previousCount = count
+    const optimisticCount = Math.max(0, count - 1)
     setCount(optimisticCount)
     setIsLoading(true)
 
     try {
-      const lastEvent = events[events.length - 1]
-      if (!lastEvent) {
-        setCount(count)
-        setIsLoading(false)
-        return
-      }
-
-      const res = await fetch(`/api/habits/${habitId}/events/${lastEvent.id}`, {
+      const res = await fetch(`/api/habits/${habitId}/check-in`, {
         method: 'DELETE',
       })
 
-      if (res.ok) {
-        setEvents(prev => prev.slice(0, -1))
-        showToast('Annulé 👍', 'info')
-        onCountChange?.(optimisticCount)
-        startTransition(() => router.refresh())
-      } else {
-        setCount(count)
-        showToast('Erreur lors de la suppression', 'error')
+      if (!res.ok) {
+        throw new Error('delete failed')
       }
+
+      const data = await res.json()
+      const newCount = typeof data.count === 'number' ? data.count : optimisticCount
+      setCount(newCount)
+      showToast('Annulé 👍', 'info')
+      onCountChange?.(newCount)
+      startTransition(() => router.refresh())
     } catch (error) {
       console.error('Erreur:', error)
-      setCount(count)
-      showToast('Erreur réseau', 'error')
+      setCount(previousCount)
+      showToast('Erreur lors de la suppression', 'error')
     } finally {
       setIsLoading(false)
     }

@@ -38,14 +38,49 @@ export async function POST(
     return NextResponse.json({ error: 'Habitude non trouvée' }, { status: 404 })
   }
 
-  if (habit.tracking_mode !== 'binary') {
-    return NextResponse.json(
-      { error: 'Habitude invalide pour ce type de suivi' },
-      { status: 400 }
-    )
-  }
-
   const completedDate = getToday()
+  const isCounter = habit.tracking_mode === 'counter'
+
+  if (isCounter) {
+    const { error: insertError } = await supabase.from('habit_events').insert({
+      habit_id: habitId,
+      user_id: user.id,
+      event_date: completedDate,
+      occurred_at: new Date().toISOString(),
+    })
+
+    if (insertError) {
+      console.error('[check-in error]', insertError)
+      return NextResponse.json(
+        { error: 'Impossible d’enregistrer le check-in' },
+        { status: 500 }
+      )
+    }
+
+    const {
+      count: eventCount,
+      error: countError,
+    } = await supabase
+      .from('habit_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('habit_id', habitId)
+      .eq('user_id', user.id)
+      .eq('event_date', completedDate)
+
+    if (countError) {
+      console.error('[check-in error]', countError)
+      return NextResponse.json(
+        { error: 'Impossible de récupérer le compteur' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      count: eventCount ?? 0,
+      goalReached: false,
+    })
+  }
 
   const { error: upsertError } = await supabase
     .from('logs')
@@ -119,26 +154,48 @@ export async function GET(
   const today = getToday()
 
   const {
-    data: todayLogs,
-    error: todayLogsError,
+    data: habit,
+    error: habitError,
   } = await supabase
-    .from('logs')
-    .select('id, created_at')
+    .from('habits')
+    .select('tracking_mode')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (habitError || !habit) {
+    return NextResponse.json({ error: 'Habitude non trouvée' }, { status: 404 })
+  }
+
+  const isCounter = habit.tracking_mode === 'counter'
+  const table = isCounter ? 'habit_events' : 'logs'
+  const dateColumn = isCounter ? 'event_date' : 'completed_date'
+
+  const { data, error } = await supabase
+    .from(table)
+    .select(isCounter ? 'id, occurred_at' : 'id, created_at')
     .eq('habit_id', id)
     .eq('user_id', user.id)
-    .eq('completed_date', today)
+    .eq(dateColumn, today)
 
-  if (todayLogsError) {
-    console.error('[check-in error]', todayLogsError)
+  if (error) {
+    console.error('[check-in error]', error)
     return NextResponse.json(
-      { error: 'Impossible de récupérer les logs' },
+      { error: 'Impossible de récupérer les données' },
       { status: 500 }
     )
   }
 
+  if (isCounter) {
+    return NextResponse.json({
+      count: data?.length || 0,
+      events: data || [],
+    })
+  }
+
   return NextResponse.json({
-    count: todayLogs?.length || 0,
-    logs: todayLogs || [],
+    count: data?.length || 0,
+    logs: data || [],
   })
 }
 
@@ -160,37 +217,55 @@ export async function DELETE(
   const today = getToday()
 
   const {
-    data: logs,
-    error: logsError,
+    data: habit,
+    error: habitError,
   } = await supabase
-    .from('logs')
-    .select('id, created_at')
+    .from('habits')
+    .select('tracking_mode')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (habitError || !habit) {
+    return NextResponse.json({ error: 'Habitude non trouvée' }, { status: 404 })
+  }
+
+  const isCounter = habit.tracking_mode === 'counter'
+  const table = isCounter ? 'habit_events' : 'logs'
+  const dateColumn = isCounter ? 'event_date' : 'completed_date'
+  const orderColumn = isCounter ? 'occurred_at' : 'created_at'
+
+  const {
+    data: rows,
+    error: fetchError,
+  } = await supabase
+    .from(table)
+    .select('id')
     .eq('habit_id', id)
     .eq('user_id', user.id)
-    .eq('completed_date', today)
-    .order('created_at', { ascending: false })
+    .eq(dateColumn, today)
+    .order(orderColumn, { ascending: false })
     .limit(1)
 
-  if (logsError) {
-    console.error('[check-in error]', logsError)
+  if (fetchError) {
+    console.error('[check-in error]', fetchError)
     return NextResponse.json(
-      { error: 'Impossible de récupérer le log à supprimer' },
+      { error: 'Impossible de récupérer les données' },
       { status: 500 }
     )
   }
 
-  if (!logs || logs.length === 0) {
+  if (!rows || rows.length === 0) {
     return NextResponse.json({
       success: true,
       count: 0,
-      message: 'Aucun log à supprimer',
     })
   }
 
   const { error: deleteError } = await supabase
-    .from('logs')
+    .from(table)
     .delete()
-    .eq('id', logs[0].id)
+    .eq('id', rows[0].id)
 
   if (deleteError) {
     console.error('[check-in error]', deleteError)
@@ -204,11 +279,11 @@ export async function DELETE(
     count,
     error: remainingError,
   } = await supabase
-    .from('logs')
+    .from(table)
     .select('id', { count: 'exact', head: true })
     .eq('habit_id', id)
     .eq('user_id', user.id)
-    .eq('completed_date', today)
+    .eq(dateColumn, today)
 
   if (remainingError) {
     console.error('[check-in error]', remainingError)

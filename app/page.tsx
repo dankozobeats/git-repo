@@ -1,64 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { getTodayDateISO } from '@/lib/date-utils'
-
-async function setHabitStatus(habitId: string, action: 'complete' | 'clear') {
-  'use server'
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return
-
-  const today = getTodayDateISO()
-
-  const { data: habit } = await supabase
-    .from('habits')
-    .select('id, tracking_mode')
-    .eq('id', habitId)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!habit || habit.tracking_mode !== 'binary') {
-    return
-  }
-
-  const { data: existingLogs } = await supabase
-    .from('logs')
-    .select('id')
-    .eq('habit_id', habitId)
-    .eq('user_id', user.id)
-    .eq('completed_date', today)
-    .limit(1)
-
-  const existingLogId = existingLogs?.[0]?.id
-
-  if (action === 'complete') {
-    await supabase
-      .from('logs')
-      .upsert(
-        {
-          habit_id: habitId,
-          user_id: user.id,
-          completed_date: today,
-          value: 1,
-        },
-        {
-          onConflict: 'habit_id,completed_date',
-          ignoreDuplicates: true,
-        }
-      )
-  } else if (existingLogId) {
-    await supabase.from('logs').delete().eq('id', existingLogId)
-  }
-
-  revalidatePath('/')
-  redirect('/')
-}
+import HabitQuickActions from '@/components/HabitQuickActions'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -92,15 +36,25 @@ export default async function Home() {
     .eq('user_id', user.id)
     .eq('completed_date', today)
 
-  const loggedHabitIds = new Set(todayLogs?.map(log => log.habit_id) || [])
+  const { data: todayEvents } = await supabase
+    .from('habit_events')
+    .select('habit_id')
+    .eq('user_id', user.id)
+    .eq('event_date', today)
 
-  const badHabitsLoggedToday = todayLogs?.filter(log => 
-    badHabits?.some(h => h.id === log.habit_id)
-  ).length || 0
+  const todayCounts = new Map<string, number>()
+  ;(todayLogs || []).forEach(log => {
+    todayCounts.set(log.habit_id, 1)
+  })
+  ;(todayEvents || []).forEach(event => {
+    todayCounts.set(event.habit_id, (todayCounts.get(event.habit_id) || 0) + 1)
+  })
 
-  const goodHabitsLoggedToday = todayLogs?.filter(log => 
-    goodHabits?.some(h => h.id === log.habit_id)
-  ).length || 0
+  const badHabitsLoggedToday =
+    badHabits?.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
+  const goodHabitsLoggedToday =
+    goodHabits?.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
+  const hasActivityToday = badHabitsLoggedToday + goodHabitsLoggedToday > 0
 
   const getSmartMessage = () => {
     const totalToday = badHabitsLoggedToday + goodHabitsLoggedToday
@@ -211,7 +165,7 @@ export default async function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
-        {todayLogs && todayLogs.length > 0 ? (
+        {hasActivityToday ? (
           <div className={`border rounded-lg p-4 mb-6 text-center transition-all duration-300 ${
             messageType === 'bad'
               ? 'bg-red-900/20 border-red-800'
@@ -252,16 +206,8 @@ export default async function Home() {
             </h2>
             <div className="space-y-3 md:space-y-4">
               {badHabits.map((habit) => {
-                const hasLoggedToday = loggedHabitIds.has(habit.id)
-                const statusConfig = hasLoggedToday
-                  ? {
-                      label: 'Craquage',
-                      classes: 'bg-red-900/40 text-red-200 border border-red-800',
-                    }
-                  : {
-                      label: 'Aucun craquage',
-                      classes: 'bg-green-900/30 text-green-200 border border-green-800',
-                    }
+                const todayCount = todayCounts.get(habit.id) ?? 0
+                const hasLoggedToday = todayCount > 0
                 
                 return (
                   <div
@@ -290,40 +236,12 @@ export default async function Home() {
                           )}
                         </div>
                       </Link>
-                      
-                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <span className={`text-xs md:text-sm px-3 py-2 rounded-lg text-center ${statusConfig.classes}`}>
-                          {statusConfig.label}
-                        </span>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <form action={setHabitStatus.bind(null, habit.id, 'clear')} className="flex-1 sm:flex-none">
-                            <button
-                              type="submit"
-                              disabled={!hasLoggedToday}
-                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base border ${
-                                hasLoggedToday
-                                  ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 hover:scale-105 active:scale-95'
-                                  : 'border-gray-800 text-gray-500 cursor-not-allowed bg-gray-900'
-                              }`}
-                            >
-                              Corriger
-                            </button>
-                          </form>
-                          <form action={setHabitStatus.bind(null, habit.id, 'complete')} className="flex-1 sm:flex-none">
-                            <button
-                              type="submit"
-                              disabled={hasLoggedToday}
-                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
-                                hasLoggedToday
-                                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800'
-                                  : 'bg-red-600 hover:bg-red-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-500/50'
-                              }`}
-                            >
-                              + Craquage
-                            </button>
-                          </form>
-                        </div>
-                      </div>
+                      <HabitQuickActions
+                        habitId={habit.id}
+                        habitType="bad"
+                        trackingMode={habit.tracking_mode}
+                        initialCount={todayCount}
+                      />
                     </div>
                   </div>
                 )
@@ -340,32 +258,24 @@ export default async function Home() {
             </h2>
             <div className="space-y-3 md:space-y-4">
               {goodHabits.map((habit) => {
-                const hasLoggedToday = loggedHabitIds.has(habit.id)
-                const statusConfig = hasLoggedToday
-                  ? {
-                      label: 'Validée',
-                      classes: 'bg-green-900/40 text-green-200 border border-green-800',
-                    }
-                  : {
-                      label: 'À faire',
-                      classes: 'bg-red-900/30 text-red-200 border border-red-800',
-                    }
-                
+                const todayCount = todayCounts.get(habit.id) ?? 0
+                const hasLoggedToday = todayCount > 0
+
                 return (
                   <div
                     key={habit.id}
                     className={`bg-gray-900 rounded-lg p-4 md:p-6 border transition-all duration-300 ${
-                      hasLoggedToday 
-                        ? 'border-green-700 shadow-lg shadow-green-900/20' 
+                      hasLoggedToday
+                        ? 'border-green-700 shadow-lg shadow-green-900/20'
                         : 'border-gray-800 hover:border-green-900/30'
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                      <Link 
+                      <Link
                         href={`/habits/${habit.id}`}
                         className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
                       >
-                        <div 
+                        <div
                           className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
                           style={{ backgroundColor: habit.color + '20' }}
                         >
@@ -378,40 +288,13 @@ export default async function Home() {
                           )}
                         </div>
                       </Link>
-                      
-                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <span className={`text-xs md:text-sm px-3 py-2 rounded-lg text-center ${statusConfig.classes}`}>
-                          {statusConfig.label}
-                        </span>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <form action={setHabitStatus.bind(null, habit.id, 'clear')} className="flex-1 sm:flex-none">
-                            <button
-                              type="submit"
-                              disabled={!hasLoggedToday}
-                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base border ${
-                                hasLoggedToday
-                                  ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 hover:scale-105 active:scale-95'
-                                  : 'border-gray-800 text-gray-500 cursor-not-allowed bg-gray-900'
-                              }`}
-                            >
-                              Annuler
-                            </button>
-                          </form>
-                          <form action={setHabitStatus.bind(null, habit.id, 'complete')} className="flex-1 sm:flex-none">
-                            <button
-                              type="submit"
-                              disabled={hasLoggedToday}
-                              className={`w-full px-4 md:px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
-                                hasLoggedToday
-                                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800'
-                                  : 'bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-green-500/50'
-                              }`}
-                            >
-                              Valider
-                            </button>
-                          </form>
-                        </div>
-                      </div>
+
+                      <HabitQuickActions
+                        habitId={habit.id}
+                        habitType="good"
+                        trackingMode={habit.tracking_mode}
+                        initialCount={todayCount}
+                      />
                     </div>
                   </div>
                 )

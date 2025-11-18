@@ -23,16 +23,9 @@ type Habit = {
   daily_goal_type: 'minimum' | 'maximum' | null
 }
 
-type HabitEvent = {
-  id?: string
-  occurred_at?: string
-  event_date?: string
-}
-
 type Props = {
   habit: Habit
   calendarData: Record<string, number>
-  todayEvents: HabitEvent[]
   todayCount: number
   totalCount: number
   last7DaysCount: number
@@ -42,7 +35,6 @@ type Props = {
 export default function HabitDetailClient({
   habit,
   calendarData,
-  todayEvents,
   todayCount,
   totalCount,
   last7DaysCount,
@@ -94,7 +86,6 @@ export default function HabitDetailClient({
             goalValue={habit.goal_value}
             goalType={habit.goal_type}
             todayCount={count}
-            todayEvents={todayEvents}
             onCountChange={setCount}
           />
         </section>

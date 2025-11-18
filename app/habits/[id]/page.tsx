@@ -49,7 +49,6 @@ export default async function HabitDetailPage({ params }: PageProps) {
 
   // Récupérer les données pour le calendrier
   let calendarData: Record<string, number> = {}
-  let todayEvents: { id: string }[] = []
   let todayCount = 0
 
   if (habit.tracking_mode === 'counter') {
@@ -67,8 +66,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
       return acc
     }, {} as Record<string, number>)
 
-    todayEvents = (events || []).filter(e => e.event_date === todayStr)
-    todayCount = todayEvents.length
+    todayCount = (events || []).filter(e => e.event_date === todayStr).length
 
   } else {
     const { data: logs } = await supabase
@@ -168,7 +166,6 @@ export default async function HabitDetailPage({ params }: PageProps) {
       <HabitDetailClient
         habit={habit}
         calendarData={calendarData}
-        todayEvents={todayEvents}
         todayCount={todayCount}
         totalCount={totalCount}
         last7DaysCount={last7DaysCount}
