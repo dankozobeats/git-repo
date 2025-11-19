@@ -38,3 +38,7 @@ body {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+.pdf-export * {
+  background-image: none !important;
+}
+

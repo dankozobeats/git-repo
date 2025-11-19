@@ -208,6 +208,9 @@ export default async function Home() {
               >
                 + Nouvelle
               </Link>
+              <Link href="/report" className="bg-blue-600 px-4 py-2 rounded-lg">
+                📊 Rapport
+              </Link>
               <form action="/auth/signout" method="post" className="flex-1 md:flex-none">
                 <button className="w-full bg-gray-800 hover:bg-gray-700 px-3 md:px-4 py-2 rounded-lg font-medium transition-all duration-200 border border-gray-700 text-sm md:text-base hover:scale-105 active:scale-95">
                   Déco
@@ -267,7 +270,7 @@ export default async function Home() {
                   title={group.category?.name ?? 'Sans catégorie'}
                   color={group.category?.color}
                   count={group.habits.length}
-                  defaultOpen
+                  defaultOpen={false}
                 >
                   {group.habits.map(habit => {
                     const todayCount = todayCounts.get(habit.id) ?? 0
@@ -333,7 +336,7 @@ export default async function Home() {
                   title={group.category?.name ?? 'Sans catégorie'}
                   color={group.category?.color}
                   count={group.habits.length}
-                  defaultOpen
+                  defaultOpen={false}
                 >
                   {group.habits.map(habit => {
                     const todayCount = todayCounts.get(habit.id) ?? 0
