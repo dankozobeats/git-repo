@@ -1,0 +1,31 @@
+@layer base {
+  :root {
+    --bh-bg: #0b0b10;
+    --bh-panel: #141421;
+    --bh-card: #1c1c2a;
+    --bh-text: #e0e0e0;
+    --bh-text-muted: #9ca3af;
+    --bh-red: #ff4d4d;
+    --bh-green: #2ecc71;
+    --bh-blue: #4da6ff;
+    --bh-border: rgba(255, 255, 255, 0.08);
+    --bh-border-strong: rgba(255, 255, 255, 0.18);
+    --bh-radius: 1.5rem;
+    --bh-radius-card: 1.25rem;
+    --bh-shadow: 0 30px 120px rgba(0, 0, 0, 0.55);
+  }
+
+  body {
+    @apply bg-[#121212] text-[var(--bh-text)] font-['Inter',var(--font-sans),_sans-serif] antialiased min-h-screen;
+    background: radial-gradient(circle at top, rgba(28, 28, 48, 0.6), var(--bh-bg));
+  }
+
+  ::selection {
+    background: rgba(77, 166, 255, 0.3);
+    color: var(--bh-text);
+  }
+
+  * {
+    @apply border-transparent;
+  }
+}

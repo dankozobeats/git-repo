@@ -5,6 +5,7 @@ import { Plus, Minus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import { getBinaryStatusLabel, isSuccess } from '@/lib/habits/status'
+import { toastRoastCraquage, toastRoastCorrection, toastRoastSuccess } from '@/lib/coach/coach'
 
 type HabitCounterProps = {
   habitId: string
@@ -14,6 +15,10 @@ type HabitCounterProps = {
   goalType?: string | null
   todayCount: number
   onCountChange?: (newCount: number) => void
+  habitName: string
+  streak?: number
+  totalLogs?: number
+  totalCraquages?: number
 }
 
 export default function HabitCounter({
@@ -24,6 +29,10 @@ export default function HabitCounter({
   goalType,
   todayCount: initialCount,
   onCountChange,
+  habitName,
+  streak = 0,
+  totalLogs = 0,
+  totalCraquages = 0,
 }: HabitCounterProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -68,9 +77,9 @@ export default function HabitCounter({
 
       showToast(
         habitType === 'good'
-          ? 'Habitude validée pour aujourd’hui ✅'
-          : 'Craquage enregistré 😬',
-        habitType === 'good' ? 'success' : 'info'
+          ? toastRoastSuccess(habitName, streak + 1, totalLogs + 1)
+          : toastRoastCraquage(habitName, streak + 1, totalCraquages + 1),
+        habitType === 'good' ? 'success' : 'error'
       )
       onCountChange?.(1)
       startTransition(() => router.refresh())
@@ -97,7 +106,7 @@ export default function HabitCounter({
         throw new Error('reset failed')
       }
 
-      showToast('Statut corrigé', 'info')
+      showToast(toastRoastCorrection(habitName, streak, Math.max(0, totalCraquages - 1)), 'info')
       onCountChange?.(0)
       startTransition(() => router.refresh())
     } catch (error) {
@@ -130,22 +139,18 @@ export default function HabitCounter({
       setCount(newCount)
 
       if (isBadHabit) {
-        if (newCount === 1) {
-          showToast('Premier craquage... ça arrive 😏', 'info')
-        } else if (newCount >= 5) {
-          showToast(`${newCount} craquages ! Tu te lâches là 💀`, 'error')
-        } else {
-          showToast(`Craquage n°${newCount}`, 'info')
-        }
+        showToast(toastRoastCraquage(habitName, streak + newCount, totalCraquages + newCount), 'error')
       } else if (goalValue) {
-        if (newCount >= goalValue) {
-          showToast('🎯 Objectif atteint ! Bien joué !', 'success')
-        } else {
-          const remaining = goalValue - newCount
-          showToast(`+1 ! Encore ${remaining} pour l'objectif`, 'success')
-        }
+        showToast(
+          toastRoastSuccess(
+            habitName,
+            streak + (newCount >= goalValue ? newCount : 1),
+            totalLogs + newCount
+          ),
+          'success'
+        )
       } else {
-        showToast(`+1 ! Continue comme ça ! ✨`, 'success')
+        showToast(toastRoastSuccess(habitName, streak + newCount, totalLogs + newCount), 'success')
       }
 
       onCountChange?.(newCount)
@@ -179,7 +184,7 @@ export default function HabitCounter({
       const data = await res.json()
       const newCount = typeof data.count === 'number' ? data.count : optimisticCount
       setCount(newCount)
-      showToast('Annulé 👍', 'info')
+      showToast(toastRoastCorrection(habitName, streak, Math.max(0, totalCraquages - 1)), 'info')
       onCountChange?.(newCount)
       startTransition(() => router.refresh())
     } catch (error) {

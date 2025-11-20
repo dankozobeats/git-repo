@@ -1,0 +1,17 @@
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border text-sm font-medium px-5 py-2.5 select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#4DA6FF]/60 focus-visible:ring-offset-[#121212];
+  }
+
+  .btn-dark {
+    @apply bg-neutral-900/80 text-neutral-200 border-neutral-800 hover:bg-neutral-800/80 hover:border-neutral-700;
+  }
+
+  .btn-green {
+    @apply bg-emerald-600/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-600/30 hover:border-emerald-500/60;
+  }
+
+  .btn-red {
+    @apply bg-[#FF4D4D]/20 text-[#ff9c9c] border-[#ff4d4d]/30 hover:bg-[#FF4D4D]/30 hover:border-[#ff4d4d]/60;
+  }
+}

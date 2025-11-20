@@ -34,67 +34,55 @@ export default function ReportPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="border-b border-gray-800 bg-gray-900">
-        <div className="max-w-5xl mx-auto px-4 py-4 md:py-6">
-  <div className="border-b border-gray-800 bg-gray-900">
-  <div className="max-w-5xl mx-auto px-4 py-4 md:py-6">
-
-    <div className="flex items-center justify-between">
-      
-      {/* ----- GAUCHE : Retour + Titre ----- */}
-      <div className="flex items-center gap-4">
-        <Link
-          href="/"
-          className="text-gray-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="w-8 h-8 text-blue-500" />
-            Rapport IA
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Analyse de tes habitudes par Gemini
-          </p>
+    <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
+      <header className="border-b border-white/5 bg-gradient-to-r from-[#1E1E1E] via-[#0F0F0F] to-[#1A1A1A]">
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="rounded-full border border-white/10 p-2 text-white/70 transition hover:border-white/40">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Rapport IA</p>
+              <h1 className="flex items-center gap-2 text-3xl font-bold text-white">
+                <BarChart3 className="h-7 w-7 text-[#FF4D4D]" /> BadHabit Intelligence
+              </h1>
+              <p className="text-sm text-white/60">Analyse générée par Gemini (IA) sur la période sélectionnée</p>
+            </div>
+          </div>
+          <Link
+            href="/reports/history"
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40"
+          >
+            <BarChart3 className="h-4 w-4" /> Historique IA
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {/* ----- DROITE : Bouton Historique IA ----- */}
-      <Link
-        href="/reports/history"
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold flex items-center gap-2 transition"
-      >
-        {/* Icon custom de ton choix, ici BarChart3 */}
-        <BarChart3 className="w-4 h-4" />
-        Historique IA
-      </Link>
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+        <section className="rounded-3xl border border-white/5 bg-[#1B1B24] p-6 shadow-2xl shadow-black/40">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Période d'analyse</p>
+              <h2 className="text-2xl font-bold text-white">Sélectionne ton intervalle</h2>
+            </div>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/50">
+              {period === '7j' && 'Semaine'}
+              {period === '30j' && '30 jours'}
+              {period === '90j' && '90 jours'}
+            </span>
+          </div>
 
-    </div>
-
-  </div>
-</div>
-
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 space-y-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h3 className="font-semibold mb-4">Période d'analyse</h3>
-          
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="mt-6 flex flex-col gap-4 md:flex-row">
             <div className="flex-1 grid grid-cols-3 gap-3">
               {(['7j', '30j', '90j'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
                   disabled={isLoading}
-                  className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                     period === p
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      ? 'border-[#FF4D4D] bg-[#FF4D4D]/10 text-white shadow-[0_0_20px_rgba(255,77,77,0.2)]'
+                      : 'border-white/10 bg-black/20 text-white/60 hover:border-white/30'
                   } disabled:opacity-50`}
                 >
                   {p === '7j' && '7 jours'}
@@ -107,16 +95,16 @@ export default function ReportPage() {
             <button
               onClick={generateReport}
               disabled={isLoading}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-[#FF4D4D]/30 transition hover:bg-[#e04343] disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Génération...
                 </>
               ) : (
                 <>
-                  <BarChart3 className="w-5 h-5" />
+                  <BarChart3 className="h-5 w-5" />
                   Générer le rapport
                 </>
               )}
@@ -124,48 +112,43 @@ export default function ReportPage() {
           </div>
 
           {stats && (
-            <div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <div className="text-gray-400">Good Habits</div>
-                <div className="text-xl font-bold text-green-400">{stats.goodHabits}</div>
-              </div>
-              <div>
-                <div className="text-gray-400">Bad Habits</div>
-                <div className="text-xl font-bold text-red-400">{stats.badHabits}</div>
-              </div>
-              <div>
-                <div className="text-gray-400">Validations</div>
-                <div className="text-xl font-bold text-blue-400">{stats.goodLogs}</div>
-              </div>
-              <div>
-                <div className="text-gray-400">Craquages</div>
-                <div className="text-xl font-bold text-orange-400">{stats.badLogs}</div>
-              </div>
+            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-6 text-sm md:grid-cols-4">
+              {[
+                { label: 'Good habits', value: stats.goodHabits, color: 'text-[#4DA6FF]' },
+                { label: 'Bad habits', value: stats.badHabits, color: 'text-[#FF4D4D]' },
+                { label: 'Validations', value: stats.goodLogs, color: 'text-[#4DA6FF]' },
+                { label: 'Craquages', value: stats.badLogs, color: 'text-[#FFB347]' },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/50">{stat.label}</p>
+                  <p className={`mt-2 text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                </div>
+              ))}
             </div>
           )}
-        </div>
+        </section>
 
         {isLoading && (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-12 text-center">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500" />
-            <p className="text-gray-400">Gemini analyse tes données...</p>
-          </div>
+          <section className="rounded-3xl border border-white/5 bg-[#0F0F13] p-12 text-center shadow-xl shadow-black/30">
+            <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-[#4DA6FF]" />
+            <p className="text-white/70">Gemini analyse tes données...</p>
+          </section>
         )}
 
         {report && !isLoading && (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 md:p-8">
-            <div className="prose prose-invert max-w-none whitespace-pre-wrap">
+          <section className="rounded-3xl border border-white/5 bg-[#0F0F13] p-6 md:p-8 shadow-xl shadow-black/30">
+            <div className="prose prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
               {report}
             </div>
-          </div>
+          </section>
         )}
 
         {!report && !isLoading && (
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-12 text-center">
-            <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            <p className="text-gray-400 mb-2">Aucun rapport généré</p>
-            <p className="text-sm text-gray-500">Sélectionne une période et clique sur "Générer le rapport"</p>
-          </div>
+          <section className="rounded-3xl border border-white/5 bg-[#0F0F13] p-12 text-center text-white/70 shadow-xl shadow-black/30">
+            <BarChart3 className="mx-auto mb-4 h-16 w-16 text-white/20" />
+            <p className="mb-2 text-lg font-semibold">Aucun rapport généré</p>
+            <p className="text-sm text-white/50">Sélectionne une période et clique sur « Générer le rapport »</p>
+          </section>
         )}
       </div>
     </main>

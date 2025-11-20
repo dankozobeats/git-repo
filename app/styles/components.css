@@ -1,0 +1,21 @@
+@layer components {
+  .glass-panel {
+    @apply rounded-[var(--bh-radius)] border border-[color:var(--bh-border)] bg-white/5 p-6 shadow-[var(--bh-shadow)] backdrop-blur-md;
+  }
+
+  .stat-card {
+    @apply rounded-2xl border border-white/10 bg-[#0f111a] p-4 text-sm text-white/70 shadow-inner shadow-black/40;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70;
+  }
+
+  .divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
+  }
+
+  .input-dark {
+    @apply rounded-2xl border border-[#333333] bg-[#1E1E1E] px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#4DA6FF];
+  }
+}

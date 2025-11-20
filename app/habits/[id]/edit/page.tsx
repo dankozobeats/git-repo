@@ -39,30 +39,31 @@ export default async function HabitEditPage({ params }: PageProps) {
     .order('name', { ascending: true })
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-3xl mx-auto px-4 py-6 md:py-10">
-        <div className="mb-6">
+    <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
+      <section className="bg-gradient-to-br from-[#1E1E1E] via-[#151515] to-[#0f0f0f] border-b border-white/5">
+        <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
           <Link
             href={`/habits/${habit.id}`}
-            className="text-gray-400 hover:text-white transition-colors text-sm"
+            className="inline-flex items-center gap-3 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
           >
             ← Retour à l&apos;habitude
           </Link>
-        </div>
-
-        <div className="flex items-center gap-3 mb-2">
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
-            style={{ backgroundColor: `${habit.color}20` }}
-          >
-            {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
+          <div className="flex items-center gap-4">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-inner"
+              style={{ backgroundColor: `${habit.color}33` }}
+            >
+              {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Édition</p>
+              <h1 className="text-3xl font-bold text-white">{habit.name}</h1>
+            </div>
           </div>
-          <div>
-            <p className="text-sm uppercase tracking-wide text-gray-500">Modifier</p>
-            <h1 className="text-3xl font-bold">{habit.name}</h1>
-          </div>
         </div>
+      </section>
 
+      <div className="mx-auto max-w-5xl px-4 py-8">
         <HabitEditForm habit={habit} categories={categories || []} />
       </div>
     </main>

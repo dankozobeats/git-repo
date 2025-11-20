@@ -113,55 +113,61 @@ export default async function HabitDetailPage({ params }: PageProps) {
   const isBadHabit = habit.type === 'bad'
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="border-b border-gray-800 bg-gray-900">
-        <div className="max-w-4xl mx-auto px-4 py-4 md:py-6">
-          <Link 
+    <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
+      <section className="bg-gradient-to-br from-[#1E1E1E] via-[#151515] to-[#0f0f0f] border-b border-white/5">
+        <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+          <Link
             href="/"
-            className="text-gray-400 hover:text-white mb-4 inline-block text-sm md:text-base"
+            className="inline-flex items-center gap-3 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
           >
-            ← Retour
+            ← Retour au dashboard
           </Link>
-          <div className="flex items-start gap-3 md:gap-4 mt-4">
-            <div 
-              className="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center text-2xl md:text-3xl flex-shrink-0"
-              style={{ backgroundColor: habit.color + '20' }}
-            >
-              {habit.icon || (isBadHabit ? '🔥' : '✨')}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-bold truncate">{habit.name}</h1>
-                <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-                  isBadHabit 
-                    ? 'bg-red-900/30 text-red-400 border border-red-800' 
-                    : 'bg-green-900/30 text-green-400 border border-green-800'
-                }`}>
-                  {isBadHabit ? '🔥 Mauvaise' : '✨ Bonne'}
-                </span>
-                {habit.tracking_mode === 'counter' && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-900/30 text-blue-400 border border-blue-800">
-                    🔢 Compteur ({habit.daily_goal_type === 'minimum' ? 'min' : 'max'}: {habit.daily_goal_value})
+
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl shadow-inner"
+                style={{ backgroundColor: `${habit.color}33` }}
+              >
+                {habit.icon || (isBadHabit ? '🔥' : '✨')}
+              </div>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-3xl font-bold text-white truncate">{habit.name}</h1>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold border ${
+                      isBadHabit
+                        ? 'border-[#FF4D4D] text-[#FF4D4D]'
+                        : 'border-[#4DA6FF] text-[#4DA6FF]'
+                    }`}
+                  >
+                    {isBadHabit ? '🔥 Mauvaise habitude' : '✨ Bonne habitude'}
                   </span>
+                  {habit.tracking_mode === 'counter' && (
+                    <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/80">
+                      🔢 Compteur ({habit.daily_goal_type === 'minimum' ? 'min' : 'max'}:{' '}
+                      {habit.daily_goal_value})
+                    </span>
+                  )}
+                </div>
+                {habit.description && (
+                  <p className="text-sm text-[#A0A0A0] max-w-2xl">{habit.description}</p>
                 )}
               </div>
-              {habit.description && (
-                <p className="text-gray-400 mt-1 text-sm md:text-base">{habit.description}</p>
-              )}
+            </div>
+
+            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+              <Link
+                href={`/habits/${id}/edit`}
+                className="flex-1 h-11 rounded-lg border border-white/15 bg-white/5 px-4 text-center text-sm font-semibold text-white transition-all duration-200 hover:border-white/40 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4DA6FF]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090f] inline-flex items-center justify-center gap-2"
+              >
+                <span aria-hidden>✏️</span> Modifier
+              </Link>
+              <DeleteButton habitId={id} habitName={habit.name} />
             </div>
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mt-4">
-            <Link
-              href={`/habits/${id}/edit`}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg font-medium transition border border-gray-700 text-center text-sm md:text-base"
-            >
-              ✏️ Modifier
-            </Link>
-            <DeleteButton habitId={id} habitName={habit.name} />
-          </div>
         </div>
-      </div>
+      </section>
 
       <HabitDetailClient
         habit={habit}

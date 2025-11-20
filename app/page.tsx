@@ -2,18 +2,33 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTodayDateISO } from '@/lib/date-utils'
-import HabitQuickActions from '@/components/HabitQuickActions'
-import CategoryAccordion from '@/components/CategoryAccordion'
+import { getRandomMessage } from '@/lib/coach/roastMessages'
 import CategoryManager from '@/components/CategoryManager'
 import type { Database } from '@/types/database'
+import HabitSectionsClient from '@/components/HabitSectionsClient'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
-type HabitRow = Database['public']['Tables']['habits']['Row']
-
+type HabitRow = Database['public']['Tables']['habits']['Row'] & {
+  current_streak?: number | null
+  total_logs?: number | null
+  total_craquages?: number | null
+}
+type HabitGroup = {
+  category: CategoryRow | null
+  habits: HabitRow[]
+}
+type CategoryStat = {
+  id: string
+  name: string
+  color: string | null
+  count: number
+}
 export default async function Home() {
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     redirect('/login')
@@ -80,14 +95,8 @@ export default async function Home() {
     return categoriesMap.get(categoryId) ?? null
   }
 
-  const groupByCategory = (habitsList: HabitRow[]) => {
-    const map = new Map<
-      string,
-      {
-        category: CategoryRow | null
-        habits: HabitRow[]
-      }
-    >()
+  const groupByCategory = (habitsList: HabitRow[]): HabitGroup[] => {
+    const map = new Map<string, HabitGroup>()
 
     habitsList.forEach(habit => {
       const key = habit.category_id ?? 'uncategorized'
@@ -101,14 +110,17 @@ export default async function Home() {
     })
 
     return Array.from(map.values()).sort((a, b) =>
-      (a.category?.name || 'Sans catégorie').localeCompare(
-        b.category?.name || 'Sans catégorie'
-      )
+      (a.category?.name || 'Sans catégorie').localeCompare(b.category?.name || 'Sans catégorie')
     )
   }
 
   const groupedBadHabits = groupByCategory(safeBadHabits)
   const groupedGoodHabits = groupByCategory(safeGoodHabits)
+  const allActiveHabits = [...safeBadHabits, ...safeGoodHabits]
+  const categoryStats = buildCategoryStats(categoriesList, allActiveHabits)
+  const totalHabits = allActiveHabits.length
+  const todayCountsRecord: Record<string, number> = Object.fromEntries(todayCounts)
+  const randomRoastBanner = getRandomMessage()
 
   const getSmartMessage = () => {
     const totalToday = badHabitsLoggedToday + goodHabitsLoggedToday
@@ -116,295 +128,257 @@ export default async function Home() {
     if (totalToday === 0) {
       return {
         message: "Journée tranquille... ou tu oublies de logger ? 🤔",
-        type: 'neutral'
       }
     }
 
     if (badHabitsLoggedToday > 0 && goodHabitsLoggedToday === 0) {
       if (badHabitsLoggedToday === 1) {
         return {
-          message: "Un petit craquage. Ça arrive, champion. 😏",
-          type: 'bad'
+          message: 'Un petit craquage. Ça arrive, champion. 😏',
         }
       } else if (badHabitsLoggedToday === 2) {
         return {
-          message: "2 craquages... Tu commences à prendre un rythme là. 🔥",
-          type: 'bad'
+          message: '2 craquages... Tu commences à prendre un rythme là. 🔥',
         }
       } else if (badHabitsLoggedToday >= 3 && badHabitsLoggedToday < 5) {
         return {
           message: `${badHabitsLoggedToday} craquages ! La constance dans la médiocrité, respect. 💀`,
-          type: 'bad'
         }
-      } else {
-        return {
-          message: `${badHabitsLoggedToday} craquages ! Tu bats des records là. Impressionnant. 🏆`,
-          type: 'bad'
-        }
+      }
+      return {
+        message: `${badHabitsLoggedToday} craquages ! Tu bats des records là. Impressionnant. 🏆`,
       }
     }
 
     if (goodHabitsLoggedToday > 0 && badHabitsLoggedToday === 0) {
       if (goodHabitsLoggedToday === 1) {
         return {
-          message: "Une bonne action ! C'est déjà ça. Continue. 💪",
-          type: 'good'
+          message: 'Une bonne action ! C\'est déjà ça. Continue. 💪',
         }
       } else if (goodHabitsLoggedToday === 2) {
         return {
-          message: "2 bonnes actions ! Tu prends ça au sérieux aujourd'hui. ✨",
-          type: 'good'
+          message: '2 bonnes actions ! Tu prends ça au sérieux aujourd\'hui. ✨',
         }
       } else if (goodHabitsLoggedToday >= 3 && goodHabitsLoggedToday < 5) {
         return {
           message: `${goodHabitsLoggedToday} bonnes actions ! Regarde-toi tout motivé ! 🔥`,
-          type: 'good'
         }
-      } else {
-        return {
-          message: `${goodHabitsLoggedToday} bonnes actions ! Tu es en feu aujourd'hui ! 🎯`,
-          type: 'good'
-        }
+      }
+      return {
+        message: `${goodHabitsLoggedToday} bonnes actions ! Tu es en feu aujourd'hui ! 🎯`,
       }
     }
 
     const ratio = goodHabitsLoggedToday / (badHabitsLoggedToday + goodHabitsLoggedToday)
-    
+
     if (ratio > 0.7) {
       return {
-        message: `Plus de bonnes que de mauvaises ! C'est l'idée. Continue. ⚖️`,
-        type: 'mixed'
+        message: 'Plus de bonnes que de mauvaises ! C\'est l\'idée. Continue. ⚖️',
       }
-    } else if (ratio >= 0.4 && ratio <= 0.7) {
+    }
+
+    if (ratio >= 0.4 && ratio <= 0.7) {
       return {
-        message: `Bon... du bon ET du mauvais. Tu es humain finalement. 🤷`,
-        type: 'mixed'
+        message: 'Bon... du bon ET du mauvais. Tu es humain finalement. 🤷',
       }
-    } else {
-      return {
-        message: `Plus de craquages que de bonnes actions... Intéressant. 😅`,
-        type: 'mixed'
-      }
+    }
+
+    return {
+      message: 'Plus de craquages que de bonnes actions... Intéressant. 😅',
     }
   }
 
-  const smartMessage = getSmartMessage()
-  const displayMessage = smartMessage.message
-  const messageType = smartMessage.type
+  const { message: displayMessage } = getSmartMessage()
+  const heroSubtitle = hasActivityToday
+    ? 'Les statistiques se mettent à jour immédiatement à chaque action.'
+    : 'Commence par valider une habitude ou ajoute-en une nouvelle.'
+  const avatarInitial = (user.email?.charAt(0) || 'U').toUpperCase()
+  const heroStats = [
+    { label: 'Bonnes actions', value: goodHabitsLoggedToday, accent: '#4DA6FF' },
+    { label: 'Craquages', value: badHabitsLoggedToday, accent: '#FF4D4D' },
+    { label: 'Habitudes actives', value: totalHabits, accent: '#E0E0E0' },
+  ]
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="border-b border-gray-800 bg-gray-900">
-        <div className="max-w-4xl mx-auto px-4 py-4 md:py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">BadHabit Tracker 🔥</h1>
-              <p className="text-gray-400 text-sm mt-1">{user.email}</p>
+    <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
+      <div className="mx-auto max-w-5xl px-4 py-6 md:py-10 space-y-8">
+        <header className="rounded-3xl border border-white/5 bg-[#1E1E1E]/70 p-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#4DA6FF] text-2xl font-semibold text-white">
+                {avatarInitial}
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Tableau de bord</p>
+                <h1 className="text-3xl font-bold text-white">BadHabit Tracker 🔥</h1>
+                <p className="text-sm text-[#A0A0A0]">{user.email}</p>
+              </div>
             </div>
-            <div className="flex gap-2 md:gap-3">
-              <Link 
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              <Link
+                href="/report"
+                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white"
+              >
+                📈 Rapport
+              </Link>
+              <form action="/auth/signout" method="post">
+                <button className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white">
+                  Déconnexion
+                </button>
+              </form>
+              <Link
                 href="/habits/new"
-                className="flex-1 md:flex-none bg-red-600 hover:bg-red-700 px-3 md:px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base text-center hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-500/50"
+                className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#e04343]"
               >
                 + Nouvelle
               </Link>
-              <Link href="/report" className="bg-blue-600 px-4 py-2 rounded-lg">
-                📊 Rapport
+            </div>
+          </div>
+        </header>
+
+        <section className="rounded-3xl border border-[#FF4D4D]/40 bg-[#1F1414]/70 p-6 shadow-lg shadow-black/30">
+          <p className="text-xs uppercase tracking-[0.3em] text-[#FF9C9C]">Coach Roast</p>
+          <p className="mt-3 text-lg font-semibold text-white">{randomRoastBanner}</p>
+        </section>
+
+        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-6 md:p-8" aria-live="polite">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Focus du jour</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">{displayMessage}</h2>
+              <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
+            </div>
+            <div className="flex w-full flex-col gap-2 md:w-auto">
+              <Link
+                href="/habits/new"
+                className="rounded-2xl bg-[#FF4D4D] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e04343]"
+              >
+                + Ajouter une habitude
               </Link>
-              <form action="/auth/signout" method="post" className="flex-1 md:flex-none">
-                <button className="w-full bg-gray-800 hover:bg-gray-700 px-3 md:px-4 py-2 rounded-lg font-medium transition-all duration-200 border border-gray-700 text-sm md:text-base hover:scale-105 active:scale-95">
-                  Déco
-                </button>
-              </form>
+              <Link
+                href="/"
+                className="rounded-2xl border border-white/10 px-4 py-3 text-center text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white"
+              >
+                Voir les habitudes actives
+              </Link>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
-        {hasActivityToday ? (
-          <div className={`border rounded-lg p-4 mb-6 text-center transition-all duration-300 ${
-            messageType === 'bad'
-              ? 'bg-red-900/20 border-red-800'
-              : messageType === 'good'
-              ? 'bg-green-900/20 border-green-800'
-              : 'bg-gray-900 border-gray-800'
-          }`}>
-            <p className="text-gray-300 text-base md:text-lg">{displayMessage}</p>
-            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mt-2 text-sm text-gray-500">
-              {badHabitsLoggedToday > 0 && (
-                <span className="text-red-400">
-                  🔥 {badHabitsLoggedToday} craquage{badHabitsLoggedToday > 1 ? 's' : ''}
-                </span>
-              )}
-              {goodHabitsLoggedToday > 0 && (
-                <span className="text-green-400">
-                  ✨ {goodHabitsLoggedToday} bonne{goodHabitsLoggedToday > 1 ? 's' : ''} action{goodHabitsLoggedToday > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {heroStats.map(stat => (
+              <div key={stat.label} className="rounded-2xl border border-white/5 bg-black/20 px-4 py-4 text-center">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">{stat.label}</p>
+                <p className="mt-2 text-3xl font-semibold" style={{ color: stat.accent }}>
+                  {stat.value}
+                </p>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="border border-gray-800 bg-gray-900 rounded-lg p-6 mb-6 text-center">
-            <p className="text-gray-400 text-base md:text-lg">
-              Encore rien aujourd'hui. Commence la journée ! 🎯
-            </p>
-            <p className="text-gray-500 text-sm mt-2">
-              Clique sur un bouton ci-dessous pour tracker une habitude
-            </p>
-          </div>
-        )}
+        </section>
 
-        <CategoryManager />
+        <CategoryOverview stats={categoryStats} />
 
-        {groupedBadHabits.length > 0 ? (
-          <details open className="mb-8 border border-red-800/40 rounded-2xl bg-gray-900/40">
-            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer text-sm md:text-base font-semibold">
-              <span>🔥 Mauvaises habitudes ({safeBadHabits.length})</span>
-              <span className="text-xs text-gray-400">Cliquer pour réduire</span>
-            </summary>
-            <div className="p-4 space-y-4">
-              {groupedBadHabits.map(group => (
-                <CategoryAccordion
-                  key={group.category?.id || 'bad-uncategorized'}
-                  title={group.category?.name ?? 'Sans catégorie'}
-                  color={group.category?.color}
-                  count={group.habits.length}
-                  defaultOpen={false}
-                >
-                  {group.habits.map(habit => {
-                    const todayCount = todayCounts.get(habit.id) ?? 0
-                    const hasLoggedToday = todayCount > 0
-                    return (
-                      <div
-                        key={habit.id}
-                        className={`bg-gray-900 rounded-lg p-4 md:p-5 border transition-all duration-300 ${
-                          hasLoggedToday
-                            ? 'border-red-700 shadow-lg shadow-red-900/20'
-                            : 'border-gray-800 hover:border-red-900/30'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                          <Link
-                            href={`/habits/${habit.id}`}
-                            className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
-                          >
-                            <div
-                              className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
-                              style={{ backgroundColor: habit.color + '20' }}
-                            >
-                              {habit.icon || '🔥'}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-lg md:text-xl font-semibold truncate">{habit.name}</h3>
-                              {habit.description && (
-                                <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-1">{habit.description}</p>
-                              )}
-                            </div>
-                          </Link>
+        <HabitSectionsClient
+          badHabits={groupedBadHabits}
+          goodHabits={groupedGoodHabits}
+          todayCounts={todayCountsRecord}
+        />
 
-                          <HabitQuickActions
-                            habitId={habit.id}
-                            habitType="bad"
-                            trackingMode={habit.tracking_mode}
-                            initialCount={todayCount}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CategoryAccordion>
-              ))}
-            </div>
-          </details>
-        ) : (
-          <div className="mb-8 text-sm text-gray-500 bg-gray-900/40 border border-gray-800 rounded-2xl px-4 py-6">
-            Aucune mauvaise habitude active.
-          </div>
-        )}
-
-        {groupedGoodHabits.length > 0 ? (
-          <details open className="mb-8 border border-green-800/40 rounded-2xl bg-gray-900/40">
-            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer text-sm md:text-base font-semibold">
-              <span>✨ Bonnes habitudes ({safeGoodHabits.length})</span>
-              <span className="text-xs text-gray-400">Cliquer pour réduire</span>
-            </summary>
-            <div className="p-4 space-y-4">
-              {groupedGoodHabits.map(group => (
-                <CategoryAccordion
-                  key={group.category?.id || 'good-uncategorized'}
-                  title={group.category?.name ?? 'Sans catégorie'}
-                  color={group.category?.color}
-                  count={group.habits.length}
-                  defaultOpen={false}
-                >
-                  {group.habits.map(habit => {
-                    const todayCount = todayCounts.get(habit.id) ?? 0
-                    const hasLoggedToday = todayCount > 0
-                    return (
-                      <div
-                        key={habit.id}
-                        className={`bg-gray-900 rounded-lg p-4 md:p-5 border transition-all duration-300 ${
-                          hasLoggedToday
-                            ? 'border-green-700 shadow-lg shadow-green-900/20'
-                            : 'border-gray-800 hover:border-green-900/30'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                          <Link
-                            href={`/habits/${habit.id}`}
-                            className="flex items-center gap-3 md:gap-4 flex-1 cursor-pointer min-w-0"
-                          >
-                            <div
-                              className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-xl md:text-2xl flex-shrink-0"
-                              style={{ backgroundColor: habit.color + '20' }}
-                            >
-                              {habit.icon || '✨'}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-lg md:text-xl font-semibold truncate">{habit.name}</h3>
-                              {habit.description && (
-                                <p className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-1">{habit.description}</p>
-                              )}
-                            </div>
-                          </Link>
-
-                          <HabitQuickActions
-                            habitId={habit.id}
-                            habitType="good"
-                            trackingMode={habit.tracking_mode}
-                            initialCount={todayCount}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CategoryAccordion>
-              ))}
-            </div>
-          </details>
-        ) : (
-          <div className="mb-8 text-sm text-gray-500 bg-gray-900/40 border border-gray-800 rounded-2xl px-4 py-6">
-            Aucune bonne habitude active.
-          </div>
-        )}
-
-        {safeBadHabits.length === 0 && safeGoodHabits.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-5xl md:text-6xl mb-4">🎯</div>
-            <h2 className="text-xl md:text-2xl font-bold mb-2">Aucune habitude pour l'instant</h2>
-            <p className="text-gray-400 mb-6 text-sm md:text-base">
-              Commence par tracker tes mauvaises habitudes... ou tes bonnes ! 😏
+        {totalHabits === 0 && (
+          <div className="rounded-3xl border border-dashed border-white/10 bg-[#1E1E1E]/60 p-8 text-center">
+            <p className="text-lg font-semibold text-white">Commence par créer une habitude</p>
+            <p className="mt-2 text-sm text-[#A0A0A0]">
+              Choisis un objectif clair ou une mauvaise habitude à surveiller.
             </p>
             <Link
               href="/habits/new"
-              className="inline-block bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium transition-all duration-200 text-sm md:text-base hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-500/50"
+              className="mt-4 inline-block rounded-2xl bg-[#FF4D4D] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#e04343]"
             >
               Créer ma première habitude
             </Link>
           </div>
         )}
+
+        <div className="rounded-3xl border border-white/5 bg-[#1E1E1E]/60 p-6">
+          <CategoryManager />
+        </div>
       </div>
     </main>
+  )
+}
+
+function buildCategoryStats(categories: CategoryRow[], habits: HabitRow[]): CategoryStat[] {
+  const baseStats = new Map<string, CategoryStat>()
+
+  categories.forEach(category => {
+    baseStats.set(category.id, {
+      id: category.id,
+      name: category.name,
+      color: category.color,
+      count: 0,
+    })
+  })
+
+  habits.forEach(habit => {
+    const categoryId = habit.category_id
+    if (categoryId && baseStats.has(categoryId)) {
+      baseStats.get(categoryId)!.count += 1
+    } else if (categoryId) {
+      baseStats.set(categoryId, {
+        id: categoryId,
+        name: 'Catégorie inconnue',
+        color: habit.color,
+        count: 1,
+      })
+    } else {
+      const existing = baseStats.get('uncategorized')
+      if (existing) {
+        existing.count += 1
+      } else {
+        baseStats.set('uncategorized', {
+          id: 'uncategorized',
+          name: 'Sans catégorie',
+          color: null,
+          count: 1,
+        })
+      }
+    }
+  })
+
+  return Array.from(baseStats.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
+
+function CategoryOverview({ stats }: { stats: CategoryStat[] }) {
+  return (
+    <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/60 p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Catégories</p>
+          <h2 className="text-2xl font-semibold text-white">Organisation des habitudes</h2>
+        </div>
+        <span className="text-sm text-[#A0A0A0]">
+          {stats.length > 0 ? `${stats.length} catégorie${stats.length > 1 ? 's' : ''}` : 'Aucune catégorie'}
+        </span>
+      </div>
+
+      {stats.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-sm text-[#A0A0A0]">
+          Pas encore de catégories personnalisées. Utilise le module plus bas pour en créer.
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {stats.map(stat => (
+            <article key={stat.id} className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
+                <span className="text-sm font-medium text-white">{stat.name}</span>
+              </div>
+              <span className="text-xs text-[#A0A0A0]">
+                {stat.count} habitude{stat.count > 1 ? 's' : ''}
+              </span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }

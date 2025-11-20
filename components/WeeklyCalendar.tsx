@@ -11,47 +11,46 @@ interface WeeklyCalendarProps {
   onDayClick: (date: string) => void
 }
 
-export function WeeklyCalendar({ 
-  habitType, 
-  calendarData, 
+export function WeeklyCalendar({
+  habitType,
+  calendarData,
   trackingMode,
-  onDayClick 
+  onDayClick,
 }: WeeklyCalendarProps) {
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
   const todayIso = getTodayDateISO()
 
-  // Générer les 4 dernières semaines
   const weeks = generateWeeks(4, currentWeekOffset)
 
   function generateWeeks(numWeeks: number, offset: number = 0) {
     const weeks = []
     const today = new Date()
-    
+
     for (let w = numWeeks - 1; w >= 0; w--) {
       const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() - ((w + offset) * 7) - today.getDay() + 1) // Lundi
-      
+      weekStart.setDate(today.getDate() - (w + offset) * 7 - today.getDay() + 1)
+
       const days = []
       for (let d = 0; d < 7; d++) {
         const date = new Date(weekStart)
         date.setDate(weekStart.getDate() + d)
         const dateStr = date.toISOString().split('T')[0]
-        
+
         days.push({
           date: dateStr,
           dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
           dayNumber: date.getDate(),
-          isToday: dateStr === today.toISOString().split('T')[0],
+          isToday: dateStr === todayIso,
           count: calendarData[dateStr] || 0,
         })
       }
-      
+
       weeks.push({
         weekNumber: getWeekNumber(weekStart),
         days,
       })
     }
-    
+
     return weeks
   }
 
@@ -62,72 +61,64 @@ export function WeeklyCalendar({
   }
 
   function getCellStyle(dateStr: string, count: number, isToday: boolean) {
+    const selectedClasses = isToday ? 'border-2 border-[#4DA6FF]' : 'border border-white/5'
+
     if (isFutureDate(dateStr)) {
-      return `bg-gray-900/50 border border-gray-800 cursor-not-allowed ${
-        isToday ? 'ring-2 ring-blue-500' : ''
-      }`
+      return `bg-[#161822] text-white/30 cursor-not-allowed ${selectedClasses}`
     }
 
     if (trackingMode === 'binary') {
       if (count > 0) {
-        return habitType === 'good'
-          ? `bg-green-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-          : `bg-red-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+        return `${habitType === 'good' ? 'bg-[#1d4d2c]' : 'bg-[#3b1212]'} text-white ${selectedClasses}`
       }
-
-      return habitType === 'good'
-        ? `bg-red-900/40 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-        : `bg-green-900/30 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+      return `${habitType === 'good' ? 'bg-[#2a2323]' : 'bg-[#102417]'} text-white/60 ${selectedClasses}`
     }
 
     if (count === 0) {
-      return `bg-gray-800 ${isToday ? 'ring-2 ring-blue-500' : ''}`
+      return `bg-[#181b29] text-white/50 ${selectedClasses}`
     }
 
-    // Mode counter - intensité
-    const intensity = Math.min(count / 3, 1) // Ajustable selon l'objectif
-    
-    if (habitType === 'good') {
-      if (intensity <= 0.33) return `bg-green-900/50 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-      if (intensity <= 0.66) return `bg-green-700 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-      return `bg-green-500 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-    } else {
-      if (intensity <= 0.33) return `bg-yellow-900/50 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-      if (intensity <= 0.66) return `bg-orange-700 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-      return `bg-red-600 ${isToday ? 'ring-2 ring-blue-500' : ''}`
-    }
+    const intensity = Math.min(count / 3, 1)
+    const palette = habitType === 'good' ? ['#133022', '#1c5b32', '#25a249'] : ['#33210b', '#6e3412', '#bf1b1b']
+    const color = intensity <= 0.33 ? palette[0] : intensity <= 0.66 ? palette[1] : palette[2]
+
+    return `text-white ${selectedClasses}`
   }
 
   return (
-    <div className="bg-gray-900 rounded-lg p-4 md:p-6 border border-gray-800">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg md:text-xl font-bold">Calendrier</h2>
-        
-        <div className="flex items-center gap-2">
+    <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#0B0D19] via-[#090911] to-[#050609] p-6 shadow-2xl shadow-black/40">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Calendrier</p>
+          <h2 className="text-2xl font-bold text-white">Historique visuel</h2>
+        </div>
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setCurrentWeekOffset(currentWeekOffset + 4)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            className="rounded-full border border-white/10 p-2 text-white/70 transition hover:border-white/40"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="text-sm text-gray-400 min-w-[120px] text-center">
-            {currentWeekOffset === 0 ? '4 dernières semaines' : `Semaines précédentes`}
+          <span className="min-w-[140px] text-center text-sm text-white/60">
+            {currentWeekOffset === 0 ? '4 dernières semaines' : 'Semaines précédentes'}
           </span>
           <button
             onClick={() => setCurrentWeekOffset(Math.max(0, currentWeekOffset - 4))}
             disabled={currentWeekOffset === 0}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="rounded-full border border-white/10 p-2 text-white/70 transition hover:border-white/40 disabled:opacity-30"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {weeks.map((week, weekIdx) => (
-          <div key={weekIdx}>
-            <div className="text-xs text-gray-500 mb-2">Semaine {week.weekNumber}</div>
-            <div className="grid grid-cols-7 gap-2">
+          <div key={weekIdx} className="rounded-2xl border border-white/5 bg-black/20 p-4">
+            <p className="mb-3 text-xs uppercase tracking-[0.3em] text-white/40">
+              Semaine {week.weekNumber}
+            </p>
+            <div className="grid grid-cols-7 gap-3">
               {week.days.map((day) => (
                 <button
                   key={day.date}
@@ -135,17 +126,14 @@ export function WeeklyCalendar({
                     if (isFutureDate(day.date)) return
                     onDayClick(day.date)
                   }}
-                  className={`
-                    aspect-square rounded-lg transition-all duration-200
-                    hover:scale-105 active:scale-95
-                    flex flex-col items-center justify-center
-                    ${getCellStyle(day.date, day.count, day.isToday)}
-                  `}
+                  className={`day-box flex flex-col items-center justify-center rounded-lg p-2 text-center text-white transition hover:-translate-y-1 ${getCellStyle(day.date, day.count, day.isToday)}`}
                 >
-                  <div className="text-xs font-medium opacity-70">{day.dayName}</div>
-                  <div className="text-lg font-bold">{day.dayNumber}</div>
+                  <span className="text-[0.65rem] uppercase tracking-wide text-white/60">
+                    {day.dayName}
+                  </span>
+                  <span className="text-xl font-bold">{day.dayNumber}</span>
                   {day.count > 0 && trackingMode === 'counter' && (
-                    <div className="text-xs opacity-80 mt-0.5">{day.count}×</div>
+                    <span className="text-xs text-white/70">{day.count}×</span>
                   )}
                 </button>
               ))}
@@ -154,39 +142,28 @@ export function WeeklyCalendar({
         ))}
       </div>
 
-      <div className="flex items-center justify-end gap-3 mt-4 text-xs text-gray-400">
+      <div className="calendar-footer text-xs text-white/60">
         {trackingMode === 'binary' ? (
-          <>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-4 h-4 rounded ${
-                  habitType === 'good' ? 'bg-red-900/40' : 'bg-green-900/30'
-                }`}
-              ></div>
-              <span>{habitType === 'good' ? 'À faire' : 'OK'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-4 h-4 rounded ${
-                  habitType === 'good' ? 'bg-green-600' : 'bg-red-600'
-                }`}
-              ></div>
-              <span>{habitType === 'good' ? 'Validée' : 'Craquage'}</span>
-            </div>
-          </>
+          <div className="flex flex-wrap items-center gap-4">
+            <Legend color={habitType === 'good' ? '#2a2323' : '#102417'} label={habitType === 'good' ? 'À faire' : 'OK'} />
+            <Legend color={habitType === 'good' ? '#1d4d2c' : '#3b1212'} label={habitType === 'good' ? 'Validée' : 'Craquage'} />
+          </div>
         ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-800 rounded"></div>
-              <span>Vide</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded ${habitType === 'good' ? 'bg-green-600' : 'bg-red-600'}`}></div>
-              <span>{habitType === 'good' ? 'Fait' : 'Craqué'}</span>
-            </div>
-          </>
+          <div className="flex flex-wrap items-center gap-4">
+            <Legend color="#181b29" label="Vide" />
+            <Legend color={habitType === 'good' ? '#25a249' : '#bf1b1b'} label={habitType === 'good' ? 'Fait' : 'Craqué'} />
+          </div>
         )}
       </div>
+    </section>
+  )
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-4 w-4 rounded" style={{ backgroundColor: color }} />
+      <span>{label}</span>
     </div>
   )
 }

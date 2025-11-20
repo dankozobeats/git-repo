@@ -229,62 +229,52 @@ export default function GamificationPanel({
   const isBadHabit = habit.type === 'bad'
 
   return (
-    <section className="bg-gray-900 rounded-lg border border-gray-800 p-5 md:p-6 space-y-6">
+    <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#0D111D] to-[#07090F] p-6 space-y-6 shadow-2xl shadow-black/40">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-widest text-gray-400 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-yellow-500" /> Gamification
+          <p className="text-sm uppercase tracking-[0.3em] text-white/50 flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-[#FFB347]" /> Gamification
           </p>
           <h3 className="text-2xl font-bold text-white mt-1">
             {isBadHabit ? 'Score de contrôle' : 'Score de progression'}
           </h3>
-          <p className="text-gray-400 text-sm">
-            Basé sur tes 4 dernières semaines
-          </p>
+          <p className="text-white/60 text-sm">Basé sur tes 4 dernières semaines.</p>
         </div>
 
-        <div className="flex items-center gap-4 bg-gray-800/50 rounded-2xl px-5 py-3 border border-gray-700 flex-shrink-0">
+        <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 flex-shrink-0">
           <div>
-            <div className="text-xs text-gray-400 uppercase tracking-wider">
-              Points
-            </div>
-            <div className="text-4xl font-bold text-white tabular-nums">
-              {points}
-            </div>
+            <div className="text-xs text-white/50 uppercase tracking-wider">Points</div>
+            <div className="text-4xl font-bold text-white tabular-nums">{points}</div>
           </div>
-          <div className="h-12 w-px bg-gray-700 hidden sm:block" />
+          <div className="h-12 w-px bg-white/10 hidden sm:block" />
           <div>
-            <div className="text-xs text-gray-400 uppercase tracking-wider">
-              Niveau
-            </div>
-            <div className="text-2xl font-semibold text-yellow-400">
-              {level.name}
-            </div>
+            <div className="text-xs text-white/50 uppercase tracking-wider">Niveau</div>
+            <div className="text-2xl font-semibold text-[#FFB347]">{level.name}</div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/60">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Sparkles className="w-4 h-4 text-blue-400" />
+        <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center gap-2 text-sm text-white/60">
+            <Sparkles className="w-4 h-4 text-[#4DA6FF]" />
             Progression niveau
           </div>
-          <div className="h-2 bg-gray-700 rounded-full mt-3 overflow-hidden">
+          <div className="h-2 bg-white/10 rounded-full mt-3 overflow-hidden">
             <div
-              className={`h-full ${isBadHabit ? 'bg-orange-400' : 'bg-green-400'}`}
+              className={`h-full ${isBadHabit ? 'bg-[#FF4D4D]' : 'bg-[#4DA6FF]'}`}
               style={{ width: `${level.progress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-white/50 mt-2">
             {level.nextThreshold
               ? `${level.nextThreshold} pts pour le niveau suivant`
               : 'Niveau max atteint !'}
           </p>
         </div>
 
-        <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/60">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center gap-2 text-sm text-white/60">
             {isBadHabit ? (
               <Shield className="w-4 h-4 text-emerald-400" />
             ) : (
@@ -295,22 +285,20 @@ export default function GamificationPanel({
           <div className="text-3xl font-bold mt-2 text-white">
             {isBadHabit ? calmMetrics.calmDays : last7DaysCount}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-white/50 mt-1">
             {isBadHabit
               ? 'Sans craquage sur les 28 derniers jours'
               : 'Actions réalisées sur 7 jours'}
           </p>
         </div>
 
-        <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/60">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="bg-black/30 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center gap-2 text-sm text-white/60">
             <Flame className="w-4 h-4 text-orange-400" />
             Streak actuel
           </div>
-          <div className="text-3xl font-bold mt-2 text-white">
-            {currentStreak}j
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <div className="text-3xl font-bold mt-2 text-white">{currentStreak}j</div>
+          <p className="text-xs text-white/50 mt-1">
             {isBadHabit
               ? calmMetrics.calmStreak > 0
                 ? `${calmMetrics.calmStreak} jours clean`
@@ -321,8 +309,8 @@ export default function GamificationPanel({
       </div>
 
       <div>
-        <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-400" />
+        <p className="text-sm text-white/60 mb-3 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#FFB347]" />
           Badges
         </p>
         <div className="flex flex-wrap gap-3">
@@ -331,8 +319,8 @@ export default function GamificationPanel({
               key={badge.id}
               className={`px-4 py-2 rounded-xl border text-sm transition ${
                 badge.unlocked
-                  ? 'bg-green-900/30 border-green-700/60 text-white'
-                  : 'bg-gray-800/50 border-gray-700 text-gray-500'
+                  ? 'bg-[#102315] border-emerald-600/60 text-white'
+                  : 'bg-black/20 border-white/10 text-white/40'
               }`}
             >
               <div className="flex items-center gap-2 font-medium">
