@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTodayDateISO } from '@/lib/date-utils'
 import { getRandomMessage } from '@/lib/coach/roastMessages'
-import CategoryManager from '@/components/CategoryManager'
 import type { Database } from '@/types/database'
 import HabitSectionsClient from '@/components/HabitSectionsClient'
 
@@ -285,6 +284,7 @@ export default async function Home() {
           badHabits={groupedBadHabits}
           goodHabits={groupedGoodHabits}
           todayCounts={todayCountsRecord}
+          categoryStats={categoryStats}
         />
 
         {totalHabits === 0 && (
@@ -302,10 +302,6 @@ export default async function Home() {
           </div>
         )}
 
-        <div className="rounded-3xl border border-white/5 bg-[#1E1E1E]/60 p-6">
-          <CategoryManager />
-        </div>
-        <CategoryOverview stats={categoryStats} />
       </div>
     </main>
   )
@@ -350,40 +346,4 @@ function buildCategoryStats(categories: CategoryRow[], habits: HabitRow[]): Cate
   })
 
   return Array.from(baseStats.values()).sort((a, b) => a.name.localeCompare(b.name))
-}
-
-function CategoryOverview({ stats }: { stats: CategoryStat[] }) {
-  return (
-    <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/60 p-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Catégories</p>
-          <h2 className="text-2xl font-semibold text-white">Organisation des habitudes</h2>
-        </div>
-        <span className="text-sm text-[#A0A0A0]">
-          {stats.length > 0 ? `${stats.length} catégorie${stats.length > 1 ? 's' : ''}` : 'Aucune catégorie'}
-        </span>
-      </div>
-
-      {stats.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-sm text-[#A0A0A0]">
-          Pas encore de catégories personnalisées. Utilise le module plus bas pour en créer.
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {stats.map(stat => (
-            <article key={stat.id} className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
-                <span className="text-sm font-medium text-white">{stat.name}</span>
-              </div>
-              <span className="text-xs text-[#A0A0A0]">
-                {stat.count} habitude{stat.count > 1 ? 's' : ''}
-              </span>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  )
 }

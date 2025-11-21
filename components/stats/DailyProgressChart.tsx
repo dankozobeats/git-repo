@@ -12,37 +12,54 @@ type DailyProgressChartProps = {
 }
 
 export default function DailyProgressChart({ data }: DailyProgressChartProps) {
+  const cardClass =
+    'glass-card min-h-[320px] w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
+  const axisColor = '#C5C8D0'
+
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-white/50">30 derniers jours</p>
-        <h3 className="text-xl font-semibold text-white">Progression quotidienne</h3>
+    <div className={cardClass}>
+      <div className="flex flex-col gap-1 text-white">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/60">30 derniers jours</p>
+        <h3 className="text-xl font-semibold">Progression quotidienne</h3>
       </div>
-      <div className="w-full rounded-2xl bg-[#08080d] p-4 h-[360px]">
+      <div className="h-[320px] w-full mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid stroke="#1f1f2b" strokeDasharray="3 3" />
-            <XAxis dataKey="date" stroke="#9CA3AF" tickLine={false} axisLine={false} minTickGap={16} />
-            <YAxis
-              stroke="#9CA3AF"
+            <XAxis
+              dataKey="date"
+              tick={{ fill: axisColor, fontSize: 12 }}
               tickLine={false}
               axisLine={false}
-              width={40}
+              minTickGap={16}
+            />
+            <YAxis
+              tick={{ fill: axisColor, fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+              width={48}
               domain={[0, 100]}
               tickFormatter={value => `${value}%`}
             />
             <Tooltip
-              contentStyle={{ background: '#111119', border: '1px solid #2F2F3A', borderRadius: '12px' }}
-              labelStyle={{ color: '#fff' }}
+              contentStyle={{
+                background: 'rgba(11,11,17,0.8)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 16,
+                backdropFilter: 'blur(12px)',
+              }}
+              labelStyle={{ color: '#fff', fontWeight: 600 }}
+              itemStyle={{ color: '#fff', fontWeight: 600 }}
               formatter={value => [`${value}%`, 'Complétion']}
             />
             <Line
               type="monotone"
               dataKey="completion"
-              stroke="#FF4D4D"
+              stroke="#FF4D6D"
               strokeWidth={3}
               dot={false}
-              activeDot={{ r: 6 }}
+              activeDot={{ r: 6, style: { filter: 'drop-shadow(0 0 8px rgba(255,77,109,0.6))' } }}
+              style={{ filter: 'drop-shadow(0 0 12px rgba(255,77,109,0.35))' }}
             />
           </LineChart>
         </ResponsiveContainer>

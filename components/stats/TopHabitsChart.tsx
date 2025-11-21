@@ -12,13 +12,17 @@ type TopHabitsChartProps = {
 }
 
 export default function TopHabitsChart({ data }: TopHabitsChartProps) {
+  const cardClass =
+    'glass-card min-h-[320px] w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
+  const axisColor = '#C5C8D0'
+
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-white/50">Classement</p>
-        <h3 className="text-xl font-semibold text-white">Top habitudes validées</h3>
+    <div className={cardClass}>
+      <div className="flex flex-col gap-1 text-white">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/60">Classement</p>
+        <h3 className="text-xl font-semibold">Top habitudes validées</h3>
       </div>
-      <div className="w-full rounded-2xl bg-[#08080d] p-4 h-[360px]">
+      <div className="h-[320px] w-full mt-4">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={[...data].reverse()} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid stroke="#1f1f2b" strokeDasharray="3 3" horizontal={false} />
@@ -26,17 +30,29 @@ export default function TopHabitsChart({ data }: TopHabitsChartProps) {
             <YAxis
               type="category"
               dataKey="habit"
-              width={120}
+              width={140}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: '#E5E7EB', fontSize: 12 }}
+              tick={{ fill: axisColor, fontSize: 12 }}
             />
             <Tooltip
-              contentStyle={{ background: '#111119', border: '1px solid #2F2F3A', borderRadius: '12px' }}
-              labelStyle={{ color: '#fff' }}
+              contentStyle={{
+                background: 'rgba(11,11,17,0.8)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 16,
+                backdropFilter: 'blur(12px)',
+              }}
+              labelStyle={{ color: '#fff', fontWeight: 600 }}
+              itemStyle={{ color: '#fff', fontWeight: 600 }}
               formatter={value => [`${value}%`, 'Complétion']}
             />
-            <Bar dataKey="completion" fill="#2ECC71" radius={[0, 12, 12, 0]} />
+            <Bar
+              dataKey="completion"
+              fill="#2ECC71"
+              radius={[0, 14, 14, 0]}
+              barSize={18}
+              style={{ filter: 'drop-shadow(0 0 12px rgba(46,204,113,0.35))' }}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>

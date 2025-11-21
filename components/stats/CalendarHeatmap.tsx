@@ -29,14 +29,16 @@ export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
   }, {})
 
   const months = Object.keys(byMonth)
+  const cardClass =
+    'glass-card min-h-[320px] w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-xs uppercase tracking-[0.3em] text-white/50">12 derniers mois</p>
-        <h3 className="text-xl font-semibold text-white">Calendrier de complétion</h3>
+    <div className={cardClass}>
+      <div className="flex flex-col gap-1 text-white">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/60">12 derniers mois</p>
+        <h3 className="text-xl font-semibold">Calendrier de complétion</h3>
       </div>
-      <div className="min-h-[360px] w-full rounded-2xl bg-[#08080d] p-4 space-y-6">
+      <div className="mt-4 space-y-6">
         {months.length === 0 && <p className="text-sm text-white/60">Aucune donnée récente.</p>}
         {months.map(month => (
           <div key={month} className="space-y-2">
@@ -45,8 +47,8 @@ export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
               {(byMonth[month] || []).map(point => (
                 <div
                   key={point.date}
-                  className="h-6 rounded-md border border-white/5"
-                  style={{ backgroundColor: getColor(point.completion) }}
+                  className="h-6 rounded-md border border-white/5 transition-colors"
+                  style={{ backgroundColor: getColor(point.completion), filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.08))' }}
                   title={`${point.date} • ${point.completion}%`}
                 />
               ))}
@@ -54,7 +56,7 @@ export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 text-xs text-white/50">
+      <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-white/50">
         Intensité:
         {buckets.map(bucket => (
           <span key={bucket} className="flex items-center gap-1">

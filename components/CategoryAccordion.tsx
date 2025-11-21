@@ -4,8 +4,8 @@ import { useState } from 'react'
 
 type CategoryAccordionProps = {
   id?: string
-  openId?: string | null
-  onToggle?: (id: string) => void
+  openCategoryId?: string | null
+  setOpenCategoryId?: (id: string | null) => void
   title: string
   count: number
   color?: string | null
@@ -18,8 +18,8 @@ type CategoryAccordionProps = {
 
 export default function CategoryAccordion({
   id,
-  openId,
-  onToggle,
+  openCategoryId,
+  setOpenCategoryId,
   title,
   count,
   color,
@@ -30,23 +30,28 @@ export default function CategoryAccordion({
   contentClassName,
 }: CategoryAccordionProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
-  const isControlled = typeof id === 'string' && typeof openId !== 'undefined' && typeof onToggle === 'function'
-  const isOpen = isControlled ? openId === id : uncontrolledOpen
+  const isControlled =
+    typeof id === 'string' && typeof openCategoryId !== 'undefined' && typeof setOpenCategoryId === 'function'
+  const isOpen = isControlled ? openCategoryId === id : uncontrolledOpen
 
   const handleToggle = () => {
     if (isControlled && id) {
-      onToggle(id)
+      setOpenCategoryId(openCategoryId === id ? null : id)
     } else {
       setUncontrolledOpen(prev => !prev)
     }
   }
 
   return (
-    <div className={`border border-gray-800 rounded-xl overflow-hidden ${className || ''}`}>
+    <div
+      className={`overflow-hidden rounded-2xl border-0 bg-transparent sm:border sm:border-gray-800 sm:bg-black/30 ${
+        className || ''
+      }`}
+    >
       <button
         type="button"
         onClick={handleToggle}
-        className={`w-full flex items-center justify-between px-4 py-3 bg-gray-900/70 hover:bg-gray-900 transition-colors ${
+        className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-white transition sm:rounded-none sm:px-4 sm:py-4 sm:bg-gray-900/70 sm:hover:bg-gray-900 ${
           headerClassName || ''
         }`}
         aria-expanded={isOpen}
@@ -63,7 +68,7 @@ export default function CategoryAccordion({
       {isOpen && (
         <div
           id={id ? `${id}-content` : undefined}
-          className={`p-4 space-y-3 ${contentClassName || ''}`}
+          className={`px-0 py-0 sm:px-4 sm:py-4 ${contentClassName || ''}`}
           role="region"
           aria-labelledby={id}
         >

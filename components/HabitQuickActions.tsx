@@ -36,27 +36,6 @@ export default function HabitQuickActions({
   const hasValue = count > 0
   const isMutating = isSubmitting || isPending
 
-  const statusLabel =
-    habitType === 'good'
-      ? hasValue
-        ? 'Validée'
-        : 'À faire'
-      : hasValue
-      ? `Craquage${isCounterMode && count > 1 ? ` (${count})` : ''}`
-      : 'Aucun craquage'
-
-  const statusClasses =
-    habitType === 'good'
-      ? hasValue
-        ? 'bg-green-900/40 text-green-200 border-green-800'
-        : 'bg-red-900/30 text-red-200 border-red-800'
-      : hasValue
-      ? 'bg-red-900/40 text-red-200 border-red-800'
-      : 'bg-green-900/30 text-green-200 border-green-800'
-
-  const pillBaseClasses =
-    'inline-flex h-10 min-w-[120px] items-center justify-center rounded-lg border px-4 text-center text-xs font-semibold'
-
   const buttonBaseClasses =
     'flex-1 h-11 rounded-lg px-4 font-semibold text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4DA6FF]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090f]'
 
@@ -96,7 +75,6 @@ export default function HabitQuickActions({
   }
 
   const disablePrimary = isMutating || (!isCounterMode && hasValue)
-  const disableSecondary = isMutating || !hasValue
   const primaryLabel = habitType === 'bad' ? '+ Craquage' : 'Valider'
 
   const safeStreak = Math.max(0, streak)
@@ -106,39 +84,50 @@ export default function HabitQuickActions({
   return (
     <>
       {ToastComponent}
-      <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row">
-        <span className={`${pillBaseClasses} ${statusClasses}`}>
-          {statusLabel}
-        </span>
-        <div className="flex gap-2 w-full sm:w-auto">
-        <button
-          type="button"
-          disabled={disableSecondary}
-          onClick={() => handleAction('DELETE')}
-          className={`${buttonBaseClasses} border ${
-            disableSecondary
-              ? 'border-gray-800 bg-gray-900 text-gray-500 opacity-70 cursor-not-allowed'
-              : 'border-gray-700 bg-gray-800 text-gray-100 hover:bg-gray-700 hover:scale-[1.02] active:scale-95'
-          }`}
-        >
-          Corriger
-        </button>
-        <button
-          type="button"
-          disabled={disablePrimary}
-          onClick={() => handleAction('POST')}
-          className={`${buttonBaseClasses} ${
-            disablePrimary
-              ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800 opacity-70'
-              : habitType === 'bad'
-              ? 'bg-red-600 text-white hover:bg-red-700 hover:scale-[1.02] active:scale-95 border border-red-500/70'
-              : 'bg-green-600 text-white hover:bg-green-700 hover:scale-[1.02] active:scale-95 border border-green-500/70'
-          }`}
-        >
-          {primaryLabel}
-        </button>
+      <div className="hidden w-full min-w-0 max-w-full flex-wrap gap-2 justify-between sm:flex sm:w-auto sm:flex-nowrap sm:justify-start">
+        <div className="flex flex-wrap gap-2 w-full min-w-0 max-w-full justify-end sm:w-auto sm:flex-nowrap sm:justify-start">
+          <button
+            type="button"
+            disabled={disablePrimary}
+            onClick={() => handleAction('POST')}
+            className={`${buttonBaseClasses} flex-shrink-0 ${
+              disablePrimary
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800 opacity-70'
+                : habitType === 'bad'
+                ? 'bg-red-600 text-white hover:bg-red-700 hover:scale-[1.02] active:scale-95 border border-red-500/70'
+                : 'bg-green-600 text-white hover:bg-green-700 hover:scale-[1.02] active:scale-95 border border-green-500/70'
+            }`}
+          >
+            {primaryLabel}
+          </button>
+        </div>
       </div>
-    </div>
+
+      <div className="flex w-full flex-wrap gap-2 sm:hidden">
+        {habitType === 'bad' ? (
+          <button
+            type="button"
+            disabled={disablePrimary}
+            onClick={() => handleAction('POST')}
+            className="flex-shrink-0 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-red-900/40 transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            + Craquage
+          </button>
+        ) : hasValue ? (
+          <span className="flex-shrink-0 rounded-xl border border-green-500/60 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-200">
+            Validée
+          </span>
+        ) : (
+          <button
+            type="button"
+            disabled={disablePrimary}
+            onClick={() => handleAction('POST')}
+            className="flex-shrink-0 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/40 transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Valider
+          </button>
+        )}
+      </div>
     </>
   )
 }

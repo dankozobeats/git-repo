@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Trash2,
@@ -16,12 +16,16 @@ import GraphAIStats from '@/components/GraphAIStats'
 import AIDisciplineScore from '@/components/AIScoreCard'
 import AIHeatmap from '@/components/AIHeatmap'
 import AICalendarView from '@/components/AICalendarView'
+import ReportModal from '@/components/ReportModal'
 
 export default function HistoryPage() {
   const [reports, setReports] = useState<any[]>([])
   const [filter, setFilter] = useState('all')
   const [sortAsc, setSortAsc] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
   async function loadReports() {
     const res = await fetch('/api/ai-reports')
@@ -66,6 +70,25 @@ export default function HistoryPage() {
     window.location.href = `/reports/compare?id1=${id1}&id2=${id2}`
   }
 
+  const reportsByDate = useMemo(() => {
+    const map: Record<string, any[]> = {}
+    reports.forEach(report => {
+      const key = formatDateKey(report.created_at)
+      if (!map[key]) map[key] = []
+      map[key].push(report)
+    })
+    return map
+  }, [reports])
+
+  const reportsForSelectedDate = selectedDate ? reportsByDate[selectedDate] ?? [] : []
+
+  function handleDayClick(date: string) {
+    setSelectedDate(date)
+    const dayReports = reportsByDate[date] ?? []
+    setSelectedReportId(dayReports[0]?.id ?? null)
+    setModalOpen(dayReports.length > 0)
+  }
+
   return (
     <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
       <header className="border-b border-white/5 bg-gradient-to-r from-[#1E1E1E] via-[#0F0F0F] to-[#1A1A1A]">
@@ -99,7 +122,7 @@ export default function HistoryPage() {
           <p className="text-sm text-white/60 mb-6">Synthèse des derniers rapports générés.</p>
           <AIDisciplineScore reports={reports} />
           <AIHeatmap reports={reports} />
-          <AICalendarView reports={reports} />
+          <AICalendarView reports={reports} onDayClick={handleDayClick} />
         </section>
 
         <section className="rounded-3xl border border-white/5 bg-[#1B1B24] p-6 shadow-2xl shadow-black/40 space-y-6">
@@ -165,7 +188,9 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              <pre className="whitespace-pre-wrap text-sm text-white/80">{r.report}</pre>
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-white/70">
+                Rapport généré automatiquement. Consulte les détails via le calendrier.
+              </div>
 
               <div className="mt-4 flex items-center gap-3 border-t border-white/10 pt-3">
                 <label className="inline-flex items-center gap-2 text-xs text-white/50">
@@ -186,6 +211,23 @@ export default function HistoryPage() {
           ))}
         </section>
       </div>
+
+      <ReportModal
+        open={modalOpen}
+        date={selectedDate}
+        reports={reportsForSelectedDate}
+        selectedReportId={selectedReportId}
+        onSelectReport={id => setSelectedReportId(id)}
+        onClose={() => {
+          setModalOpen(false)
+          setSelectedReportId(null)
+        }}
+      />
     </main>
   )
+}
+
+function formatDateKey(date: string | Date) {
+  const d = date instanceof Date ? date : new Date(date)
+  return d.toISOString().split('T')[0]
 }

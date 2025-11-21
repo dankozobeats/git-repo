@@ -2,7 +2,12 @@
 
 import { useState, useMemo } from "react"
 
-export default function AICalendarView({ reports }: { reports: any[] }) {
+type AICalendarViewProps = {
+  reports: any[]
+  onDayClick?: (date: string) => void
+}
+
+export default function AICalendarView({ reports, onDayClick }: AICalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   // Regrouper les rapports par date
@@ -41,16 +46,21 @@ export default function AICalendarView({ reports }: { reports: any[] }) {
     const key = date.toISOString().split("T")[0]
     const active = byDate[key]?.length > 0
 
+    const handleSelect = () => {
+      setSelectedDate(key)
+      onDayClick?.(key)
+    }
+
     calendarCells.push(
-      <div
+      <button
         key={key}
-        onClick={() => setSelectedDate(key)}
-        className={`p-2 text-center text-sm rounded cursor-pointer border 
+        onClick={handleSelect}
+        className={`p-2 text-center text-sm rounded cursor-pointer border transition hover:scale-[1.02]
           ${active ? "bg-blue-700 border-blue-500" : "bg-gray-800 border-gray-700"}
         `}
       >
         {d}
-      </div>
+      </button>
     )
   }
 
@@ -77,21 +87,8 @@ export default function AICalendarView({ reports }: { reports: any[] }) {
 
       {/* Résumé de la date sélectionnée */}
       {selectedDate && (
-        <div className="mt-4 border-t border-gray-700 pt-4">
-          <h3 className="font-bold mb-2">{selectedDate}</h3>
-
-          {(byDate[selectedDate] ?? []).map((r) => (
-            <pre
-              key={r.id}
-              className="whitespace-pre-wrap text-sm bg-gray-800 p-3 rounded mb-3"
-            >
-              {r.report}
-            </pre>
-          ))}
-
-          {(byDate[selectedDate]?.length ?? 0) === 0 && (
-            <p className="text-gray-500 text-sm">Aucun rapport ce jour.</p>
-          )}
+        <div className="mt-4 border-t border-gray-700 pt-4 text-sm text-gray-400">
+          {byDate[selectedDate]?.length ?? 0} rapport(s) le {selectedDate}. Cliquez sur la date pour ouvrir le détail.
         </div>
       )}
     </div>

@@ -138,36 +138,40 @@ function buildStats(data: StatsResponse): ProcessedStats {
     })
     .filter(Boolean) as Array<LogRecord & { date: Date }>
 
-  const groupedByDate = new Map<string, { success: number; total: number }>()
-  const habitStats = new Map<string, { success: number; total: number }>()
-  let overallSuccess = 0
+  const groupedCompletions = new Map<string, Set<string>>()
+  const habitCompletionDates = new Map<string, Set<string>>()
 
-  logsWithDate.forEach(log => {
-    const key = log.date.toISOString().split('T')[0]
-    const isSuccess = (log.value ?? 0) > 0
-    const dateEntry = groupedByDate.get(key) || { success: 0, total: 0 }
-    groupedByDate.set(key, {
-      success: dateEntry.success + (isSuccess ? 1 : 0),
-      total: dateEntry.total + 1,
-    })
-
-    const habitEntry = habitStats.get(log.habit_id) || { success: 0, total: 0 }
-    habitStats.set(log.habit_id, {
-      success: habitEntry.success + (isSuccess ? 1 : 0),
-      total: habitEntry.total + 1,
-    })
-
-    overallSuccess += isSuccess ? 1 : 0
+  data.habits.forEach(habit => {
+    habitCompletionDates.set(habit.id, new Set())
   })
 
-  const totalLogs = logsWithDate.length
-  const summaryCompletion = totalLogs === 0 ? 0 : Math.round((overallSuccess / totalLogs) * 100)
+  logsWithDate.forEach(log => {
+    if ((log.value ?? 0) > 0) {
+      const dateKey = log.date.toISOString().split('T')[0]
+      if (!groupedCompletions.has(dateKey)) {
+        groupedCompletions.set(dateKey, new Set())
+      }
+      groupedCompletions.get(dateKey)!.add(log.habit_id)
 
-  const daily = buildDailyData(groupedByDate)
-  const weekday = buildWeekdayData(logsWithDate)
-  const weekly = buildWeeklyData(logsWithDate)
-  const topHabits = buildTopHabits(habitStats, habitsMap)
-  const calendar = buildCalendarData(groupedByDate)
+      if (!habitCompletionDates.has(log.habit_id)) {
+        habitCompletionDates.set(log.habit_id, new Set())
+      }
+      habitCompletionDates.get(log.habit_id)!.add(dateKey)
+    }
+  })
+
+  const totalHabits = data.habits.length
+  const analysisDays = 365
+  const totalLogs = logsWithDate.length
+
+  const daily = buildDailyData(groupedCompletions, totalHabits)
+  const weekday = buildWeekdayData(groupedCompletions, totalHabits)
+  const weekly = buildWeeklyData(groupedCompletions, totalHabits)
+  const topHabits = buildTopHabits(habitCompletionDates, habitsMap, analysisDays)
+  const calendar = buildCalendarData(groupedCompletions, totalHabits)
+  const averageCompletion = daily.length
+    ? Math.round(daily.reduce((sum, point) => sum + point.completion, 0) / daily.length)
+    : 0
 
   return {
     daily,
@@ -178,90 +182,110 @@ function buildStats(data: StatsResponse): ProcessedStats {
     summary: {
       totalLogs,
       totalHabits: data.habits.length,
-      completion: summaryCompletion,
+      completion: averageCompletion,
     },
   }
 }
 
-function buildDailyData(groupedByDate: Map<string, { success: number; total: number }>): DailyProgressPoint[] {
+function buildDailyData(completions: Map<string, Set<string>>, totalHabits: number): DailyProgressPoint[] {
   const points: DailyProgressPoint[] = []
   const today = new Date()
 
   for (let i = 29; i >= 0; i--) {
     const day = new Date(today)
     day.setDate(day.getDate() - i)
-    const key = day.toISOString().split('T')[0]
-    const entry = groupedByDate.get(key)
-    const completion = entry && entry.total > 0 ? Math.round((entry.success / entry.total) * 100) : 0
+    const key = getDateKey(day)
+    const completion = calculateCompletionPercentage(completions, totalHabits, key)
     points.push({ date: day.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }), completion })
   }
 
   return points
 }
 
-function buildWeekdayData(logs: Array<LogRecord & { date: Date }>): WeekdayPoint[] {
-  const counters = Array.from({ length: 7 }, () => ({ success: 0, total: 0 }))
+function buildWeekdayData(completions: Map<string, Set<string>>, totalHabits: number): WeekdayPoint[] {
+  const counters = Array.from({ length: 7 }, () => ({ sum: 0, count: 0 }))
+  const today = new Date()
 
-  logs.forEach(log => {
-    const dayIndex = log.date.getDay()
-    counters[dayIndex].success += (log.value ?? 0) > 0 ? 1 : 0
-    counters[dayIndex].total += 1
-  })
+  for (let i = 0; i < 30; i++) {
+    const day = new Date(today)
+    day.setDate(day.getDate() - i)
+    const key = getDateKey(day)
+    const completion = calculateCompletionPercentage(completions, totalHabits, key)
+    const index = day.getDay()
+    counters[index].sum += completion
+    counters[index].count += 1
+  }
 
   return counters.map((counter, index) => ({
     day: weekdayLabels[index],
-    completion: counter.total === 0 ? 0 : Math.round((counter.success / counter.total) * 100),
+    completion: counter.count === 0 ? 0 : Math.round(counter.sum / counter.count),
   }))
 }
 
-function buildWeeklyData(logs: Array<LogRecord & { date: Date }>): WeeklyPoint[] {
-  const weeklyMap = new Map<string, { success: number; total: number; date: Date }>()
+function buildWeeklyData(completions: Map<string, Set<string>>, totalHabits: number): WeeklyPoint[] {
+  const today = new Date()
+  const weeklyAggregates = new Map<string, { sum: number; count: number; reference: Date }>()
 
-  logs.forEach(log => {
-    const isoKey = getWeekKey(log.date)
-    const entry = weeklyMap.get(isoKey) || { success: 0, total: 0, date: log.date }
-    weeklyMap.set(isoKey, {
-      success: entry.success + ((log.value ?? 0) > 0 ? 1 : 0),
-      total: entry.total + 1,
-      date: entry.date,
-    })
-  })
+  for (let i = 0; i < 84; i++) {
+    const day = new Date(today)
+    day.setDate(day.getDate() - i)
+    const weekKey = getWeekKey(day)
+    const completion = calculateCompletionPercentage(completions, totalHabits, getDateKey(day))
+    const entry = weeklyAggregates.get(weekKey) || { sum: 0, count: 0, reference: day }
+    entry.sum += completion
+    entry.count += 1
+    weeklyAggregates.set(weekKey, entry)
+  }
 
-  return Array.from(weeklyMap.entries())
-    .sort((a, b) => a[1].date.getTime() - b[1].date.getTime())
-    .map((entry, index) => ({
-      week: `S${index + 1}`,
-      completion: entry[1].total === 0 ? 0 : Math.round((entry[1].success / entry[1].total) * 100),
-    }))
+  const ordered = Array.from(weeklyAggregates.entries()).sort(
+    (a, b) => a[1].reference.getTime() - b[1].reference.getTime()
+  )
+
+  return ordered.map((entry, index) => ({
+    week: `S${index + 1}`,
+    completion: entry[1].count === 0 ? 0 : Math.round(entry[1].sum / entry[1].count),
+  }))
 }
 
 function buildTopHabits(
-  habitStats: Map<string, { success: number; total: number }>,
-  habitsMap: Map<string, HabitRecord>
+  habitCompletionDates: Map<string, Set<string>>,
+  habitsMap: Map<string, HabitRecord>,
+  analysisDays: number
 ): TopHabitPoint[] {
-  return Array.from(habitStats.entries())
-    .map(([habitId, stats]) => ({
+  const safeDays = Math.max(1, analysisDays)
+
+  return Array.from(habitCompletionDates.entries())
+    .map(([habitId, dates]) => ({
       habit: habitsMap.get(habitId)?.name ?? 'Habitude inconnue',
-      completion: stats.total === 0 ? 0 : Math.round((stats.success / stats.total) * 100),
+      completion: Math.round(((dates?.size ?? 0) / safeDays) * 100),
     }))
     .sort((a, b) => b.completion - a.completion)
     .slice(0, 5)
 }
 
-function buildCalendarData(groupedByDate: Map<string, { success: number; total: number }>): CalendarPoint[] {
+function buildCalendarData(completions: Map<string, Set<string>>, totalHabits: number): CalendarPoint[] {
   const today = new Date()
   const points: CalendarPoint[] = []
 
   for (let i = 364; i >= 0; i--) {
     const day = new Date(today)
     day.setDate(day.getDate() - i)
-    const key = day.toISOString().split('T')[0]
-    const entry = groupedByDate.get(key)
-    const completion = entry && entry.total > 0 ? Math.round((entry.success / entry.total) * 100) : 0
+    const key = getDateKey(day)
+    const completion = calculateCompletionPercentage(completions, totalHabits, key)
     points.push({ date: key, completion })
   }
 
   return points
+}
+
+function calculateCompletionPercentage(completions: Map<string, Set<string>>, totalHabits: number, dateKey: string) {
+  if (totalHabits === 0) return 0
+  const completed = completions.get(dateKey)?.size ?? 0
+  return Math.round((completed / totalHabits) * 100)
+}
+
+function getDateKey(date: Date) {
+  return date.toISOString().split('T')[0]
 }
 
 function getWeekKey(date: Date) {
