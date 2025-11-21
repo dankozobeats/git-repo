@@ -4,6 +4,7 @@ import Link from 'next/link'
 import HabitDetailClient from './HabitDetailClient'
 import DeleteButton from './DeleteButton'
 import { getTodayDateISO, toUtcDate } from '@/lib/date-utils'
+import HabitDetailHeader from '@/components/HabitDetailHeader'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -110,6 +111,13 @@ export default async function HabitDetailPage({ params }: PageProps) {
     }
   }
 
+  const { data: userHabits } = await supabase
+    .from('habits')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('is_archived', false)
+    .order('name', { ascending: true })
+
   const isBadHabit = habit.type === 'bad'
 
   return (
@@ -122,6 +130,8 @@ export default async function HabitDetailPage({ params }: PageProps) {
           >
             ← Retour au dashboard
           </Link>
+
+          <HabitDetailHeader habit={habit} allHabits={userHabits || [habit]} />
 
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">

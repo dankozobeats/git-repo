@@ -161,7 +161,6 @@ type HabitListItemProps = {
 
 function HabitListItem({ habit, type, accentColor, todayCount }: HabitListItemProps) {
   const icon = habit.icon || (type === 'bad' ? '🔥' : '✨')
-  const bubbleColor = withAlpha(habit.color || accentColor, '33')
   const statusLabel =
     todayCount > 0
       ? type === 'bad'
@@ -185,15 +184,15 @@ function HabitListItem({ habit, type, accentColor, todayCount }: HabitListItemPr
       }
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4 md:flex-row md:items-center">
-      <Link href={`/habits/${habit.id}`} className="flex flex-1 items-center gap-4 rounded-2xl transition hover:bg-white/5">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ backgroundColor: bubbleColor }}>
+    <div className="flex flex-col gap-4 px-4 py-3 md:flex-row md:items-center">
+      <Link
+        href={`/habits/${habit.id}`}
+        className="flex flex-1 items-center gap-4 rounded-2xl bg-transparent px-4 py-3 transition hover:bg-neutral-800/40"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-700 bg-neutral-800/80 text-xl shadow-sm">
           {icon}
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-white">{habit.name}</p>
-          {habit.description && <p className="text-sm text-[#A0A0A0] line-clamp-1">{habit.description}</p>}
-        </div>
+        <p className="truncate text-base font-semibold text-white">{habit.name}</p>
       </Link>
       <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
         <span className="rounded-full px-3 py-1 text-xs font-semibold" style={statusStyle}>

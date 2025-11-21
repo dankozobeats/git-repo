@@ -221,6 +221,12 @@ export default async function Home() {
               >
                 📈 Rapport
               </Link>
+              <Link
+                href="/habits/stats"
+                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-[#E0E0E0] transition hover:border-white/30 hover:text-white"
+              >
+                📊 Stats
+              </Link>
               <form action="/auth/signout" method="post">
                 <button className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white">
                   Déconnexion
@@ -275,8 +281,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <CategoryOverview stats={categoryStats} />
-
         <HabitSectionsClient
           badHabits={groupedBadHabits}
           goodHabits={groupedGoodHabits}
@@ -301,6 +305,7 @@ export default async function Home() {
         <div className="rounded-3xl border border-white/5 bg-[#1E1E1E]/60 p-6">
           <CategoryManager />
         </div>
+        <CategoryOverview stats={categoryStats} />
       </div>
     </main>
   )
