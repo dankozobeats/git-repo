@@ -60,79 +60,83 @@ export function DayReportModal({ date, isOpen, onClose }: DayReportModalProps) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 font-['Inter']">
-      <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl border border-white/5 bg-[#111623] shadow-[0_40px_120px_rgba(0,0,0,0.65)]">
-        <div className="sticky top-0 flex items-center justify-between rounded-t-3xl bg-[#111623] px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-800 bg-gray-950/95 backdrop-blur-xl shadow-2xl">
+        <div className="flex items-start justify-between border-b border-gray-800 px-6 py-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">Rapport du jour</p>
-            <h2 className="text-2xl font-bold text-white capitalize">{formattedDate}</h2>
+            <p className="text-xs uppercase tracking-[0.4em] text-gray-400 font-semibold">Rapport du jour</p>
+            <h2 className="text-2xl font-semibold text-white capitalize">{formattedDate}</h2>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border border-white/10 p-2 text-white/70 transition hover:border-white/40"
+            className="rounded-xl border border-gray-800 bg-gray-900/60 p-2 text-gray-300 transition hover:text-white hover:border-gray-700"
+            aria-label="Fermer le rapport"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="space-y-6 px-6 pb-6">
+        <div className="space-y-5 px-6 py-6">
           {isLoading ? (
-            <div className="py-12 text-center">
-              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#4DA6FF] border-t-transparent" />
-              <p className="text-white/60">Chargement...</p>
+            <div className="py-12 text-center text-gray-300">
+              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+              Chargement...
             </div>
           ) : report ? (
             <>
-              <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#151d3b] to-[#0f1220] p-6 text-center">
-                <p className="text-5xl font-bold text-white">{report.successRate}%</p>
-                <p className="text-white/60">Taux de réussite</p>
+              <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-6 text-center">
+                <p className="text-5xl font-semibold text-white">{report.successRate}%</p>
+                <p className="text-sm text-gray-400 mt-2">Taux de réussite</p>
                 {report.successRate >= 80 && (
-                  <div className="mt-3 flex items-center justify-center gap-2 text-emerald-300">
-                    <TrendingUp className="h-5 w-5" /> Excellente journée ! 🎉
+                  <div className="mt-4 flex items-center justify-center gap-2 text-emerald-300">
+                    <TrendingUp className="h-5 w-5 opacity-90" /> Excellente journée !
                   </div>
                 )}
                 {report.successRate < 50 && report.goodHabits.total > 0 && (
-                  <div className="mt-3 flex items-center justify-center gap-2 text-orange-300">
-                    <TrendingDown className="h-5 w-5" /> Peut mieux faire... 💪
+                  <div className="mt-4 flex items-center justify-center gap-2 text-amber-300">
+                    <TrendingDown className="h-5 w-5 opacity-90" /> Peut mieux faire...
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
-                  <div className="mb-3 flex items-center gap-2 text-emerald-300">
-                    <CheckCircle className="h-5 w-5" /> Bonnes habitudes
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-4">
+                  <div className="mb-3 flex items-center gap-2 text-gray-300 text-sm font-semibold uppercase tracking-wide">
+                    <CheckCircle className="h-4 w-4 opacity-80" /> Bonnes habitudes
                   </div>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-3xl font-semibold text-white">
                     {report.goodHabits.completed}/{report.goodHabits.total}
                   </p>
-                  <p className="text-sm text-white/60">réussies</p>
+                  <p className="text-sm text-gray-400 mt-1">réussies</p>
                 </div>
-                <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
-                  <div className="mb-3 flex items-center gap-2 text-red-300">
-                    <XCircle className="h-5 w-5" /> Craquages
+                <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-4">
+                  <div className="mb-3 flex items-center gap-2 text-gray-300 text-sm font-semibold uppercase tracking-wide">
+                    <XCircle className="h-4 w-4 opacity-80" /> Craquages
                   </div>
-                  <p className="text-3xl font-bold text-white">{report.badHabits.totalCracks}</p>
-                  <p className="text-sm text-white/60">
+                  <p className="text-3xl font-semibold text-white">{report.badHabits.totalCracks}</p>
+                  <p className="text-sm text-gray-400 mt-1">
                     {report.badHabits.cracked}/{report.badHabits.total} habitudes
                   </p>
                 </div>
               </div>
 
               {report.goodHabits.completed > 0 && (
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                    <span className="text-emerald-300">✨</span> Bonnes habitudes accomplies
+                <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-3">
+                    Bonnes habitudes accomplies
                   </h3>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {report.goodHabits.details.map((habit, idx) => (
-                      <div key={idx} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#141929] px-4 py-3 text-sm">
-                        <div className="flex items-center gap-3">
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/30 px-4 py-3 text-sm text-white"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
                           <span className="text-2xl">{habit.icon || '✨'}</span>
-                          <span className="font-medium text-white">{habit.name}</span>
+                          <span className="font-medium truncate">{habit.name}</span>
                         </div>
                         {habit.count > 1 && (
-                          <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">
+                          <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300">
                             {habit.count}×
                           </span>
                         )}
@@ -143,16 +147,17 @@ export function DayReportModal({ date, isOpen, onClose }: DayReportModalProps) {
               )}
 
               {report.badHabits.totalCracks > 0 && (
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                    <span className="text-red-300">🔥</span> Craquages du jour
-                  </h3>
-                  <div className="space-y-2">
+                <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-3">Craquages du jour</h3>
+                  <div className="space-y-3">
                     {report.badHabits.details.map((habit, idx) => (
-                      <div key={idx} className="flex items-center justify-between rounded-xl border border-red-500/20 bg-[#1f1414] px-4 py-3 text-sm">
-                        <div className="flex items-center gap-3">
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/30 px-4 py-3 text-sm text-white"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
                           <span className="text-2xl">{habit.icon || '🔥'}</span>
-                          <span className="font-medium text-white">{habit.name}</span>
+                          <span className="font-medium truncate">{habit.name}</span>
                         </div>
                         <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-300">
                           {habit.count}×
@@ -164,21 +169,21 @@ export function DayReportModal({ date, isOpen, onClose }: DayReportModalProps) {
               )}
 
               {report.goodHabits.completed === 0 && report.badHabits.totalCracks === 0 && (
-                <div className="py-8 text-center text-white/60">
-                  <div className="mb-3 text-5xl">📭</div>
-                  Journée tranquille ou oubli de logger ?
+                <div className="py-10 text-center text-gray-400">
+                  <div className="mb-4 text-4xl">📭</div>
+                  Journée calme ou oubli de logger.
                 </div>
               )}
             </>
           ) : (
-            <div className="py-12 text-center text-white/60">Aucune donnée disponible</div>
+            <div className="py-12 text-center text-gray-400">Aucune donnée disponible</div>
           )}
         </div>
 
-        <div className="sticky bottom-0 rounded-b-3xl border-t border-white/10 bg-[#0d1020] p-4">
+        <div className="border-t border-gray-800 px-6 py-5">
           <button
             onClick={onClose}
-            className="w-full rounded-2xl bg-[#4DA6FF] py-3 text-sm font-semibold text-white shadow-lg shadow-[#4DA6FF]/40 transition hover:bg-[#3b82ff]"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-blue-500/40 transition"
           >
             Fermer
           </button>

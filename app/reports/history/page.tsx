@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   LibraryBig,
   ArrowUpDown,
-  GitCompare,
   BarChart3,
 } from 'lucide-react'
 
@@ -17,15 +16,18 @@ import AIDisciplineScore from '@/components/AIScoreCard'
 import AIHeatmap from '@/components/AIHeatmap'
 import AICalendarView from '@/components/AICalendarView'
 import ReportModal from '@/components/ReportModal'
+import AIReportModal from '@/components/AIReportModal'
 
 export default function HistoryPage() {
   const [reports, setReports] = useState<any[]>([])
   const [filter, setFilter] = useState('all')
   const [sortAsc, setSortAsc] = useState(false)
-  const [selected, setSelected] = useState<string[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [selectedReportContent, setSelectedReportContent] = useState<string | null>(null)
+  const [selectedReportTitle, setSelectedReportTitle] = useState<string>('')
 
   async function loadReports() {
     const res = await fetch('/api/ai-reports')
@@ -62,12 +64,6 @@ export default function HistoryPage() {
   async function archiveReport(id: string) {
     await fetch(`/api/ai-reports/${id}/archive`, { method: 'PATCH' })
     loadReports()
-  }
-
-  function compareSelected() {
-    if (selected.length !== 2) return alert('Sélectionne exactement 2 rapports.')
-    const [id1, id2] = selected
-    window.location.href = `/reports/compare?id1=${id1}&id2=${id2}`
   }
 
   const reportsByDate = useMemo(() => {
@@ -150,21 +146,6 @@ export default function HistoryPage() {
           </div>
 
           <GraphAIStats reports={reports} />
-
-          {selected.length >= 2 && (
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4 flex items-center gap-3 text-sm">
-              <GitCompare className="h-5 w-5 text-[#9B59B6]" />
-              <span>
-                <strong>{selected.length}</strong> rapports sélectionnés
-              </span>
-              <button
-                onClick={compareSelected}
-                className="ml-auto rounded-full bg-[#9B59B6] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-[#9B59B6]/40"
-              >
-                Comparer
-              </button>
-            </div>
-          )}
         </section>
 
         <section className="space-y-4">
@@ -192,20 +173,17 @@ export default function HistoryPage() {
                 Rapport généré automatiquement. Consulte les détails via le calendrier.
               </div>
 
-              <div className="mt-4 flex items-center gap-3 border-t border-white/10 pt-3">
-                <label className="inline-flex items-center gap-2 text-xs text-white/50">
-                  <input
-                    type="checkbox"
-                    className="rounded border-white/20 bg-black/40"
-                    checked={selected.includes(r.id)}
-                    onChange={() =>
-                      setSelected((sel) =>
-                        sel.includes(r.id) ? sel.filter((x) => x !== r.id) : [...sel, r.id]
-                      )
-                    }
-                  />
-                  Sélectionner pour comparaison
-                </label>
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3">
+                <button
+                  onClick={() => {
+                    setSelectedReportContent(r.report)
+                    setSelectedReportTitle(new Date(r.created_at).toLocaleString('fr-FR'))
+                    setReportModalOpen(true)
+                  }}
+                  className="rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40"
+                >
+                  Voir rapport
+                </button>
               </div>
             </article>
           ))}
@@ -221,6 +199,16 @@ export default function HistoryPage() {
         onClose={() => {
           setModalOpen(false)
           setSelectedReportId(null)
+        }}
+      />
+
+      <AIReportModal
+        open={reportModalOpen}
+        report={selectedReportContent}
+        title={selectedReportTitle}
+        onClose={() => {
+          setReportModalOpen(false)
+          setSelectedReportContent(null)
         }}
       />
     </main>

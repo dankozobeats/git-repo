@@ -13,7 +13,7 @@ type WeekdayChartProps = {
 
 export default function WeekdayChart({ data }: WeekdayChartProps) {
   const cardClass =
-    'glass-card min-h-[320px] w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
+    'glass-card min-h-[320px] w-full p-4 sm:p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
   const axisColor = '#C5C8D0'
 
   return (
@@ -22,7 +22,7 @@ export default function WeekdayChart({ data }: WeekdayChartProps) {
         <p className="text-xs uppercase tracking-[0.3em] text-white/60">Moyenne par jour</p>
         <h3 className="text-xl font-semibold">Performance hebdomadaire</h3>
       </div>
-      <div className="h-[320px] w-full mt-4">
+      <div className="mt-4 w-full h-64 sm:h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid stroke="#1f1f2b" strokeDasharray="3 3" />

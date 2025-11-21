@@ -30,7 +30,7 @@ export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
 
   const months = Object.keys(byMonth)
   const cardClass =
-    'glass-card min-h-[320px] w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
+    'glass-card min-h-[320px] w-full p-4 sm:p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
 
   return (
     <div className={cardClass}>
@@ -38,12 +38,12 @@ export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
         <p className="text-xs uppercase tracking-[0.3em] text-white/60">12 derniers mois</p>
         <h3 className="text-xl font-semibold">Calendrier de complétion</h3>
       </div>
-      <div className="mt-4 space-y-6">
+      <div className="mt-4 w-full space-y-6">
         {months.length === 0 && <p className="text-sm text-white/60">Aucune donnée récente.</p>}
         {months.map(month => (
           <div key={month} className="space-y-2">
             <p className="text-sm text-white/60">{month}</p>
-            <div className="grid grid-cols-14 gap-1">
+            <div className="grid grid-cols-7 gap-1 sm:grid-cols-14">
               {(byMonth[month] || []).map(point => (
                 <div
                   key={point.date}

@@ -1,25 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-type CategoryAccordionProps = {
-  id?: string
-  openCategoryId?: string | null
-  setOpenCategoryId?: (id: string | null) => void
-  title: string
-  count: number
-  color?: string | null
-  children: React.ReactNode
-  defaultOpen?: boolean
-  className?: string
-  headerClassName?: string
-  contentClassName?: string
-}
+export let scrollingByCode = false
 
 export default function CategoryAccordion({
   id,
-  openCategoryId,
-  setOpenCategoryId,
+  openCategoryKey,
+  setOpenCategoryKey,
   title,
   count,
   color,
@@ -28,22 +16,103 @@ export default function CategoryAccordion({
   className,
   headerClassName,
   contentClassName,
-}: CategoryAccordionProps) {
+}) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
+  const [isAccordionVisible, setAccordionVisible] = useState(true)
+  const [isHovered, setIsHovered] = useState(false)
+
+  const accordionRef = useRef<HTMLDivElement>(null)
   const isControlled =
-    typeof id === 'string' && typeof openCategoryId !== 'undefined' && typeof setOpenCategoryId === 'function'
-  const isOpen = isControlled ? openCategoryId === id : uncontrolledOpen
+    typeof id === 'string' &&
+    typeof openCategoryKey !== 'undefined' &&
+    typeof setOpenCategoryKey === 'function'
+
+  const isOpen = isControlled ? openCategoryKey === id : uncontrolledOpen
 
   const handleToggle = () => {
     if (isControlled && id) {
-      setOpenCategoryId(openCategoryId === id ? null : id)
+      setOpenCategoryKey(openCategoryKey === id ? null : id)
     } else {
       setUncontrolledOpen(prev => !prev)
     }
   }
 
+  // Auto scroll when opened
+  useEffect(() => {
+    if (isOpen && accordionRef.current) {
+      scrollingByCode = true
+      accordionRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+      const timeout = setTimeout(() => {
+        scrollingByCode = false
+      }, 600)
+      return () => clearTimeout(timeout)
+    }
+  }, [isOpen])
+
+  // Observe visibility but do NOT close too early
+  useEffect(() => {
+    if (!accordionRef.current) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setAccordionVisible(entry.isIntersecting)
+      },
+      { threshold: 0.01 }  // 🔥 beaucoup moins agressif
+    )
+    observer.observe(accordionRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  // Scroll-based auto-close with distance & delay
+  useEffect(() => {
+    if (!isControlled || typeof setOpenCategoryKey !== 'function') return
+
+    let closeTimeout: NodeJS.Timeout | null = null
+
+    const handleScroll = () => {
+      if (!accordionRef.current) return
+
+      const rect = accordionRef.current.getBoundingClientRect()
+
+      if (isHovered) {
+        if (closeTimeout) {
+          clearTimeout(closeTimeout)
+          closeTimeout = null
+        }
+        return
+      }
+
+      if (rect.bottom > 80 && rect.top < window.innerHeight - 80) {
+        if (closeTimeout) {
+          clearTimeout(closeTimeout)
+          closeTimeout = null
+        }
+        return
+      }
+
+      if (scrollingByCode) return
+
+      if (closeTimeout) clearTimeout(closeTimeout)
+      closeTimeout = setTimeout(() => {
+        setOpenCategoryKey(null)
+        closeTimeout = null
+      }, 1500)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => {
+      if (closeTimeout) clearTimeout(closeTimeout)
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [isControlled, setOpenCategoryKey, isHovered])
+
   return (
     <div
+      ref={accordionRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`overflow-hidden rounded-2xl border-0 bg-transparent sm:border sm:border-gray-800 sm:bg-black/30 ${
         className || ''
       }`}
@@ -69,8 +138,6 @@ export default function CategoryAccordion({
         <div
           id={id ? `${id}-content` : undefined}
           className={`px-0 py-0 sm:px-4 sm:py-4 ${contentClassName || ''}`}
-          role="region"
-          aria-labelledby={id}
         >
           {children}
         </div>

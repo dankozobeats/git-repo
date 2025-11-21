@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import HabitEditForm from '../HabitEditForm'
 import { cookies } from 'next/headers'
-import CategoryManager from '@/components/CategoryManager'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -40,31 +39,33 @@ export default async function HabitEditPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
-      <section className="bg-gradient-to-br from-[#1E1E1E] via-[#151515] to-[#0f0f0f] border-b border-white/5">
-        <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-          <Link
-            href={`/habits/${habit.id}`}
-            className="inline-flex items-center gap-3 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
-          >
-            ← Retour à l&apos;habitude
-          </Link>
-          <div className="flex items-center gap-4">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-inner"
-              style={{ backgroundColor: `${habit.color}33` }}
+      <div className="w-full max-w-full overflow-x-hidden px-4 sm:px-6">
+        <section className="border-b border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#151515] to-[#0f0f0f]">
+          <div className="mx-auto w-full max-w-5xl space-y-6 py-6 sm:py-8">
+            <Link
+              href={`/habits/${habit.id}`}
+              className="inline-flex items-center gap-3 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
             >
-              {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Édition</p>
-              <h1 className="text-3xl font-bold text-white">{habit.name}</h1>
+              ← Retour à l&apos;habitude
+            </Link>
+            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center">
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-inner"
+                style={{ backgroundColor: `${habit.color}33` }}
+              >
+                {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Édition</p>
+                <h1 className="text-3xl font-bold text-white truncate">{habit.name}</h1>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="mx-auto max-w-5xl px-4 py-8">
-        <HabitEditForm habit={habit} categories={categories || []} />
+        <div className="mx-auto w-full max-w-5xl py-6 sm:py-8">
+          <HabitEditForm habit={habit} categories={categories || []} />
+        </div>
       </div>
     </main>
   )

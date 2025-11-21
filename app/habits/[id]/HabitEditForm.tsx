@@ -125,7 +125,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
         </div>
       )}
 
-      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-6 space-y-6">
+      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-4 sm:p-6 space-y-6">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-2">Catégorie personnalisée</p>
           <select
@@ -144,7 +144,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
 
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-3">Type d&apos;habitude</p>
-          <div className="flex gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => {
@@ -181,10 +181,10 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/5 bg-[#1A1D2B] p-6 space-y-6">
+      <section className="rounded-3xl border border-white/5 bg-[#1A1D2B] p-4 sm:p-6 space-y-6">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-3">Mode de suivi</p>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setTrackingMode('binary')}
@@ -213,21 +213,21 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
         </div>
 
         {trackingMode === 'counter' && (
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4">
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5 space-y-4">
             <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
               {habitType === 'good' ? '🎯 Objectif minimum' : '⚠️ Limite maximum'}
             </p>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center">
               <input
                 type="range"
                 min="1"
                 max="20"
                 value={dailyGoalValue}
-                onChange={(e) => setDailyGoalValue(parseInt(e.target.value))}
-                className="accent-[#FF4D4D] md:flex-1"
+                onChange={e => setDailyGoalValue(parseInt(e.target.value))}
+                className="w-full accent-[#FF4D4D] sm:flex-1"
               />
               <div
-                className={`text-4xl font-bold tabular-nums text-center md:w-24 ${
+                className={`w-full text-center text-4xl font-bold tabular-nums sm:w-24 ${
                   habitType === 'good' ? 'text-[#4DA6FF]' : 'text-[#FF4D4D]'
                 }`}
               >
@@ -246,8 +246,8 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
           <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-3">
             Suggestions ({habitType === 'bad' ? 'mauvaises' : 'bonnes'})
           </p>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {presets.map((preset) => (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {presets.map(preset => (
               <button
                 key={preset.name}
                 type="button"
@@ -262,7 +262,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-6 space-y-5">
+      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-4 sm:p-6 space-y-5">
         <div>
           <label htmlFor="name" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
             Nom de l&apos;habitude *
@@ -277,7 +277,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
           />
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="icon" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
               Icône (emoji)
@@ -295,12 +295,12 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
             <label htmlFor="color" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
               Couleur
             </label>
-            <div className="mt-2 flex items-center gap-4">
+            <div className="mt-2 flex w-full flex-col items-start gap-4 sm:flex-row sm:items-center">
               <input
                 id="color"
                 type="color"
                 value={color}
-                onChange={(e) => setColor(e.target.value)}
+                onChange={e => setColor(e.target.value)}
                 className="h-12 w-16 rounded-lg border border-white/10 bg-black/20"
               />
               <span className="text-sm font-mono text-white/70">{color}</span>
@@ -322,8 +322,8 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-6">
-        <div className="flex flex-col gap-3 md:flex-row">
+      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
             onClick={() => router.push(`/habits/${habit.id}`)}

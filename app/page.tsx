@@ -5,6 +5,7 @@ import { getTodayDateISO } from '@/lib/date-utils'
 import { getRandomMessage } from '@/lib/coach/roastMessages'
 import type { Database } from '@/types/database'
 import HabitSectionsClient from '@/components/HabitSectionsClient'
+import ViewHabitsButton from '@/components/ViewHabitsButton'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -260,12 +261,7 @@ export default async function Home() {
               >
                 + Ajouter une habitude
               </Link>
-              <Link
-                href="/"
-                className="rounded-2xl border border-white/10 px-4 py-3 text-center text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white"
-              >
-                Voir les habitudes actives
-              </Link>
+              <ViewHabitsButton />
             </div>
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -280,12 +276,14 @@ export default async function Home() {
           </div>
         </section>
 
-        <HabitSectionsClient
-          badHabits={groupedBadHabits}
-          goodHabits={groupedGoodHabits}
-          todayCounts={todayCountsRecord}
-          categoryStats={categoryStats}
-        />
+        <div id="active-habits-section">
+          <HabitSectionsClient
+            badHabits={groupedBadHabits}
+            goodHabits={groupedGoodHabits}
+            todayCounts={todayCountsRecord}
+            categoryStats={categoryStats}
+          />
+        </div>
 
         {totalHabits === 0 && (
           <div className="rounded-3xl border border-dashed border-white/10 bg-[#1E1E1E]/60 p-8 text-center">

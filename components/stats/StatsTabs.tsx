@@ -51,9 +51,9 @@ export default function StatsTabs({ daily, weekday, weekly, topHabits, calendar 
         ))}
       </div>
 
-      <div className="rounded-3xl border border-white/5 bg-[#0F0F13]/80 p-6 shadow-2xl shadow-black/40 min-h-[360px] w-full min-w-0">
+      <div className="rounded-3xl border border-white/5 bg-[#0F0F13]/80 p-4 sm:p-6 shadow-2xl shadow-black/40 min-h-[360px] w-full min-w-0">
         {!mounted ? (
-          <div className="flex h-80 w-full items-center justify-center text-sm text-white/50">Chargement…</div>
+          <div className="flex h-64 w-full items-center justify-center text-sm text-white/50 sm:h-80">Chargement…</div>
         ) : (
           <>
             {activeTab === 'daily' && <DailyProgressChart data={daily} />}

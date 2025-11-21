@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, GitCompare } from "lucide-react"
 import { fetchAI } from "@/lib/ai/fetchAI"
+import { useSearchParams } from "next/navigation"
 
 function diffText(a: string, b: string) {
   const aLines = a.split("\n")
@@ -27,8 +28,10 @@ function diffText(a: string, b: string) {
   return diff
 }
 
-export default function ComparePage({ searchParams }: any) {
-  const { id1, id2 } = searchParams || {}
+export default function ComparePage() {
+  const searchParams = useSearchParams()
+  const id1 = searchParams.get("id1")
+  const id2 = searchParams.get("id2")
   const [report1, setReport1] = useState<any>(null)
   const [report2, setReport2] = useState<any>(null)
   const [analysis, setAnalysis] = useState<any>(null)
