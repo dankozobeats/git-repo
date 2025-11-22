@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import CategoryAccordion from '@/components/CategoryAccordion'
+import HabitAccordionItem from '@/components/HabitAccordionItem'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import SearchBar from '@/components/SearchBar'
 import CategoryManager from '@/components/CategoryManager'
@@ -39,6 +40,7 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
   const [searchQuery, setSearchQuery] = useState('')
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
+  const [openHabitId, setOpenHabitId] = useState<string | null>(null)
   const todayCountsMap = useMemo(
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
@@ -81,28 +83,28 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
               return (
                 <div
                   key={habit.id}
-                  className="bg-gray-900 rounded-xl p-4 border border-gray-800 hover:border-gray-700 transition"
+                  className="relative z-0 rounded-xl border border-gray-800 bg-gray-900 p-4 transition hover:border-gray-700"
                 >
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <Link href={`/habits/${habit.id}`} className="flex items-center gap-3 min-w-0 flex-1">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xl"
                         style={{ backgroundColor: `${habit.color || '#6b7280'}20` }}
                       >
                         {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
                       </div>
-
-                      <div className="min-w-0">
-                        <p className="font-semibold truncate">{habit.name}</p>
-                      </div>
+                      <p className="truncate text-base font-semibold text-white">{habit.name}</p>
                     </Link>
 
-                    <HabitQuickActions
-                      habitId={habit.id}
-                      habitType={habit.type as 'good' | 'bad'}
-                      trackingMode={habit.tracking_mode as 'binary' | 'counter'}
-                      initialCount={todayCount}
-                    />
+                    <div className="w-full sm:w-auto">
+                      <HabitQuickActions
+                        habitId={habit.id}
+                        habitType={habit.type as 'good' | 'bad'}
+                        trackingMode={habit.tracking_mode as 'binary' | 'counter'}
+                        initialCount={todayCount}
+                        habitName={habit.name}
+                      />
+                    </div>
                   </div>
                 </div>
               )
@@ -127,6 +129,8 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
             todayCountsMap={todayCountsMap}
             openCategoryKey={openCategoryKey}
             setOpenCategoryKey={setOpenCategoryKey}
+            openHabitId={openHabitId}
+            setOpenHabitId={setOpenHabitId}
           />
           <HabitSection
             title="✨ Bonnes habitudes"
@@ -139,6 +143,8 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
             todayCountsMap={todayCountsMap}
             openCategoryKey={openCategoryKey}
             setOpenCategoryKey={setOpenCategoryKey}
+            openHabitId={openHabitId}
+            setOpenHabitId={setOpenHabitId}
           />
           <CategoryAccordion
             id="system-organisation"
@@ -171,6 +177,8 @@ type HabitSectionProps = {
   todayCountsMap: Map<string, number>
   openCategoryKey: string | null
   setOpenCategoryKey: (id: string | null) => void
+  openHabitId: string | null
+  setOpenHabitId: (id: string | null) => void
 }
 
 function HabitSection({
@@ -184,6 +192,8 @@ function HabitSection({
   todayCountsMap,
   openCategoryKey,
   setOpenCategoryKey,
+  openHabitId,
+  setOpenHabitId,
 }: HabitSectionProps) {
   return (
     <details
@@ -229,82 +239,27 @@ function HabitSection({
                 color={group.category?.color || accentColor}
                 className="text-white"
                 headerClassName="bg-transparent hover:bg-white/5"
-                contentClassName="space-y-0 divide-y divide-white/10 sm:divide-y-0"
+                contentClassName="space-y-4"
                 defaultOpen={false}
               >
-                {group.habits.map(habit => (
-                  <HabitListItem
-                    key={habit.id}
-                    habit={habit}
-                    type={type}
-                    accentColor={accentColor}
-                    todayCount={todayCountsMap.get(habit.id) ?? 0}
-                  />
-                ))}
+                <div className="space-y-3">
+                  {group.habits.map(habit => (
+                    <HabitAccordionItem
+                      key={habit.id}
+                      habit={habit}
+                      type={type}
+                      todayCount={todayCountsMap.get(habit.id) ?? 0}
+                      openHabitId={openHabitId}
+                      setOpenHabitId={setOpenHabitId}
+                    />
+                  ))}
+                </div>
               </CategoryAccordion>
             )
           })}
         </div>
       )}
     </details>
-  )
-}
-
-type HabitListItemProps = {
-  habit: HabitRow
-  type: 'good' | 'bad'
-  accentColor: string
-  todayCount: number
-}
-
-function HabitListItem({ habit, type, accentColor, todayCount }: HabitListItemProps) {
-  const icon = habit.icon || (type === 'bad' ? '🔥' : '✨')
-  const hasValue = todayCount > 0
-  const isBad = type === 'bad'
-  const statusLabel = isBad
-    ? hasValue
-      ? `${todayCount} craquage${todayCount > 1 ? 's' : ''}`
-      : 'Aucun craquage'
-    : hasValue
-    ? 'Validée'
-    : 'À faire'
-
-  const badgeClasses = isBad
-    ? hasValue
-      ? 'border-red-500/70 bg-red-500/10 text-red-200'
-      : 'border-green-500/60 bg-green-500/10 text-green-200'
-    : hasValue
-    ? 'border-green-500/70 bg-green-500/10 text-green-200'
-    : 'border-red-400/60 bg-red-500/10 text-red-200'
-
-  return (
-    <div className="px-3 py-4 sm:px-4 sm:py-4">
-      <div className="grid grid-cols-1 gap-4 items-center w-full min-w-0 rounded-2xl bg-[#1a1b23]/40 px-3 py-3 transition sm:grid-cols-[1fr_auto_auto] sm:bg-[#1a1b23]/70 sm:border sm:border-white/10 sm:px-4 sm:py-4 sm:hover:scale-[1.01] sm:hover:bg-[#1f2232]">
-        <Link href={`/habits/${habit.id}`} className="flex items-center gap-3 min-w-0 truncate">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-0 bg-neutral-900/50 text-xl shadow-inner sm:border sm:border-white/10">
-            {icon}
-          </div>
-          <p className="truncate text-base font-semibold text-white">{habit.name}</p>
-        </Link>
-        <div className="flex items-center gap-2">
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badgeClasses}`}>
-            {statusLabel}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-nowrap justify-end">
-          <HabitQuickActions
-            habitId={habit.id}
-            habitType={type}
-            trackingMode={habit.tracking_mode}
-            initialCount={todayCount}
-            habitName={habit.name}
-            streak={habit.current_streak ?? 0}
-            totalLogs={habit.total_logs ?? (type === 'good' ? todayCount : 0)}
-            totalCraquages={habit.total_craquages ?? (type === 'bad' ? todayCount : 0)}
-          />
-        </div>
-      </div>
-    </div>
   )
 }
 

@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { MoreVertical } from 'lucide-react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useToast } from './Toast'
 import { toastRoastCraquage, toastRoastCorrection, toastRoastSuccess } from '@/lib/coach/coach'
 
@@ -29,105 +32,128 @@ export default function HabitQuickActions({
   const router = useRouter()
   const [count, setCount] = useState(initialCount)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isPending, startTransition] = useTransition()
   const { showToast, ToastComponent } = useToast()
 
   const isCounterMode = trackingMode === 'counter'
   const hasValue = count > 0
-  const isMutating = isSubmitting || isPending
+  const disablePrimary = isSubmitting || isPending || (!isCounterMode && hasValue)
 
-  const buttonBaseClasses =
-    'flex-1 h-11 rounded-lg px-4 font-semibold text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4DA6FF]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090f]'
+  const safeStreak = Math.max(0, streak)
+  const safeLogs = Math.max(0, totalLogs)
+  const safeCraquages = Math.max(0, totalCraquages)
 
-  const handleAction = async (method: 'POST' | 'DELETE') => {
+  const handleAction = async () => {
+    if (disablePrimary) return
     setIsSubmitting(true)
     try {
-      const res = await fetch(`/api/habits/${habitId}/check-in`, { method })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || 'request_failed')
-      }
+      const res = await fetch(`/api/habits/${habitId}/check-in`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
       const data = await res.json()
-      const newCount =
-        typeof data.count === 'number'
-          ? data.count
-          : method === 'POST'
-          ? count + 1
-          : Math.max(0, count - 1)
+      const newCount = typeof data.count === 'number' ? data.count : count + 1
       setCount(newCount)
       startTransition(() => router.refresh())
-      const payloadStreak = habitType === 'good' && method === 'POST' ? safeStreak + 1 : safeStreak
-      if (method === 'POST') {
-        if (habitType === 'bad') {
-          showToast(toastRoastCraquage(habitName, payloadStreak, safeCraquages + newCount), 'error')
-        } else {
-          showToast(toastRoastSuccess(habitName, payloadStreak, safeLogs + newCount), 'success')
-        }
+
+      const payloadStreak = habitType === 'good' ? safeStreak + 1 : safeStreak
+      if (habitType === 'bad') {
+        showToast(toastRoastCraquage(habitName, payloadStreak, safeCraquages + newCount), 'error')
       } else {
-        showToast(toastRoastCorrection(habitName, safeStreak, Math.max(0, safeCraquages - 1)), 'info')
+        showToast(toastRoastSuccess(habitName, payloadStreak, safeLogs + newCount), 'success')
       }
     } catch (error) {
-      console.error('[habit-action]', error)
+      console.error(error)
       showToast('Impossible de mettre à jour', 'error')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const disablePrimary = isMutating || (!isCounterMode && hasValue)
-  const primaryLabel = habitType === 'bad' ? '+ Craquage' : 'Valider'
+  const handleDelete = async () => {
+    if (!confirm('Supprimer cette habitude ?')) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/habits/${habitId}/delete`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      startTransition(() => router.refresh())
+    } catch (error) {
+      console.error(error)
+      showToast('Suppression impossible', 'error')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
-  const safeStreak = Math.max(0, streak)
-  const safeLogs = Math.max(0, totalLogs)
-  const safeCraquages = Math.max(0, totalCraquages)
+  const primaryClasses = disablePrimary
+    ? 'cursor-not-allowed bg-gray-800 text-gray-500'
+    : habitType === 'bad'
+    ? 'bg-red-600 hover:bg-red-700'
+    : 'bg-green-600 hover:bg-green-700'
 
   return (
     <>
       {ToastComponent}
-      <div className="hidden w-full min-w-0 max-w-full flex-wrap gap-2 justify-between sm:flex sm:w-auto sm:flex-nowrap sm:justify-start">
-        <div className="flex flex-wrap gap-2 w-full min-w-0 max-w-full justify-end sm:w-auto sm:flex-nowrap sm:justify-start">
-          <button
-            type="button"
-            disabled={disablePrimary}
-            onClick={() => handleAction('POST')}
-            className={`${buttonBaseClasses} flex-shrink-0 ${
-              disablePrimary
-                ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-800 opacity-70'
-                : habitType === 'bad'
-                ? 'bg-red-600 text-white hover:bg-red-700 hover:scale-[1.02] active:scale-95 border border-red-500/70'
-                : 'bg-green-600 text-white hover:bg-green-700 hover:scale-[1.02] active:scale-95 border border-green-500/70'
-            }`}
-          >
-            {primaryLabel}
-          </button>
-        </div>
-      </div>
+      <div data-prevent-toggle="true" className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <button
+          type="button"
+          disabled={disablePrimary}
+          onClick={event => {
+            event.stopPropagation()
+            handleAction()
+          }}
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${primaryClasses}`}
+        >
+          {habitType === 'bad' ? '+ Craquage' : 'Valider'}
+        </button>
 
-      <div className="flex w-full flex-wrap gap-2 sm:hidden">
-        {habitType === 'bad' ? (
-          <button
-            type="button"
-            disabled={disablePrimary}
-            onClick={() => handleAction('POST')}
-            className="flex-shrink-0 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-red-900/40 transition disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            + Craquage
-          </button>
-        ) : hasValue ? (
-          <span className="flex-shrink-0 rounded-xl border border-green-500/60 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-200">
-            Validée
-          </span>
-        ) : (
-          <button
-            type="button"
-            disabled={disablePrimary}
-            onClick={() => handleAction('POST')}
-            className="flex-shrink-0 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/40 transition disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Valider
-          </button>
-        )}
+        <DropdownMenu.Root modal={false}>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              data-prevent-toggle="true"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              onClick={event => event.stopPropagation()}
+            >
+              <MoreVertical className="h-5 w-5" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="bottom"
+              align="end"
+              sideOffset={10}
+              className="z-[999999] w-[208px] rounded-2xl border border-white/10 bg-[#0d0f17] p-2 text-sm text-white shadow-2xl shadow-black/40 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
+            >
+              <MenuLink href={`/habits/${habitId}`} label="Voir l'habitude" />
+              <MenuLink href={`/habits/${habitId}/edit`} label="Modifier" />
+              <MenuLink href={`/habits/${habitId}?view=stats`} label="Statistiques" />
+              <DropdownMenu.Item
+                onSelect={event => {
+                  event.preventDefault()
+                  handleDelete()
+                }}
+                className="rounded-lg px-3 py-2 text-left text-red-500 transition hover:bg-white/10 focus:bg-white/10"
+              >
+                {isDeleting ? 'Suppression…' : 'Supprimer'}
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
     </>
+  )
+}
+
+function MenuLink({ href, label }: { href: string; label: string }) {
+  return (
+    <DropdownMenu.Item asChild>
+      <Link
+        href={href}
+        className="block rounded-lg px-3 py-2 text-white/90 transition hover:bg-white/10 focus:bg-white/10"
+        onClick={event => event.stopPropagation()}
+      >
+        {label}
+      </Link>
+    </DropdownMenu.Item>
   )
 }

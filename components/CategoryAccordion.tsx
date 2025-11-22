@@ -1,147 +1,82 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import * as Accordion from '@radix-ui/react-accordion'
 
-export let scrollingByCode = false
+type CategoryAccordionProps = {
+  id: string
+  title: string
+  count?: number
+  color?: string | null
+  children: ReactNode
+  openCategoryKey?: string | null
+  setOpenCategoryKey?: (id: string | null) => void
+  defaultOpen?: boolean
+  className?: string
+  headerClassName?: string
+  contentClassName?: string
+}
 
 export default function CategoryAccordion({
   id,
-  openCategoryKey,
-  setOpenCategoryKey,
   title,
-  count,
+  count = 0,
   color,
   children,
+  openCategoryKey,
+  setOpenCategoryKey,
   defaultOpen = false,
-  className,
-  headerClassName,
-  contentClassName,
-}) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
-  const [isAccordionVisible, setAccordionVisible] = useState(true)
-  const [isHovered, setIsHovered] = useState(false)
+  className = '',
+  headerClassName = '',
+  contentClassName = '',
+}: CategoryAccordionProps) {
+  const isControlled = typeof openCategoryKey !== 'undefined' && typeof setOpenCategoryKey === 'function'
+  const [internalValue, setInternalValue] = useState(defaultOpen ? id : '')
+  const accordionValue = isControlled ? openCategoryKey ?? '' : internalValue
 
-  const accordionRef = useRef<HTMLDivElement>(null)
-  const isControlled =
-    typeof id === 'string' &&
-    typeof openCategoryKey !== 'undefined' &&
-    typeof setOpenCategoryKey === 'function'
+  const accentColor = useMemo(() => color || '#6b7280', [color])
 
-  const isOpen = isControlled ? openCategoryKey === id : uncontrolledOpen
-
-  const handleToggle = () => {
-    if (isControlled && id) {
-      setOpenCategoryKey(openCategoryKey === id ? null : id)
+  const handleChange = (nextValue: string) => {
+    if (isControlled && setOpenCategoryKey) {
+      setOpenCategoryKey(nextValue === id ? id : null)
     } else {
-      setUncontrolledOpen(prev => !prev)
+      setInternalValue(nextValue)
     }
   }
 
-  // Auto scroll when opened
-  useEffect(() => {
-    if (isOpen && accordionRef.current) {
-      scrollingByCode = true
-      accordionRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
-      const timeout = setTimeout(() => {
-        scrollingByCode = false
-      }, 600)
-      return () => clearTimeout(timeout)
-    }
-  }, [isOpen])
-
-  // Observe visibility but do NOT close too early
-  useEffect(() => {
-    if (!accordionRef.current) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setAccordionVisible(entry.isIntersecting)
-      },
-      { threshold: 0.01 }  // 🔥 beaucoup moins agressif
-    )
-    observer.observe(accordionRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  // Scroll-based auto-close with distance & delay
-  useEffect(() => {
-    if (!isControlled || typeof setOpenCategoryKey !== 'function') return
-
-    let closeTimeout: NodeJS.Timeout | null = null
-
-    const handleScroll = () => {
-      if (!accordionRef.current) return
-
-      const rect = accordionRef.current.getBoundingClientRect()
-
-      if (isHovered) {
-        if (closeTimeout) {
-          clearTimeout(closeTimeout)
-          closeTimeout = null
-        }
-        return
-      }
-
-      if (rect.bottom > 80 && rect.top < window.innerHeight - 80) {
-        if (closeTimeout) {
-          clearTimeout(closeTimeout)
-          closeTimeout = null
-        }
-        return
-      }
-
-      if (scrollingByCode) return
-
-      if (closeTimeout) clearTimeout(closeTimeout)
-      closeTimeout = setTimeout(() => {
-        setOpenCategoryKey(null)
-        closeTimeout = null
-      }, 1500)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => {
-      if (closeTimeout) clearTimeout(closeTimeout)
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [isControlled, setOpenCategoryKey, isHovered])
-
   return (
-    <div
-      ref={accordionRef}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`overflow-hidden rounded-2xl border-0 bg-transparent sm:border sm:border-gray-800 sm:bg-black/30 ${
-        className || ''
-      }`}
+    <Accordion.Root
+      type="single"
+      collapsible
+      value={accordionValue}
+      onValueChange={handleChange}
+      className={`relative z-0 w-full rounded-2xl border border-white/10 bg-[#11131c]/70 text-white shadow-lg shadow-black/30 ${className}`}
     >
-      <button
-        type="button"
-        onClick={handleToggle}
-        className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-white transition sm:rounded-none sm:px-4 sm:py-4 sm:bg-gray-900/70 sm:hover:bg-gray-900 ${
-          headerClassName || ''
-        }`}
-        aria-expanded={isOpen}
-        aria-controls={id ? `${id}-content` : undefined}
-      >
-        <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color || '#6b7280' }} />
-          <span className="font-semibold text-left text-sm md:text-base">
-            {title} ({count})
-          </span>
-        </div>
-        <span className="text-gray-400 text-xs">{isOpen ? 'Fermer' : 'Ouvrir'}</span>
-      </button>
-      {isOpen && (
-        <div
-          id={id ? `${id}-content` : undefined}
-          className={`px-0 py-0 sm:px-4 sm:py-4 ${contentClassName || ''}`}
+      <Accordion.Item value={id} className="overflow-hidden rounded-2xl">
+        <Accordion.Header>
+          <Accordion.Trigger
+            className={`flex w-full items-center justify-between gap-4 rounded-2xl px-4 py-3 text-left transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${headerClassName}`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="h-3 w-3 rounded-full shadow" style={{ backgroundColor: accentColor }} />
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold sm:text-base">{title}</span>
+                <span className="text-xs text-white/60">
+                  {count} habitude{count > 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/60 transition-transform duration-200 data-[state=open]:rotate-180">
+              ▼
+            </span>
+          </Accordion.Trigger>
+        </Accordion.Header>
+        <Accordion.Content
+          className={`overflow-hidden border-t border-white/10 px-3 py-3 text-white/80 transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down sm:px-5 sm:py-5 ${contentClassName}`}
         >
           {children}
-        </div>
-      )}
-    </div>
+        </Accordion.Content>
+      </Accordion.Item>
+    </Accordion.Root>
   )
 }

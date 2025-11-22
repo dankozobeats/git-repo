@@ -83,6 +83,7 @@ export default function CategoryManager() {
   return (
     <section className="mb-12 rounded-3xl border border-white/5 bg-gradient-to-b from-[#1F1F1F] to-[#121212] py-1 px-1 text-white">
       <CategoryAccordion
+        id="custom-categories"
         title="Catégories personnalisées"
         count={categories.length}
         color="#FF4D4D"
