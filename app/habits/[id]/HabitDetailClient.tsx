@@ -75,13 +75,13 @@ export default function HabitDetailClient({
 
   return (
     <>
-      <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+      <div className="mx-auto max-w-5xl px-4 py-6 space-y-6 sm:py-8 sm:space-y-8">
         {/* Counter Section */}
-        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#1b1b1f] to-[#121214] p-6 shadow-2xl shadow-black/30">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-5">
+        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#1b1b1f] to-[#121214] p-5 shadow-2xl shadow-black/30 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-white/50">Aujourd&apos;hui</p>
-              <h2 className="text-2xl font-bold text-white mt-1">Action immédiate</h2>
+              <h2 className="mt-1 text-xl font-bold text-white sm:text-2xl">Action immédiate</h2>
             </div>
             <span className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/60">
               {isBadHabit ? 'Statut du jour' : 'Progression du jour'}
@@ -97,7 +97,7 @@ export default function HabitDetailClient({
             <p className="text-xs uppercase tracking-[0.3em] text-white/50 mb-3">Statut</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className={`text-2xl md:text-3xl font-bold ${isBadHabit ? 'text-[#FF4D4D]' : 'text-[#4DA6FF]'}`}>
+                <p className={`text-xl font-bold sm:text-2xl md:text-3xl ${isBadHabit ? 'text-[#FF4D4D]' : 'text-[#4DA6FF]'}`}>
                   {isBadHabit
                     ? count > 0
                       ? `${count} craquage${count > 1 ? 's' : ''}`
@@ -106,7 +106,7 @@ export default function HabitDetailClient({
                     ? 'Habitude validée'
                     : 'Pas encore validée'}
                 </p>
-                <p className="text-sm text-white/70 mt-1">
+                <p className="mt-1 text-sm leading-relaxed text-white/70">
                   {isBadHabit
                     ? count > 0
                       ? 'Tu as déclaré un craquage aujourd’hui. Note ce qui a déclenché pour reprendre le contrôle.'

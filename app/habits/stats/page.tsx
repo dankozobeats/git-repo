@@ -10,8 +10,15 @@ import { DailyBars } from '@/components/stats/DailyBars'
 import { GoodBadCompare } from '@/components/stats/GoodBadCompare'
 import { HabitHeatmap } from '@/components/stats/HabitHeatmap'
 import { WeekdayPerformanceChart } from '@/components/stats/WeekdayPerformanceChart'
+import HabitStatsModal from '@/components/HabitStatsModal'
 
 const PERIOD_OPTIONS: HabitStatsPeriod[] = [7, 30, 90, 'all']
+
+type SelectedHabit = {
+  id: string
+  name: string
+  type: 'good' | 'bad'
+}
 
 export default function HabitStatsPage() {
   const [period, setPeriod] = useState<HabitStatsPeriod>(30)
@@ -43,6 +50,7 @@ export default function HabitStatsPage() {
   }, [data])
 
   const topHabits = data?.topHabits ?? []
+  const [selectedHabit, setSelectedHabit] = useState<SelectedHabit | null>(null)
   const weekdaySummary = useMemo(() => {
     if (!weeklyData?.length) {
       return {
@@ -220,10 +228,18 @@ export default function HabitStatsPage() {
                 {topHabits.length === 0 && (
                   <p className="text-sm text-gray-500">Aucune donnée disponible pour cette période.</p>
                 )}
-                {topHabits.map((habit, index) => (
-                  <div
-                    key={`${habit.name}-${index}`}
-                    className="flex items-center justify-between rounded-xl border border-white/5 bg-gray-950/50 px-4 py-3 text-sm"
+                {topHabits.map(habit => (
+                  <button
+                    type="button"
+                    key={habit.id}
+                    onClick={() =>
+                      setSelectedHabit({
+                        id: habit.id,
+                        name: habit.name,
+                        type: habit.type,
+                      })
+                    }
+                    className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-gray-950/50 px-4 py-3 text-left text-sm transition hover:border-white/30"
                   >
                     <div>
                       <p className="font-semibold text-white">{habit.name}</p>
@@ -232,12 +248,13 @@ export default function HabitStatsPage() {
                       </p>
                     </div>
                     <span className="text-lg font-bold text-white">{habit.total}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
           </section>
         )}
+        {selectedHabit && <HabitStatsModal habit={selectedHabit} onClose={() => setSelectedHabit(null)} />}
       </div>
     </main>
   )

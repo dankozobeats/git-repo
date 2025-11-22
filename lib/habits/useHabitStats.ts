@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
 
-type HabitRow = Pick<Database['public']['Tables']['habits']['Row'], 'id' | 'name' | 'type'>
-type LogRow = Pick<Database['public']['Tables']['logs']['Row'], 'habit_id' | 'completed_date' | 'value' | 'created_at'>
-type EventRow = Pick<Database['public']['Tables']['habit_events']['Row'], 'habit_id' | 'event_date' | 'occurred_at'>
-
 export type HabitStatsPeriod = 7 | 30 | 90 | 'all'
+
+type HabitRow = Pick<Database['public']['Tables']['habits']['Row'], 'id' | 'name' | 'type' | 'created_at'>
+type LogRow = Pick<Database['public']['Tables']['logs']['Row'], 'habit_id' | 'completed_date' | 'value' | 'created_at'>
+type EventRow = Pick<Database['public']['Tables']['habit_events']['Row'], 'habit_id' | 'event_date' | 'occurred_at' | 'created_at'>
 
 export type DailyPoint = {
   date: string
@@ -24,9 +24,12 @@ export type CumulativePoint = {
 }
 
 export type TopHabitPoint = {
+  id: string
   name: string
+  type: 'good' | 'bad'
   total: number
-  type?: string | null
+  streak: number
+  maxStreak: number
 }
 
 export type HeatmapPoint = {
@@ -52,16 +55,19 @@ type UseHabitStatsState = {
   refresh: () => void
 }
 
-const formatDateKey = (date: Date) => date.toISOString().split('T')[0]
+const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
-const parseDateKey = (value?: string | null) => {
-  if (!value) return null
-  return new Date(`${value}T00:00:00`)
+const normalizeDate = (date?: string | null, fallback?: string | null) => {
+  if (date) return date
+  if (fallback) return fallback.split('T')[0]
+  return null
 }
+
+const diffInDays = (a: Date, b: Date) => Math.floor((b.getTime() - a.getTime()) / 86400000)
 
 export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
   const [data, setData] = useState<HabitStatsPayload | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchStats = useCallback(async () => {
@@ -79,19 +85,10 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
         throw new Error('AUTH')
       }
 
-      const today = new Date()
-      let startDateFilter: string | null = null
-
-      if (period !== 'all') {
-        const start = new Date(today)
-        start.setDate(start.getDate() - (period - 1))
-        startDateFilter = formatDateKey(start)
-      }
-
       const [habitsRes, logsRes, eventsRes] = await Promise.all([
         supabase
           .from('habits')
-          .select('id, name, type')
+          .select('id, name, type, created_at')
           .eq('user_id', user.id)
           .eq('is_archived', false),
         supabase
@@ -101,7 +98,7 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
           .order('completed_date', { ascending: true }),
         supabase
           .from('habit_events')
-          .select('habit_id, event_date, occurred_at')
+          .select('habit_id, event_date, occurred_at, created_at')
           .eq('user_id', user.id)
           .order('event_date', { ascending: true }),
       ])
@@ -110,31 +107,11 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
       if (logsRes.error) throw logsRes.error
       if (eventsRes.error) throw eventsRes.error
 
-      let logs = (logsRes.data ?? []) as LogRow[]
-      let events = (eventsRes.data ?? []) as EventRow[]
-
-      if (startDateFilter) {
-        logs = logs.filter((log) => {
-          const key = log.completed_date || log.created_at?.split('T')[0]
-          return key ? key >= startDateFilter : false
-        })
-        events = events.filter((event) => {
-          const key = event.event_date || event.occurred_at?.split('T')[0]
-          return key ? key >= startDateFilter : false
-        })
-      }
-
       const habits = (habitsRes.data ?? []) as HabitRow[]
+      const logs = (logsRes.data ?? []) as LogRow[]
+      const events = (eventsRes.data ?? []) as EventRow[]
 
-      const stats = buildStats({
-        habits,
-        logs,
-        events,
-        today,
-        period,
-        startDateFilter,
-      })
-
+      const stats = buildStats(habits, logs, events, period)
       setData(stats)
       setLoading(false)
     } catch (err: any) {
@@ -156,118 +133,216 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
   }
 }
 
-type BuildStatsArgs = {
-  habits: HabitRow[]
-  logs: LogRow[]
-  events: EventRow[]
-  today: Date
-  period: HabitStatsPeriod
-  startDateFilter: string | null
-}
-
-function buildStats({ habits, logs, events, today, period, startDateFilter }: BuildStatsArgs): HabitStatsPayload {
-  const habitMap = new Map<string, HabitRow>(habits.map((habit) => [habit.id, habit]))
-
+function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], period: HabitStatsPeriod): HabitStatsPayload {
+  const today = new Date()
+  const habitMap = new Map(habits.map(habit => [habit.id, habit]))
   const logsByDay = new Map<string, number>()
-  logs.forEach((log) => {
-    const key = log.completed_date || log.created_at?.split('T')[0]
-    if (!key) return
-    const amount = typeof log.value === 'number' ? log.value : 1
-    logsByDay.set(key, (logsByDay.get(key) ?? 0) + amount)
-  })
-
   const eventsByDay = new Map<string, number>()
-  events.forEach((event) => {
-    const key = event.event_date || event.occurred_at?.split('T')[0]
-    if (!key) return
-    eventsByDay.set(key, (eventsByDay.get(key) ?? 0) + 1)
+  const allDates = new Set<string>()
+  const habitTotals = new Map<
+    string,
+    {
+      id: string
+      name: string
+      type: 'good' | 'bad'
+      total: number
+      createdAt: string | null
+    }
+  >()
+  const logDatesByHabit = new Map<string, Set<string>>()
+  const eventDatesByHabit = new Map<string, Set<string>>()
+
+  logs.forEach(log => {
+    const habit = habitMap.get(log.habit_id)
+    if (!habit) return
+    const date = normalizeDate(log.completed_date, log.created_at)
+    if (!date) return
+
+    const amount = typeof log.value === 'number' ? Math.max(1, log.value) : 1
+    logsByDay.set(date, (logsByDay.get(date) ?? 0) + amount)
+    allDates.add(date)
+
+    if (!logDatesByHabit.has(log.habit_id)) {
+      logDatesByHabit.set(log.habit_id, new Set())
+    }
+    logDatesByHabit.get(log.habit_id)!.add(date)
+
+    const entry =
+      habitTotals.get(log.habit_id) ??
+      {
+        id: habit.id,
+        name: habit.name,
+        type: habit.type,
+        total: 0,
+        createdAt: habit.created_at ?? null,
+      }
+    entry.total += amount
+    habitTotals.set(log.habit_id, entry)
   })
 
-  const combinedDates = [
-    ...logs.map((log) => log.completed_date),
-    ...events.map((event) => event.event_date ?? event.occurred_at?.split('T')[0]),
-  ].filter(Boolean) as string[]
+  events.forEach(event => {
+    const habit = habitMap.get(event.habit_id)
+    if (!habit) return
+    const date = normalizeDate(event.event_date, event.occurred_at)
+    if (!date) return
 
-  let timelineStart: Date
-  if (period === 'all') {
-    if (combinedDates.length) {
-      const earliest = combinedDates.reduce((acc, curr) => (curr < acc ? curr : acc))
-      timelineStart = parseDateKey(earliest) ?? new Date(today)
-    } else {
-      timelineStart = new Date(today)
-      timelineStart.setDate(timelineStart.getDate() - 29)
+    eventsByDay.set(date, (eventsByDay.get(date) ?? 0) + 1)
+    allDates.add(date)
+
+    if (!eventDatesByHabit.has(event.habit_id)) {
+      eventDatesByHabit.set(event.habit_id, new Set())
     }
-  } else {
-    timelineStart = parseDateKey(startDateFilter) ?? new Date(today)
-  }
+    eventDatesByHabit.get(event.habit_id)!.add(date)
 
-  const start = new Date(timelineStart)
+    const entry =
+      habitTotals.get(event.habit_id) ??
+      {
+        id: habit.id,
+        name: habit.name,
+        type: habit.type,
+        total: 0,
+        createdAt: habit.created_at ?? null,
+      }
+    entry.total += 1
+    habitTotals.set(event.habit_id, entry)
+  })
+
+  const startDate = determineStartDate(period, allDates, today)
+  const daily: DailyPoint[] = []
+  const cumulative: CumulativePoint[] = []
+
+  let cursor = new Date(startDate)
   const end = new Date(today)
-  start.setHours(0, 0, 0, 0)
-  end.setHours(0, 0, 0, 0)
-
-  const days: DailyPoint[] = []
-  for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    const key = formatDateKey(cursor)
-    const good = logsByDay.get(key) ?? 0
-    const bad = eventsByDay.get(key) ?? 0
-    days.push({
-      date: key,
-      good,
-      bad,
-      total: good + bad,
-    })
-  }
-
   let runningGood = 0
   let runningBad = 0
-  const cumulative: CumulativePoint[] = days.map((day) => {
-    runningGood += day.good
-    runningBad += day.bad
-    return {
-      date: day.date,
-      goodCum: runningGood,
-      badCum: runningBad,
-    }
-  })
+  let maxGood = 0
+  let maxBad = 0
 
-  const maxGood = days.reduce((acc, point) => Math.max(acc, point.good), 0)
-  const maxBad = days.reduce((acc, point) => Math.max(acc, point.bad), 0)
+  while (cursor <= end) {
+    const key = formatDate(cursor)
+    const good = logsByDay.get(key) ?? 0
+    const bad = eventsByDay.get(key) ?? 0
+    const total = good + bad
+    daily.push({ date: key, good, bad, total })
+    runningGood += good
+    runningBad += bad
+    cumulative.push({ date: key, goodCum: runningGood, badCum: runningBad })
+    maxGood = Math.max(maxGood, good)
+    maxBad = Math.max(maxBad, bad)
+    cursor.setDate(cursor.getDate() + 1)
+  }
 
-  const heatmap: HeatmapPoint[] = days.map((day) => ({
-    date: day.date,
-    good: day.good,
-    bad: day.bad,
-    total: day.total,
-    intensityGood: maxGood ? Math.min(4, Math.ceil((day.good / maxGood) * 4)) : 0,
-    intensityBad: maxBad ? Math.min(4, Math.ceil((day.bad / maxBad) * 4)) : 0,
+  const heatmap: HeatmapPoint[] = daily.map(point => ({
+    ...point,
+    intensityGood: maxGood ? Math.min(4, Math.ceil((point.good / maxGood) * 4)) : 0,
+    intensityBad: maxBad ? Math.min(4, Math.ceil((point.bad / maxBad) * 4)) : 0,
   }))
 
-  const totalsByHabit = new Map<string, number>()
-  logs.forEach((log) => {
-    const amount = typeof log.value === 'number' ? log.value : 1
-    totalsByHabit.set(log.habit_id, (totalsByHabit.get(log.habit_id) ?? 0) + amount)
-  })
-  events.forEach((event) => {
-    totalsByHabit.set(event.habit_id, (totalsByHabit.get(event.habit_id) ?? 0) + 1)
-  })
-
-  const topHabits: TopHabitPoint[] = Array.from(totalsByHabit.entries())
-    .map(([habitId, total]) => {
-      const habit = habitMap.get(habitId)
-      return {
-        name: habit?.name ?? 'Habitude',
-        total,
-        type: habit?.type ?? null,
+  const topHabits: TopHabitPoint[] = Array.from(habitTotals.values())
+    .map(habit => {
+      if (habit.type === 'bad') {
+        const eventsSet = eventDatesByHabit.get(habit.id) ?? new Set<string>()
+        const { current, max } = computeBadHabitStreak(eventsSet, habit.createdAt, today)
+        return { id: habit.id, name: habit.name, type: 'bad' as const, total: habit.total, streak: current, maxStreak: max }
       }
+      const logSet = logDatesByHabit.get(habit.id) ?? new Set<string>()
+      const { current, max } = computeGoodHabitStreak(logSet, today)
+      return { id: habit.id, name: habit.name, type: 'good' as const, total: habit.total, streak: current, maxStreak: max }
     })
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 
-  return {
-    daily: days,
-    cumulative,
-    topHabits,
-    heatmap,
+  return { daily, cumulative, topHabits, heatmap }
+}
+
+function determineStartDate(period: HabitStatsPeriod, dates: Set<string>, today: Date) {
+  if (period !== 'all') {
+    const start = new Date(today)
+    start.setDate(start.getDate() - (period - 1))
+    return start
   }
+
+  if (dates.size === 0) {
+    const fallback = new Date(today)
+    fallback.setDate(fallback.getDate() - 29)
+    return fallback
+  }
+
+  const earliest = Array.from(dates).sort()[0]
+  return new Date(`${earliest}T00:00:00`)
+}
+
+function computeGoodHabitStreak(dateSet: Set<string>, today: Date) {
+  if (dateSet.size === 0) return { current: 0, max: 0 }
+  const sortedDates = Array.from(dateSet).sort()
+  let longest = 0
+  let streak = 0
+  let prevDate: Date | null = null
+
+  sortedDates.forEach(dateStr => {
+    const date = new Date(`${dateStr}T00:00:00`)
+    if (prevDate && diffInDays(prevDate, date) === 1) {
+      streak += 1
+    } else {
+      streak = 1
+    }
+    longest = Math.max(longest, streak)
+    prevDate = date
+  })
+
+  let current = 0
+  const cursor = new Date(today)
+  while (true) {
+    const key = formatDate(cursor)
+    if (dateSet.has(key)) {
+      current += 1
+      cursor.setDate(cursor.getDate() - 1)
+    } else {
+      break
+    }
+  }
+
+  return { current, max: longest }
+}
+
+function computeBadHabitStreak(dateSet: Set<string>, createdAt: string | null, today: Date) {
+  const sortedDates = Array.from(dateSet).sort()
+  const creationDate = createdAt ? new Date(createdAt) : null
+
+  let current = 0
+  const cursor = new Date(today)
+  let safety = 0
+  while (safety < 400) {
+    const key = formatDate(cursor)
+    if (dateSet.has(key)) break
+    current += 1
+    cursor.setDate(cursor.getDate() - 1)
+    safety += 1
+    if (creationDate && cursor < creationDate) break
+  }
+
+  let max = current
+  let prevDate: Date | null = creationDate ? new Date(creationDate) : null
+
+  sortedDates.forEach(dateStr => {
+    const eventDate = new Date(`${dateStr}T00:00:00`)
+    if (prevDate) {
+      const start = new Date(prevDate)
+      start.setDate(start.getDate() + 1)
+      const gap = Math.max(0, diffInDays(start, eventDate))
+      max = Math.max(max, gap)
+    }
+    prevDate = eventDate
+  })
+
+  if (sortedDates.length) {
+    const lastEvent = new Date(`${sortedDates[sortedDates.length - 1]}T00:00:00`)
+    max = Math.max(max, diffInDays(lastEvent, today))
+  } else if (creationDate) {
+    max = Math.max(max, diffInDays(creationDate, today))
+  } else {
+    max = Math.max(max, current)
+  }
+
+  return { current, max }
 }
