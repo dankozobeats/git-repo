@@ -297,9 +297,9 @@ function getCountColor(status: string): string {
 
 function getButtonColor(habitType: 'good' | 'bad', status: string): string {
   if (habitType === 'good') {
-    return 'bg-green-600 text-white hover:bg-green-500'
+    return 'bg-emerald-500/80 text-white/90 shadow-inner shadow-emerald-500/30 hover:bg-emerald-500'
   } else {
-    return 'bg-red-600 text-white hover:bg-red-500'
+    return 'bg-red-500/80 text-white/90 shadow-inner shadow-red-500/30 hover:bg-red-500'
   }
 }
 

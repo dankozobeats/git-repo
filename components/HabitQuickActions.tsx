@@ -84,11 +84,12 @@ export default function HabitQuickActions({
     }
   }
 
-  const primaryClasses = disablePrimary
-    ? 'cursor-not-allowed bg-gray-800 text-gray-500'
-    : habitType === 'bad'
-    ? 'bg-red-600 hover:bg-red-700'
-    : 'bg-green-600 hover:bg-green-700'
+  const softPrimary =
+    habitType === 'bad'
+      ? 'bg-red-500/80 text-white/90 shadow-inner shadow-red-500/20 hover:bg-red-500'
+      : 'bg-emerald-500/80 text-white/90 shadow-inner shadow-emerald-500/20 hover:bg-emerald-500'
+
+  const primaryClasses = disablePrimary ? 'cursor-not-allowed bg-gray-800 text-gray-500' : softPrimary
 
   const primaryLabel = () => {
     if (habitType === 'bad') {
