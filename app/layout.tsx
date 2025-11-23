@@ -55,7 +55,7 @@ export default async function RootLayout({
             userEmail={userEmail}
             avatarInitial={avatarInitial}
           />
-          <div className="md:ml-64 md:h-screen md:overflow-y-auto px-4 pt-16 md:px-0 md:pt-0">
+          <div className="md:ml-64 md:h-screen md:overflow-y-auto pt-0">
             {children}
           </div>
           {isAuthenticated && <FloatingQuickActions />}

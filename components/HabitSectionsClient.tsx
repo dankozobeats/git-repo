@@ -1,12 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef, type MutableRefObject } from 'react'
 import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import SearchBar from '@/components/SearchBar'
 import CategoryManager from '@/components/CategoryManager'
 import CoachRoastBubble from '@/components/CoachRoastBubble'
 import { ChevronDown, ListChecks } from 'lucide-react'
+import { useScrollLock } from '@/hooks/useScrollLock'
+import SectionSnap from '@/components/SectionSnap'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -51,6 +53,24 @@ type CategoryStat = {
   count: number
 }
 
+function centerSection(ref: { current: HTMLDivElement | null }) {
+  if (typeof window === 'undefined' || !ref.current) return
+  const rect = ref.current.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+
+  if (rect.height > viewportHeight * 0.85) {
+    ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+
+  const scrollTop = window.scrollY
+  const offset = rect.top + scrollTop - (viewportHeight - rect.height) / 2
+  window.scrollTo({
+    top: Math.max(0, offset),
+    behavior: 'smooth',
+  })
+}
+
 export default function HabitSectionsClient({
   badHabits,
   goodHabits,
@@ -65,10 +85,108 @@ export default function HabitSectionsClient({
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [lockedSection, setLockedSection] = useState<'good' | 'bad' | null>(null)
+  const [activeScrollContainerInfo, setActiveScrollContainerInfo] = useState<{
+    key: string
+    node: HTMLDivElement
+  } | null>(null)
+  const activeScrollContainer = activeScrollContainerInfo?.node ?? null
+  const categoryRefs = useRef(new Map<string, MutableRefObject<HTMLDivElement | null>>())
   const todayCountsMap = useMemo(
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
   )
+  useScrollLock(Boolean(lockedSection))
+
+  useEffect(() => {
+    if (!openCategoryKey && lockedSection) {
+      setLockedSection(null)
+    }
+  }, [openCategoryKey, lockedSection])
+
+  const handleRegisterScrollContainer = useCallback((key: string, container: HTMLDivElement | null) => {
+    setActiveScrollContainerInfo(prev => {
+      if (!container) {
+        if (prev?.key === key) {
+          return null
+        }
+        return prev
+      }
+      return { key, node: container }
+    })
+  }, [])
+
+  const getCategoryRef = useCallback((key: string) => {
+    if (!categoryRefs.current.has(key)) {
+      categoryRefs.current.set(key, { current: null } as MutableRefObject<HTMLDivElement | null>)
+    }
+    return categoryRefs.current.get(key)!
+  }, [])
+
+  const handleToggleCategory = useCallback(
+    (section: 'good' | 'bad', categoryKey: string, isOpening: boolean) => {
+      setOpenCategoryKey(prev => {
+        if (isOpening) {
+          if (prev === categoryKey) return prev
+          setLockedSection(section)
+          const ref = getCategoryRef(categoryKey)
+          window.setTimeout(() => {
+            centerSection(ref)
+          }, 20)
+          return categoryKey
+        }
+
+        if (prev === categoryKey) {
+          setLockedSection(null)
+          setActiveScrollContainerInfo(null)
+          return null
+        }
+        return prev
+      })
+    },
+    [getCategoryRef]
+  )
+
+  useEffect(() => {
+    if (!lockedSection || !activeScrollContainer) return
+
+    let lastTouchY = 0
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!activeScrollContainer) return
+      const target = event.target as Node
+      if (activeScrollContainer.contains(target)) return
+      event.preventDefault()
+      activeScrollContainer.scrollTop += event.deltaY
+    }
+
+    const handleTouchStart = (event: TouchEvent) => {
+      lastTouchY = event.touches[0]?.clientY ?? 0
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!activeScrollContainer) return
+      const target = event.target as Node
+      if (activeScrollContainer.contains(target)) return
+      if (event.cancelable) {
+        event.preventDefault()
+      }
+      const currentY = event.touches[0]?.clientY ?? 0
+      const delta = lastTouchY - currentY
+      lastTouchY = currentY
+      activeScrollContainer.scrollTop += delta
+    }
+
+    document.addEventListener('wheel', handleWheel, { passive: false })
+    document.addEventListener('touchstart', handleTouchStart, { passive: false })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+
+    return () => {
+      document.removeEventListener('wheel', handleWheel)
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchmove', handleTouchMove)
+    }
+  }, [lockedSection, activeScrollContainer])
 
   const filterGroups = (groups: HabitGroup[]) =>
     groups
@@ -177,11 +295,13 @@ export default function HabitSectionsClient({
                 type={config.type}
                 todayCountsMap={todayCountsMap}
                 openCategoryKey={openCategoryKey}
-                setOpenCategoryKey={setOpenCategoryKey}
+                onToggleCategory={handleToggleCategory}
+                registerScrollContainer={handleRegisterScrollContainer}
+                getCategoryRef={getCategoryRef}
               />
             )
           })}
-          <section className="space-y-4 rounded-3xl p-4 sm:p-6">
+          <SectionSnap id="categories-section" className="space-y-4 rounded-3xl p-4 sm:p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-white/40">Pilotage</p>
@@ -194,6 +314,7 @@ export default function HabitSectionsClient({
                 type="button"
                 onClick={() => setCategoriesOpen(prev => !prev)}
                 className="rounded-2xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+                data-floating-hide-on-press
               >
                 {categoriesOpen ? 'Masquer' : 'Afficher'}
               </button>
@@ -206,7 +327,7 @@ export default function HabitSectionsClient({
                 </div>
               </div>
             )}
-          </section>
+          </SectionSnap>
         </>
       )}
     </section>
@@ -221,7 +342,9 @@ type HabitSectionProps = {
   type: 'good' | 'bad'
   todayCountsMap: Map<string, number>
   openCategoryKey: string | null
-  setOpenCategoryKey: (id: string | null) => void
+  onToggleCategory: (section: 'good' | 'bad', categoryKey: string, isOpening: boolean) => void
+  registerScrollContainer: (key: string, container: HTMLDivElement | null) => void
+  getCategoryRef: (key: string) => MutableRefObject<HTMLDivElement | null>
 }
 
 function HabitSection({
@@ -232,12 +355,14 @@ function HabitSection({
   type,
   todayCountsMap,
   openCategoryKey,
-  setOpenCategoryKey,
+  onToggleCategory,
+  registerScrollContainer,
+  getCategoryRef,
 }: HabitSectionProps) {
   const variant = HABIT_VARIANT_STYLES[type]
 
   return (
-    <section id={`${type}-habits-section`} className="space-y-6 py-4">
+    <SectionSnap id={`${type}-habits-section`} className="space-y-6 py-4 scroll-mt-24">
       <div>
         <p className="text-xs uppercase tracking-[0.35em] text-white/40">Tableau de bord</p>
         <h2 className={`text-2xl font-semibold md:text-3xl ${variant.headerAccent}`}>
@@ -251,57 +376,99 @@ function HabitSection({
         </div>
       ) : (
         <div className="space-y-5">
-          {groupedHabits.map((group, index) => {
+          {groupedHabits.map(group => {
             const baseId = group.category?.id || 'uncategorized'
             const categoryKey = `${type}-${baseId}`
             const isOpen = openCategoryKey ? openCategoryKey === categoryKey : false
 
-            const toggleCategory = () => {
-              setOpenCategoryKey(isOpen ? null : categoryKey)
-            }
-
             return (
-              <div key={categoryKey} className="rounded-3xl bg-gradient-to-b from-white/5 to-transparent p-1">
-                <button
-                  type="button"
-                  onClick={toggleCategory}
-                  className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left sm:px-5"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`rounded-full p-2 ${variant.iconBg}`}>
-                      <ListChecks className="h-5 w-5" />
-                    </span>
-                    <div className="text-left">
-                      <p className="text-base font-semibold text-white">
-                        {group.category?.name ?? 'Sans catégorie'}
-                      </p>
-                      <p className="text-xs text-white/50">
-                        {group.habits.length} routine{group.habits.length > 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronDown
-                    className={`h-5 w-5 text-white/60 transition duration-300 ${isOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {isOpen && (
-                  <div className="space-y-4 px-1 py-4 sm:px-2">
-                    {group.habits.map(habit => (
-                      <HabitRowCard
-                        key={habit.id}
-                        habit={habit}
-                        type={type}
-                        todayCount={todayCountsMap.get(habit.id) ?? 0}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <HabitCategoryPanel
+                key={categoryKey}
+                group={group}
+                type={type}
+                variant={variant}
+                todayCountsMap={todayCountsMap}
+                isOpen={isOpen}
+                categoryKey={categoryKey}
+                onToggleCategory={() => onToggleCategory(type, categoryKey, !isOpen)}
+                registerScrollContainer={registerScrollContainer}
+                categoryRef={getCategoryRef(categoryKey)}
+              />
             )
           })}
         </div>
       )}
-    </section>
+    </SectionSnap>
+  )
+}
+
+type HabitCategoryPanelProps = {
+  group: HabitGroup
+  type: 'good' | 'bad'
+  variant: (typeof HABIT_VARIANT_STYLES)['good']
+  todayCountsMap: Map<string, number>
+  isOpen: boolean
+  categoryKey: string
+  onToggleCategory: () => void
+  registerScrollContainer: (key: string, container: HTMLDivElement | null) => void
+  categoryRef: MutableRefObject<HTMLDivElement | null>
+}
+
+function HabitCategoryPanel({
+  group,
+  type,
+  variant,
+  todayCountsMap,
+  isOpen,
+  categoryKey,
+  onToggleCategory,
+  registerScrollContainer,
+  categoryRef,
+}: HabitCategoryPanelProps) {
+  const contentRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const node = contentRef.current
+    if (isOpen && node) {
+      registerScrollContainer(categoryKey, node)
+    } else {
+      registerScrollContainer(categoryKey, null)
+      if (node) node.scrollTop = 0
+    }
+  }, [isOpen, registerScrollContainer, categoryKey])
+
+  return (
+    <div ref={categoryRef} className="rounded-3xl bg-gradient-to-b from-white/5 to-transparent p-1">
+      <button
+        type="button"
+        onClick={onToggleCategory}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left sm:px-5"
+        data-floating-hide-on-press
+      >
+        <div className="flex items-center gap-3">
+          <span className={`rounded-full p-2 ${variant.iconBg}`}>
+            <ListChecks className="h-5 w-5" />
+          </span>
+          <div className="text-left">
+            <p className="text-base font-semibold text-white">{group.category?.name ?? 'Sans catégorie'}</p>
+            <p className="text-xs text-white/50">
+              {group.habits.length} routine{group.habits.length > 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+        <ChevronDown className={`h-5 w-5 text-white/60 transition duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div
+          ref={contentRef}
+          className="space-y-4 px-1 py-4 sm:px-2 max-h-[70vh] overflow-y-auto overscroll-contain"
+        >
+          {group.habits.map(habit => (
+            <HabitRowCard key={habit.id} habit={habit} type={type} todayCount={todayCountsMap.get(habit.id) ?? 0} />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

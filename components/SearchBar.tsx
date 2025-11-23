@@ -30,7 +30,7 @@ export default function SearchBar({ onSearch, placeholder = 'Rechercher une habi
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" data-mobile-search="true">
       <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
       <input
         type="text"

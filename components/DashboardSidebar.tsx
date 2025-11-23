@@ -12,11 +12,12 @@ import {
   BarChart3,
   HelpCircle,
   Target,
-  Menu,
   X,
   LogOut,
   Settings,
+  Search as SearchIcon,
 } from 'lucide-react'
+import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
 
 const iconMap = {
   dashboard: LayoutDashboard,
@@ -49,18 +50,11 @@ type DashboardSidebarProps = {
 
 export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avatarInitial }: DashboardSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [navSearch, setNavSearch] = useState('')
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 flex items-center gap-2 rounded-2xl border border-white/20 bg-[#050915]/90 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:border-white/40 md:hidden"
-        aria-label="Ouvrir le menu"
-      >
-        <Menu className="h-4 w-4" />
-        Menu
-      </button>
+      <MobileHamburgerMenu onOpen={() => setMobileOpen(true)} isMenuOpen={mobileOpen} />
 
       <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] md:flex">
         <SidebarContent
@@ -69,6 +63,8 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
           userEmail={userEmail}
           avatarInitial={avatarInitial}
           onNavigate={() => setMobileOpen(false)}
+          searchQuery={navSearch}
+          onSearchChange={setNavSearch}
         />
       </aside>
 
@@ -96,9 +92,10 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
           </button>
         </div>
         <div className="mt-6 flex flex-col gap-6">
-          <NavLinks items={mainNav} onNavigate={() => setMobileOpen(false)} />
+          <SidebarSearchInput value={navSearch} onChange={setNavSearch} />
+          <NavLinks items={mainNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
           <div className="border-t border-white/10 pt-4">
-            <NavLinks items={utilityNav} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks items={utilityNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
             <form action="/auth/signout" method="post" className="mt-3">
               <button className="flex w-full items-center gap-3 rounded-2xl bg-[#111827] px-3 py-2 text-left text-sm font-semibold text-white/70 transition hover:bg-[#1f2937] hover:text-white">
                 <LogOut className="h-4 w-4" />
@@ -118,22 +115,27 @@ function SidebarContent({
   userEmail,
   avatarInitial,
   onNavigate,
+  searchQuery,
+  onSearchChange,
 }: {
   mainNav: SidebarNavItem[]
   utilityNav: SidebarNavItem[]
   userEmail: string
   avatarInitial: string
   onNavigate?: () => void
+  searchQuery: string
+  onSearchChange: (value: string) => void
 }) {
   return (
     <div className="flex h-full flex-col">
       <MiniProfile userEmail={userEmail} avatarInitial={avatarInitial} />
       <div className="mt-4 flex-1 overflow-y-auto">
+        <SidebarSearchInput value={searchQuery} onChange={onSearchChange} />
         <div aria-label="Navigation principale">
-          <NavLinks items={mainNav} onNavigate={onNavigate} />
+          <NavLinks items={mainNav} onNavigate={onNavigate} searchTerm={searchQuery} />
         </div>
         <div className="mt-6 border-t border-white/5 pt-4" aria-label="Navigation secondaire">
-          <NavLinks items={utilityNav} onNavigate={onNavigate} />
+          <NavLinks items={utilityNav} onNavigate={onNavigate} searchTerm={searchQuery} />
         </div>
       </div>
       <form action="/auth/signout" method="post" className="mt-6">
@@ -146,8 +148,20 @@ function SidebarContent({
   )
 }
 
-function NavLinks({ items, onNavigate }: { items: SidebarNavItem[]; onNavigate?: () => void }) {
+function NavLinks({
+  items,
+  onNavigate,
+  searchTerm = '',
+}: {
+  items: SidebarNavItem[]
+  onNavigate?: () => void
+  searchTerm?: string
+}) {
   const pathname = usePathname()
+  const normalizedQuery = searchTerm.trim().toLowerCase()
+  const filteredItems = normalizedQuery
+    ? items.filter(item => item.label.toLowerCase().includes(normalizedQuery))
+    : items
 
   const isLinkActive = (href: string, provided?: boolean) => {
     if (typeof provided !== 'undefined') return provided
@@ -164,9 +178,13 @@ function NavLinks({ items, onNavigate }: { items: SidebarNavItem[]; onNavigate?:
     return normalizedPath.startsWith(`${normalizedBase}/`)
   }
 
+  if (filteredItems.length === 0) {
+    return <p className="mt-2 text-xs text-white/40">Aucune entrée ne correspond à la recherche.</p>
+  }
+
   return (
-    <nav className="space-y-1">
-      {items.map(item => {
+    <nav className="mt-4 space-y-1">
+      {filteredItems.map(item => {
         const Icon = iconMap[item.icon]
         const isActive = isLinkActive(item.href, item.isActive)
         return (
@@ -207,6 +225,30 @@ function MiniProfile({ userEmail, avatarInitial }: { userEmail: string; avatarIn
         </div>
       </div>
       <p className="mt-2 text-xs text-white/60 truncate">{userEmail}</p>
+    </div>
+  )
+}
+
+function SidebarSearchInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="mt-2">
+      <label className="text-xs uppercase tracking-[0.3em] text-white/40">Recherche</label>
+      <div className="relative mt-2">
+        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+        <input
+          type="text"
+          value={value}
+          onChange={event => onChange(event.target.value)}
+          placeholder="Trouver une page..."
+          className="w-full rounded-2xl border border-white/10 bg-black/40 py-2 pl-10 pr-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+        />
+      </div>
     </div>
   )
 }

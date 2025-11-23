@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 
 type CategoryAccordionProps = {
@@ -15,6 +15,7 @@ type CategoryAccordionProps = {
   className?: string
   headerClassName?: string
   contentClassName?: string
+  onToggleOpen?: (open: boolean, id: string) => void
 }
 
 export default function CategoryAccordion({
@@ -29,6 +30,7 @@ export default function CategoryAccordion({
   className = '',
   headerClassName = '',
   contentClassName = '',
+  onToggleOpen,
 }: CategoryAccordionProps) {
   const isControlled = typeof openCategoryKey !== 'undefined' && typeof setOpenCategoryKey === 'function'
   const [internalValue, setInternalValue] = useState(defaultOpen ? id : '')
@@ -44,6 +46,18 @@ export default function CategoryAccordion({
     }
   }
 
+  const isOpen = accordionValue === id
+  const headerRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    onToggleOpen?.(isOpen, id)
+  }, [isOpen, onToggleOpen, id])
+  useEffect(() => {
+    if (!isOpen || !headerRef.current) return
+    const y = headerRef.current.getBoundingClientRect().top + window.scrollY - 20
+    window.scrollTo({ top: y, behavior: 'smooth' })
+  }, [isOpen])
+
   return (
     <Accordion.Root
       type="single"
@@ -56,6 +70,8 @@ export default function CategoryAccordion({
         <Accordion.Header>
           <Accordion.Trigger
             className={`flex w-full items-center justify-between gap-4 rounded-2xl px-4 py-3 text-left transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${headerClassName}`}
+            data-floating-hide-on-press
+            ref={headerRef}
           >
             <div className="flex items-center gap-3">
               <span className="h-3 w-3 rounded-full shadow" style={{ backgroundColor: accentColor }} />
@@ -72,7 +88,7 @@ export default function CategoryAccordion({
           </Accordion.Trigger>
         </Accordion.Header>
         <Accordion.Content
-          className={`overflow-hidden px-3 py-3 text-white/80 transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down sm:px-5 sm:py-5 ${contentClassName}`}
+          className={`overflow-hidden px-3 py-3 text-white/80 transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down data-[state=open]:max-h-[60vh] data-[state=open]:overflow-y-auto data-[state=open]:pr-3 sm:px-5 sm:py-5 ${contentClassName}`}
         >
           {children}
         </Accordion.Content>

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { Plus, Sparkles } from 'lucide-react'
 
 export default function FloatingQuickActions() {
-  const [hiddenOnMobile, setHiddenOnMobile] = useState(false)
+  const [scrollHidden, setScrollHidden] = useState(false)
+  const [interactionHidden, setInteractionHidden] = useState(false)
 
   useEffect(() => {
     let lastScrollY = window.scrollY
@@ -13,21 +14,19 @@ export default function FloatingQuickActions() {
 
     const handleScroll = () => {
       const currentY = window.scrollY
-      const isScrollingDown = currentY > lastScrollY
+      const moved = Math.abs(currentY - lastScrollY) > 2
       lastScrollY = currentY
 
       if (window.innerWidth >= 768) return
 
-      if (isScrollingDown && currentY > 20) {
-        setHiddenOnMobile(true)
-      } else {
-        setHiddenOnMobile(false)
+      if (moved && currentY > 10) {
+        setScrollHidden(true)
       }
 
       clearTimeout(timeout)
       timeout = setTimeout(() => {
         if (window.innerWidth < 768) {
-          setHiddenOnMobile(false)
+          setScrollHidden(false)
         }
       }, 250)
     }
@@ -39,10 +38,30 @@ export default function FloatingQuickActions() {
     }
   }, [])
 
+  useEffect(() => {
+    let interactionTimeout: ReturnType<typeof setTimeout>
+
+    const handlePointer = (event: PointerEvent) => {
+      if (window.innerWidth >= 768) return
+      const target = event.target as HTMLElement | null
+      if (target?.closest('[data-floating-hide-on-press]')) {
+        setInteractionHidden(true)
+        clearTimeout(interactionTimeout)
+        interactionTimeout = setTimeout(() => setInteractionHidden(false), 700)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointer)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointer)
+      clearTimeout(interactionTimeout)
+    }
+  }, [])
+
   return (
     <div
       className={`fixed bottom-6 right-4 z-40 flex flex-col items-center gap-3 transition-all duration-200 sm:right-8 ${
-        hiddenOnMobile ? 'translate-x-16 opacity-0' : 'translate-x-0 opacity-100'
+        scrollHidden || interactionHidden ? 'translate-x-16 opacity-0' : 'translate-x-0 opacity-100'
       }`}
     >
       <FloatingIconLink

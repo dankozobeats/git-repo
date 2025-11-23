@@ -10,6 +10,38 @@
     line-height: 1.3;
   }
 }
+
+@media (max-width: 768px) {
+  html,
+  body {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+  }
+
+  .section-snap {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    min-height: calc(100vh - 60px);
+    margin-bottom: -40px;
+  }
+
+  .section-snap:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 5rem;
+  }
+}
+
+.section-snap-enter {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+.section-snap-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);
