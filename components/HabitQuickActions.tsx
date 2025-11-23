@@ -90,10 +90,19 @@ export default function HabitQuickActions({
     ? 'bg-red-600 hover:bg-red-700'
     : 'bg-green-600 hover:bg-green-700'
 
+  const primaryLabel = () => {
+    if (habitType === 'bad') {
+      if (hasValue && !isCounterMode) return 'Craquée'
+      return '+ Craquage'
+    }
+    if (hasValue && !isCounterMode) return 'Validée'
+    return 'Valider'
+  }
+
   return (
     <>
       {ToastComponent}
-      <div data-prevent-toggle="true" className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+      <div data-prevent-toggle="true" className="flex w-full items-center gap-2 sm:gap-3">
         <button
           type="button"
           disabled={disablePrimary}
@@ -101,9 +110,9 @@ export default function HabitQuickActions({
             event.stopPropagation()
             handleAction()
           }}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${primaryClasses}`}
+          className={`flex-1 rounded-2xl px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:text-base ${primaryClasses}`}
         >
-          {habitType === 'bad' ? '+ Craquage' : 'Valider'}
+          {primaryLabel()}
         </button>
 
         <DropdownMenu.Root modal={false}>

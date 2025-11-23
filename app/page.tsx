@@ -6,6 +6,7 @@ import { getRandomMessage } from '@/lib/coach/roastMessages'
 import type { Database } from '@/types/database'
 import HabitSectionsClient from '@/components/HabitSectionsClient'
 import ViewHabitsButton from '@/components/ViewHabitsButton'
+import DashboardHeader from '@/components/DashboardHeader'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -202,45 +203,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
       <div className="mx-auto max-w-5xl px-4 py-6 md:py-10 space-y-8">
-        <header className="rounded-3xl border border-white/5 bg-[#1E1E1E]/70 p-6">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#4DA6FF] text-2xl font-semibold text-white">
-                {avatarInitial}
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Tableau de bord</p>
-                <h1 className="text-3xl font-bold text-white">BadHabit Tracker 🔥</h1>
-                <p className="text-sm text-[#A0A0A0]">{user.email}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 md:justify-end">
-              <Link
-                href="/report"
-                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white"
-              >
-                📈 Rapport
-              </Link>
-              <Link
-                href="/habits/stats"
-                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-[#E0E0E0] transition hover:border-white/30 hover:text-white"
-              >
-                📊 Stats
-              </Link>
-              <form action="/auth/signout" method="post">
-                <button className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-[#E0E0E0] transition hover:border-white/30 hover:text-white">
-                  Déconnexion
-                </button>
-              </form>
-              <Link
-                href="/habits/new"
-                className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#e04343]"
-              >
-                + Nouvelle
-              </Link>
-            </div>
-          </div>
-        </header>
+        <DashboardHeader email={user.email ?? 'Utilisateur'} avatarInitial={avatarInitial} />
 
         <section className="rounded-3xl border border-[#FF4D4D]/40 bg-[#1F1414]/70 p-6 shadow-lg shadow-black/30">
           <p className="text-xs uppercase tracking-[0.3em] text-[#FF9C9C]">Coach Roast</p>

@@ -50,7 +50,7 @@ export default function CategoryAccordion({
       collapsible
       value={accordionValue}
       onValueChange={handleChange}
-      className={`relative z-0 w-full rounded-2xl border border-white/10 bg-[#11131c]/70 text-white shadow-lg shadow-black/30 ${className}`}
+      className={`relative z-0 w-full text-white ${className}`}
     >
       <Accordion.Item value={id} className="overflow-hidden rounded-2xl">
         <Accordion.Header>
@@ -72,7 +72,7 @@ export default function CategoryAccordion({
           </Accordion.Trigger>
         </Accordion.Header>
         <Accordion.Content
-          className={`overflow-hidden border-t border-white/10 px-3 py-3 text-white/80 transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down sm:px-5 sm:py-5 ${contentClassName}`}
+          className={`overflow-hidden px-3 py-3 text-white/80 transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down sm:px-5 sm:py-5 ${contentClassName}`}
         >
           {children}
         </Accordion.Content>

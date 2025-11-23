@@ -2,11 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import CategoryAccordion from '@/components/CategoryAccordion'
-import HabitAccordionItem from '@/components/HabitAccordionItem'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import SearchBar from '@/components/SearchBar'
 import CategoryManager from '@/components/CategoryManager'
+import { ChevronDown, ListChecks } from 'lucide-react'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -29,6 +28,17 @@ type HabitSectionsClientProps = {
   categoryStats: CategoryStat[]
 }
 
+const HABIT_VARIANT_STYLES = {
+  good: {
+    headerAccent: 'text-emerald-300',
+    iconBg: 'bg-emerald-500/15 text-emerald-300',
+  },
+  bad: {
+    headerAccent: 'text-[#ff7a7a]',
+    iconBg: 'bg-red-500/15 text-red-300',
+  },
+} as const
+
 type CategoryStat = {
   id: string
   name: string
@@ -40,7 +50,7 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
   const [searchQuery, setSearchQuery] = useState('')
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
-  const [openHabitId, setOpenHabitId] = useState<string | null>(null)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
   const todayCountsMap = useMemo(
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
@@ -120,46 +130,50 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
         <>
           <HabitSection
             title="🔥 Mauvaises habitudes"
-            subtitle="Repère et neutralise tes déclencheurs récurrents."
             totalCount={badHabits.reduce((acc, group) => acc + group.habits.length, 0)}
             accentColor="#FF4D4D"
             groupedHabits={searchActive ? filteredBadHabits : badHabits}
             type="bad"
-            todayCounts={todayCounts}
             todayCountsMap={todayCountsMap}
             openCategoryKey={openCategoryKey}
             setOpenCategoryKey={setOpenCategoryKey}
-            openHabitId={openHabitId}
-            setOpenHabitId={setOpenHabitId}
           />
           <HabitSection
             title="✨ Bonnes habitudes"
-            subtitle="Renforce les routines qui font réellement avancer."
             totalCount={goodHabits.reduce((acc, group) => acc + group.habits.length, 0)}
             accentColor="#4DA6FF"
             groupedHabits={searchActive ? filteredGoodHabits : goodHabits}
             type="good"
-            todayCounts={todayCounts}
             todayCountsMap={todayCountsMap}
             openCategoryKey={openCategoryKey}
             setOpenCategoryKey={setOpenCategoryKey}
-            openHabitId={openHabitId}
-            setOpenHabitId={setOpenHabitId}
           />
-          <CategoryAccordion
-            id="system-organisation"
-            openCategoryKey={openCategoryKey}
-            setOpenCategoryKey={setOpenCategoryKey}
-            title="Organisation des habitudes"
-            count={categoryStats.length}
-            color="#A855F7"
-            defaultOpen={false}
-          >
-            <CategoryOverview stats={categoryStats} />
-            <div className="mt-4 rounded-3xl border border-white/10 bg-[#121420]/60 p-4">
-              <CategoryManager />
+          <section className="space-y-4 rounded-3xl border border-white/10 bg-black/10 p-4 sm:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-white/40">Pilotage</p>
+                <h2 className="text-2xl font-semibold text-white">Gestion des catégories personnalisées</h2>
+                <p className="text-sm text-white/60">
+                  Crée, renomme ou supprime des regroupements pour organiser tes habitudes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoriesOpen(prev => !prev)}
+                className="rounded-2xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+              >
+                {categoriesOpen ? 'Masquer' : 'Afficher'}
+              </button>
             </div>
-          </CategoryAccordion>
+            {categoriesOpen && (
+              <div className="space-y-4">
+                <CategoryOverview stats={categoryStats} />
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <CategoryManager />
+                </div>
+              </div>
+            )}
+          </section>
         </>
       )}
     </section>
@@ -168,106 +182,137 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
 
 type HabitSectionProps = {
   title: string
-  subtitle: string
   totalCount: number
   accentColor: string
   groupedHabits: HabitGroup[]
   type: 'good' | 'bad'
-  todayCounts: Record<string, number>
   todayCountsMap: Map<string, number>
   openCategoryKey: string | null
   setOpenCategoryKey: (id: string | null) => void
-  openHabitId: string | null
-  setOpenHabitId: (id: string | null) => void
 }
 
 function HabitSection({
   title,
-  subtitle,
   totalCount,
   accentColor,
   groupedHabits,
   type,
-  todayCounts,
   todayCountsMap,
   openCategoryKey,
   setOpenCategoryKey,
-  openHabitId,
-  setOpenHabitId,
 }: HabitSectionProps) {
+  const variant = HABIT_VARIANT_STYLES[type]
+
   return (
-    <details
-      id={`${type}-habits-section`}
-      open={false}
-      className="rounded-3xl border-0 bg-transparent p-2 sm:border sm:border-white/5 sm:bg-[#1E1E1E]/70 sm:p-6"
-    >
-      <summary className="flex cursor-pointer list-none flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">{subtitle}</p>
-          <h2 className="text-0.5xl font-bold text-white mt-1">{title}</h2>
-        </div>
-        <span
-          className="rounded-full px-4 py-1 text-xs font-semibold"
-          style={{
-            borderColor: withAlpha(accentColor, '40'),
-            color: accentColor,
-            borderWidth: 1,
-            borderStyle: 'solid',
-          }}
-        >
-          {totalCount} active{totalCount > 1 ? 's' : ''}
-        </span>
-      </summary>
+    <section id={`${type}-habits-section`} className="space-y-6 py-4">
+      <div>
+        <p className="text-xs uppercase tracking-[0.35em] text-white/40">Tableau de bord</p>
+        <h2 className={`text-2xl font-semibold md:text-3xl ${variant.headerAccent}`}>
+          {title} <span className="text-white/60">({totalCount})</span>
+        </h2>
+      </div>
 
       {groupedHabits.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-[#A0A0A0]">
+        <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-6 text-center text-sm text-white/60">
           Aucune habitude {type === 'good' ? 'positive' : 'négative'} ne correspond à cette recherche.
         </div>
       ) : (
-        <div className="mt-4 space-y-5 sm:space-y-4">
-          {groupedHabits.map(group => {
+        <div className="space-y-5">
+          {groupedHabits.map((group, index) => {
             const baseId = group.category?.id || 'uncategorized'
             const categoryKey = `${type}-${baseId}`
+            const isOpen = openCategoryKey ? openCategoryKey === categoryKey : false
+
+            const toggleCategory = () => {
+              setOpenCategoryKey(isOpen ? null : categoryKey)
+            }
+
             return (
-              <CategoryAccordion
-                key={categoryKey}
-                id={categoryKey}
-                openCategoryKey={openCategoryKey}
-                setOpenCategoryKey={setOpenCategoryKey}
-                title={group.category?.name ?? 'Sans catégorie'}
-                count={group.habits.length}
-                color={group.category?.color || accentColor}
-                className="text-white"
-                headerClassName="bg-transparent hover:bg-white/5"
-                contentClassName="space-y-4"
-                defaultOpen={false}
-              >
-                <div className="space-y-3">
-                  {group.habits.map(habit => (
-                    <HabitAccordionItem
-                      key={habit.id}
-                      habit={habit}
-                      type={type}
-                      todayCount={todayCountsMap.get(habit.id) ?? 0}
-                      openHabitId={openHabitId}
-                      setOpenHabitId={setOpenHabitId}
-                    />
-                  ))}
-                </div>
-              </CategoryAccordion>
+              <div key={categoryKey} className="rounded-3xl bg-gradient-to-b from-white/5 to-transparent p-1">
+                <button
+                  type="button"
+                  onClick={toggleCategory}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left sm:px-5"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`rounded-full p-2 ${variant.iconBg}`}>
+                      <ListChecks className="h-5 w-5" />
+                    </span>
+                    <div className="text-left">
+                      <p className="text-base font-semibold text-white">
+                        {group.category?.name ?? 'Sans catégorie'}
+                      </p>
+                      <p className="text-xs text-white/50">
+                        {group.habits.length} routine{group.habits.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={`h-5 w-5 text-white/60 transition duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="space-y-4 px-1 py-4 sm:px-2">
+                    {group.habits.map(habit => (
+                      <HabitRowCard
+                        key={habit.id}
+                        habit={habit}
+                        type={type}
+                        todayCount={todayCountsMap.get(habit.id) ?? 0}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
       )}
-    </details>
+    </section>
+  )
+}
+
+type HabitRowCardProps = {
+  habit: HabitRow
+  type: 'good' | 'bad'
+  todayCount: number
+}
+
+function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
+  return (
+    <div className="flex flex-col gap-4 rounded-3xl bg-black/20 px-4 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4 min-w-0">
+        <div
+          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"
+          style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
+        >
+          {habit.icon || (type === 'bad' ? '🔥' : '✨')}
+        </div>
+        <div className="min-w-0">
+          <p className="text-base font-semibold text-white sm:text-lg">{habit.name}</p>
+        </div>
+      </Link>
+      <div className="w-full sm:w-auto">
+        <HabitQuickActions
+          habitId={habit.id}
+          habitType={type}
+          trackingMode={habit.tracking_mode as 'binary' | 'counter'}
+          initialCount={todayCount}
+          habitName={habit.name}
+          streak={habit.current_streak ?? 0}
+          totalLogs={habit.total_logs ?? undefined}
+          totalCraquages={habit.total_craquages ?? undefined}
+        />
+      </div>
+    </div>
   )
 }
 
 function CategoryOverview({ stats }: { stats: CategoryStat[] }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-[#121428]/80 p-4 text-sm text-white/70">
       <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/50">
-        <span>Organisation des habitudes</span>
+        <span>Vue d'ensemble</span>
         <span>{stats.length} catégorie{stats.length > 1 ? 's' : ''}</span>
       </div>
       {stats.length === 0 ? (
@@ -275,7 +320,7 @@ function CategoryOverview({ stats }: { stats: CategoryStat[] }) {
       ) : (
         <div className="space-y-2">
           {stats.map(stat => (
-            <div key={stat.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-white">
+            <div key={stat.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-white shadow-inner shadow-black/30">
               <div className="flex items-center gap-3">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
                 <span className="text-sm font-medium">{stat.name}</span>
