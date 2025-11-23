@@ -5,6 +5,7 @@ import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import SearchBar from '@/components/SearchBar'
 import CategoryManager from '@/components/CategoryManager'
+import CoachRoastBubble from '@/components/CoachRoastBubble'
 import { ChevronDown, ListChecks } from 'lucide-react'
 import type { Database } from '@/types/database'
 
@@ -26,6 +27,10 @@ type HabitSectionsClientProps = {
   goodHabits: HabitGroup[]
   todayCounts: Record<string, number>
   categoryStats: CategoryStat[]
+  displayOrder?: 'bad-first' | 'good-first'
+  showBadHabits?: boolean
+  showGoodHabits?: boolean
+  coachMessage?: string
 }
 
 const HABIT_VARIANT_STYLES = {
@@ -46,7 +51,16 @@ type CategoryStat = {
   count: number
 }
 
-export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts, categoryStats }: HabitSectionsClientProps) {
+export default function HabitSectionsClient({
+  badHabits,
+  goodHabits,
+  todayCounts,
+  categoryStats,
+  displayOrder = 'bad-first',
+  showBadHabits = true,
+  showGoodHabits = true,
+  coachMessage,
+}: HabitSectionsClientProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
@@ -82,6 +96,7 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
   return (
     <section className="space-y-6">
       <SearchBar onSearch={setSearchQuery} />
+      {coachMessage && <CoachRoastBubble message={coachMessage} variant="inline" />}
       {searchTerm && filteredResults.length > 0 && (
         <div className="mb-8">
           <h3 className="text-sm text-gray-400 mb-3">Résultats ({filteredResults.length})</h3>
@@ -128,27 +143,45 @@ export default function HabitSectionsClient({ badHabits, goodHabits, todayCounts
         </div>
       ) : (
         <>
-          <HabitSection
-            title="🔥 Mauvaises habitudes"
-            totalCount={badHabits.reduce((acc, group) => acc + group.habits.length, 0)}
-            accentColor="#FF4D4D"
-            groupedHabits={searchActive ? filteredBadHabits : badHabits}
-            type="bad"
-            todayCountsMap={todayCountsMap}
-            openCategoryKey={openCategoryKey}
-            setOpenCategoryKey={setOpenCategoryKey}
-          />
-          <HabitSection
-            title="✨ Bonnes habitudes"
-            totalCount={goodHabits.reduce((acc, group) => acc + group.habits.length, 0)}
-            accentColor="#4DA6FF"
-            groupedHabits={searchActive ? filteredGoodHabits : goodHabits}
-            type="good"
-            todayCountsMap={todayCountsMap}
-            openCategoryKey={openCategoryKey}
-            setOpenCategoryKey={setOpenCategoryKey}
-          />
-          <section className="space-y-4 rounded-3xl border border-white/10 bg-black/10 p-4 sm:p-6">
+          {(
+            displayOrder === 'good-first'
+              ? (['good', 'bad'] as const)
+              : (['bad', 'good'] as const)
+          )
+            .filter(section => (section === 'bad' ? showBadHabits : showGoodHabits))
+            .map(section => {
+            const config =
+              section === 'bad'
+                ? {
+                    title: '🔥 Mauvaises habitudes',
+                    totalCount: badHabits.reduce((acc, group) => acc + group.habits.length, 0),
+                    accentColor: '#FF4D4D',
+                    groupedHabits: searchActive ? filteredBadHabits : badHabits,
+                    type: 'bad' as const,
+                  }
+                : {
+                    title: '✨ Bonnes habitudes',
+                    totalCount: goodHabits.reduce((acc, group) => acc + group.habits.length, 0),
+                    accentColor: '#4DA6FF',
+                    groupedHabits: searchActive ? filteredGoodHabits : goodHabits,
+                    type: 'good' as const,
+                  }
+
+            return (
+              <HabitSection
+                key={config.type}
+                title={config.title}
+                totalCount={config.totalCount}
+                accentColor={config.accentColor}
+                groupedHabits={config.groupedHabits}
+                type={config.type}
+                todayCountsMap={todayCountsMap}
+                openCategoryKey={openCategoryKey}
+                setOpenCategoryKey={setOpenCategoryKey}
+              />
+            )
+          })}
+          <section className="space-y-4 rounded-3xl p-4 sm:p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-white/40">Pilotage</p>
@@ -309,29 +342,42 @@ function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
 }
 
 function CategoryOverview({ stats }: { stats: CategoryStat[] }) {
+  const [open, setOpen] = useState(true)
+
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-[#121428]/80 p-4 text-sm text-white/70">
-      <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/50">
-        <span>Vue d'ensemble</span>
-        <span>{stats.length} catégorie{stats.length > 1 ? 's' : ''}</span>
-      </div>
-      {stats.length === 0 ? (
-        <p className="text-white/60">Aucune catégorie personnalisée. Utilise le module ci-dessous pour en créer.</p>
-      ) : (
-        <div className="space-y-2">
-          {stats.map(stat => (
-            <div key={stat.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-white shadow-inner shadow-black/30">
-              <div className="flex items-center gap-3">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
-                <span className="text-sm font-medium">{stat.name}</span>
-              </div>
-              <span className="text-xs text-white/60">
-                {stat.count} habitude{stat.count > 1 ? 's' : ''}
-              </span>
-            </div>
-          ))}
+    <div className="rounded-2xl border border-white/10 bg-[#121428]/80">
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/5"
+      >
+        <div>
+          <span className="text-xs uppercase tracking-[0.3em] text-white/50 block">Vue d'ensemble</span>
+          <span className="text-sm text-white/70">
+            {stats.length} catégorie{stats.length > 1 ? 's' : ''}
+          </span>
         </div>
-      )}
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div className={`space-y-3 px-4 pb-4 text-sm text-white/70 transition-[max-height,opacity] duration-300 ${open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+        {stats.length === 0 ? (
+          <p className="text-white/60">Aucune catégorie personnalisée. Utilise le module ci-dessous pour en créer.</p>
+        ) : (
+          <div className="space-y-2">
+            {stats.map(stat => (
+              <div key={stat.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-white shadow-inner shadow-black/30">
+                <div className="flex items-center gap-3">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
+                  <span className="text-sm font-medium">{stat.name}</span>
+                </div>
+                <span className="text-xs text-white/60">
+                  {stat.count} habitude{stat.count > 1 ? 's' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

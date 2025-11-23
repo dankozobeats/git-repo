@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getTodayDateISO } from '@/lib/date-utils'
 import { getRandomMessage } from '@/lib/coach/roastMessages'
 import type { Database } from '@/types/database'
 import HabitSectionsClient from '@/components/HabitSectionsClient'
 import ViewHabitsButton from '@/components/ViewHabitsButton'
-import DashboardSidebar, { type SidebarNavItem } from '@/components/DashboardSidebar'
-import CoachRoastBubble from '@/components/CoachRoastBubble'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -194,36 +193,22 @@ export default async function Home() {
   const heroSubtitle = hasActivityToday
     ? 'Les statistiques se mettent à jour immédiatement à chaque action.'
     : 'Commence par valider une habitude ou ajoute-en une nouvelle.'
-  const avatarInitial = (user.email?.charAt(0) || 'U').toUpperCase()
+  const cookieStore = await cookies()
+  const dashboardOrder = cookieStore.get('dashboardOrder')?.value === 'good-first' ? 'good-first' : 'bad-first'
+  const showGoodHabits = cookieStore.get('showGoodHabits')?.value !== 'false'
+  const showBadHabits = cookieStore.get('showBadHabits')?.value !== 'false'
+  const showFocusCard = cookieStore.get('showFocusCard')?.value !== 'false'
+  const showCoachBubble = cookieStore.get('showCoachBubble')?.value !== 'false'
   const heroStats = [
     { label: 'Bonnes actions', value: goodHabitsLoggedToday, accent: '#4DA6FF' },
     { label: 'Craquages', value: badHabitsLoggedToday, accent: '#FF4D4D' },
     { label: 'Habitudes actives', value: totalHabits, accent: '#E0E0E0' },
   ]
 
-  const sidebarMainNav: SidebarNavItem[] = [
-    { href: '/', label: 'Dashboard', icon: 'dashboard', isActive: true },
-    { href: '/report', label: 'Rapports rapides', icon: 'report' },
-    { href: '/reports/history', label: 'Historique', icon: 'history' },
-    { href: '/reports/dashboard', label: 'Coach IA', icon: 'coach' },
-    { href: '/reports/compare', label: 'Comparer', icon: 'compare' },
-    { href: '/habits/stats', label: 'Stats détaillées', icon: 'stats' },
-    { href: '/habits/new', label: 'Nouvelle habitude', icon: 'target' },
-  ]
-
-  const sidebarUtilityNav: SidebarNavItem[] = [{ href: '/reports/history#faq', label: 'Aide & support', icon: 'help' }]
-
   return (
-    <main className="min-h-screen bg-[#0c0f1a] text-[#E0E0E0] md:overflow-hidden">
-      <DashboardSidebar
-        mainNav={sidebarMainNav}
-        utilityNav={sidebarUtilityNav}
-        userEmail={user.email ?? 'Utilisateur'}
-        avatarInitial={avatarInitial}
-      />
-
-      <div className="md:ml-64 md:h-screen md:overflow-y-auto">
-        <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-10 md:py-10">
+    <main className="min-h-screen bg-[#0c0f1a] text-[#E0E0E0]">
+      <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-10 md:py-10">
+        {showFocusCard && (
           <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-6 md:p-8" aria-live="polite">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex-1">
@@ -252,8 +237,7 @@ export default async function Home() {
             ))}
           </div>
         </section>
-
-        <CoachRoastBubble message={randomRoastBanner} variant="inline" />
+        )}
 
         <div id="active-habits-section">
           <HabitSectionsClient
@@ -261,6 +245,10 @@ export default async function Home() {
             goodHabits={groupedGoodHabits}
             todayCounts={todayCountsRecord}
             categoryStats={categoryStats}
+            displayOrder={dashboardOrder}
+            showBadHabits={showBadHabits}
+            showGoodHabits={showGoodHabits}
+            coachMessage={showCoachBubble ? randomRoastBanner : undefined}
           />
         </div>
 
@@ -278,7 +266,6 @@ export default async function Home() {
             </Link>
           </div>
         )}
-        </div>
       </div>
     </main>
   )

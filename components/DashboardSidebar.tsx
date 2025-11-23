@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   FileBarChart2,
@@ -14,6 +15,7 @@ import {
   Menu,
   X,
   LogOut,
+  Settings,
 } from 'lucide-react'
 
 const iconMap = {
@@ -25,6 +27,7 @@ const iconMap = {
   stats: BarChart3,
   target: Target,
   help: HelpCircle,
+  settings: Settings,
   logout: LogOut,
 }
 
@@ -144,11 +147,28 @@ function SidebarContent({
 }
 
 function NavLinks({ items, onNavigate }: { items: SidebarNavItem[]; onNavigate?: () => void }) {
+  const pathname = usePathname()
+
+  const isLinkActive = (href: string, provided?: boolean) => {
+    if (typeof provided !== 'undefined') return provided
+
+    const [baseHref] = href.split('#')
+    if (baseHref === '/') {
+      return pathname === '/'
+    }
+
+    const normalizedBase = baseHref.endsWith('/') ? baseHref.slice(0, -1) : baseHref
+    const normalizedPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname
+
+    if (normalizedPath === normalizedBase) return true
+    return normalizedPath.startsWith(`${normalizedBase}/`)
+  }
+
   return (
     <nav className="space-y-1">
       {items.map(item => {
         const Icon = iconMap[item.icon]
-        const isActive = item.isActive
+        const isActive = isLinkActive(item.href, item.isActive)
         return (
           <Link
             key={item.label}

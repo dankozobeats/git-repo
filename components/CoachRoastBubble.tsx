@@ -58,7 +58,9 @@ export default function CoachRoastBubble({ message, variant = 'overlay' }: Coach
   }
 
   return (
-    <div className={`fixed inset-x-0 top-4 z-50 flex justify-center px-4 transition-all duration-500 ${overlayPhaseClass}`}>
+    <div
+      className={`fixed inset-x-0 top-28 z-50 flex justify-center px-4 transition-all duration-500 sm:top-24 md:top-10 ${overlayPhaseClass}`}
+    >
       <div className="relative max-w-xl rounded-3xl border border-[#FF4D4D]/50 bg-[#1F1414]/90 px-5 py-4 text-sm text-white shadow-2xl shadow-black/50">
         <p className="text-xs uppercase tracking-[0.35em] text-[#FF9C9C]">Coach Roast</p>
         <p className="mt-2 text-base font-semibold text-white">{message}</p>
