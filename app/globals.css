@@ -11,13 +11,17 @@
   }
 }
 
-@media (max-width: 768px) {
-  html,
-  body {
-    scroll-snap-type: y mandatory;
-    scroll-behavior: smooth;
-  }
+html,
+body {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
 
+.no-snap {
+  scroll-snap-type: none !important;
+}
+
+@media (max-width: 768px) {
   .section-snap {
     scroll-snap-align: start;
     scroll-snap-stop: always;

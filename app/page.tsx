@@ -209,7 +209,7 @@ export default async function Home() {
     <main className="min-h-screen bg-[#0c0f1a] text-[#E0E0E0]">
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-10 md:py-10">
         {showFocusCard && (
-          <section className="section-snap rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-6 pt-16 pb-16 md:p-8" aria-live="polite">
+          <section className="section-snap rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 md:py-10 md:px-8" aria-live="polite">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex-1">
               <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Focus du jour</p>

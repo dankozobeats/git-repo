@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 
-type SectionSnapProps = React.ComponentPropsWithoutRef<'section'>
+type SectionSnapProps = React.ComponentPropsWithoutRef<'section'> & {
+  disableSnap?: boolean
+}
 
-export default function SectionSnap({ className, children, ...props }: SectionSnapProps) {
+export default function SectionSnap({ className, children, disableSnap = false, ...props }: SectionSnapProps) {
   const sectionRef = useRef<HTMLElement | null>(null)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -31,7 +33,11 @@ export default function SectionSnap({ className, children, ...props }: SectionSn
     <section
       ref={sectionRef}
       {...props}
-      className={clsx('section-snap section-snap-enter', isVisible && 'section-snap-visible', className)}
+      className={clsx(
+        disableSnap ? 'section-snap-enter' : 'section-snap section-snap-enter',
+        isVisible && 'section-snap-visible',
+        className
+      )}
     >
       {children}
     </section>

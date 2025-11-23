@@ -3,12 +3,12 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type MutableRefObject } from 'react'
 import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
-import SearchBar from '@/components/SearchBar'
 import CategoryManager from '@/components/CategoryManager'
 import CoachRoastBubble from '@/components/CoachRoastBubble'
-import { ChevronDown, ListChecks } from 'lucide-react'
+import { ChevronDown, ListChecks, Search as SearchIcon } from 'lucide-react'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import SectionSnap from '@/components/SectionSnap'
+import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -53,22 +53,33 @@ type CategoryStat = {
   count: number
 }
 
-function centerSection(ref: { current: HTMLDivElement | null }) {
-  if (typeof window === 'undefined' || !ref.current) return
-  const rect = ref.current.getBoundingClientRect()
+let snapRestoreTimeout: number | null = null
+
+function scrollToCenter(element: HTMLElement | null) {
+  if (typeof window === 'undefined' || !element) return
+
+  const scrollElement = document.scrollingElement || document.documentElement
+  if (!scrollElement) return
+
+  scrollElement.classList.add('no-snap')
+
+  const rect = element.getBoundingClientRect()
   const viewportHeight = window.innerHeight
+  const targetY = window.scrollY + rect.top - viewportHeight / 2 + rect.height / 2
 
-  if (rect.height > viewportHeight * 0.85) {
-    ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    return
-  }
-
-  const scrollTop = window.scrollY
-  const offset = rect.top + scrollTop - (viewportHeight - rect.height) / 2
   window.scrollTo({
-    top: Math.max(0, offset),
+    top: Math.max(0, targetY),
     behavior: 'smooth',
   })
+
+  if (snapRestoreTimeout) {
+    window.clearTimeout(snapRestoreTimeout)
+  }
+
+  snapRestoreTimeout = window.setTimeout(() => {
+    scrollElement.classList.remove('no-snap')
+    snapRestoreTimeout = null
+  }, 400)
 }
 
 export default function HabitSectionsClient({
@@ -85,18 +96,52 @@ export default function HabitSectionsClient({
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [searchActivated, setSearchActivated] = useState(false)
   const [lockedSection, setLockedSection] = useState<'good' | 'bad' | null>(null)
   const [activeScrollContainerInfo, setActiveScrollContainerInfo] = useState<{
     key: string
     node: HTMLDivElement
   } | null>(null)
   const activeScrollContainer = activeScrollContainerInfo?.node ?? null
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const prevSearchValueRef = useRef('')
   const categoryRefs = useRef(new Map<string, MutableRefObject<HTMLDivElement | null>>())
   const todayCountsMap = useMemo(
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
   )
   useScrollLock(Boolean(lockedSection))
+
+  const scrollBackToActiveSection = useCallback(() => {
+    const targetType =
+      openCategoryKey?.startsWith('good-')
+        ? 'good'
+        : openCategoryKey?.startsWith('bad-')
+          ? 'bad'
+          : displayOrder === 'good-first'
+            ? 'good'
+            : 'bad'
+    const target = document.getElementById(`${targetType}-habits-section`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [openCategoryKey, displayOrder])
+
+  const openSearchSection = useCallback(
+    (focusInput: boolean) => {
+      setSearchActivated(true)
+      window.setTimeout(() => {
+        scrollToSearchSection()
+        if (focusInput) {
+          searchInputRef.current?.focus()
+        }
+      }, 50)
+    },
+    []
+  )
+
+  const closeSearchSection = useCallback(() => {
+    setSearchActivated(false)
+    scrollBackToActiveSection()
+  }, [scrollBackToActiveSection])
 
   useEffect(() => {
     if (!openCategoryKey && lockedSection) {
@@ -116,6 +161,15 @@ export default function HabitSectionsClient({
     })
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleSearchOpen = () => openSearchSection(true)
+    window.addEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
+    return () => {
+      window.removeEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
+    }
+  }, [openSearchSection])
+
   const getCategoryRef = useCallback((key: string) => {
     if (!categoryRefs.current.has(key)) {
       categoryRefs.current.set(key, { current: null } as MutableRefObject<HTMLDivElement | null>)
@@ -131,7 +185,7 @@ export default function HabitSectionsClient({
           setLockedSection(section)
           const ref = getCategoryRef(categoryKey)
           window.setTimeout(() => {
-            centerSection(ref)
+            scrollToCenter(ref.current)
           }, 20)
           return categoryKey
         }
@@ -207,129 +261,180 @@ export default function HabitSectionsClient({
     () => (normalizedQuery ? allHabitsList.filter(habit => habit.name.toLowerCase().includes(normalizedQuery)) : []),
     [allHabitsList, normalizedQuery]
   )
-  const searchTerm = normalizedQuery
-
   const searchActive = normalizedQuery.length > 0
+
+  const handleSearchInputChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      const trimmed = value.trim()
+      if (trimmed.length > 0) {
+        if (!searchActivated) {
+          openSearchSection(false)
+        }
+      } else if (prevSearchValueRef.current.length > 0) {
+        closeSearchSection()
+      }
+      prevSearchValueRef.current = trimmed
+    },
+    [searchActivated, closeSearchSection, openSearchSection]
+  )
+
+  const handleSearchInputFocus = useCallback(() => {
+    openSearchSection(false)
+  }, [openSearchSection])
+
+  const handleSearchInputBlur = useCallback(() => {
+    if (!searchQuery.trim()) {
+      closeSearchSection()
+    }
+  }, [searchQuery, closeSearchSection])
 
   return (
     <section className="space-y-6">
-      <SearchBar onSearch={setSearchQuery} />
       {coachMessage && <CoachRoastBubble message={coachMessage} variant="inline" />}
-      {searchTerm && filteredResults.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm text-gray-400 mb-3">Résultats ({filteredResults.length})</h3>
 
-          <div className="space-y-4">
-            {filteredResults.map(habit => {
-              const todayCount = todayCountsMap.get(habit.id) ?? 0
-
-              return (
-                <div
-                  key={habit.id}
-                  className="relative z-0 rounded-xl border border-gray-800 bg-gray-900 p-4 transition hover:border-gray-700"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <Link href={`/habits/${habit.id}`} className="flex items-center gap-3 min-w-0 flex-1">
-                      <div
-                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xl"
-                        style={{ backgroundColor: `${habit.color || '#6b7280'}20` }}
-                      >
-                        {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
-                      </div>
-                      <p className="truncate text-base font-semibold text-white">{habit.name}</p>
-                    </Link>
-
-                    <div className="w-full sm:w-auto">
-                      <HabitQuickActions
-                        habitId={habit.id}
-                        habitType={habit.type as 'good' | 'bad'}
-                        trackingMode={habit.tracking_mode as 'binary' | 'counter'}
-                        initialCount={todayCount}
-                        habitName={habit.name}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+      <SectionSnap
+        id="search-section"
+        disableSnap={!searchActivated}
+        className={`flex w-full flex-col items-center justify-center gap-6 px-4 transition-all duration-300 ${
+          searchActivated
+            ? 'min-h-screen py-8 opacity-100 scale-100'
+            : 'min-h-0 max-h-0 overflow-hidden py-0 opacity-0 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="w-full max-w-3xl space-y-3">
+          <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
+          <div className="relative">
+            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={event => handleSearchInputChange(event.target.value)}
+              onFocus={handleSearchInputFocus}
+              onBlur={handleSearchInputBlur}
+              placeholder="Rechercher une habitude…"
+              className="w-full rounded-2xl border border-white/10 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-[#FF4D4D]/60 focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]/20"
+            />
           </div>
         </div>
-      )}
-      {searchActive && filteredBadHabits.length === 0 && filteredGoodHabits.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-white/10 bg-black/30 p-6 text-center text-sm text-white/70">
-          Aucun résultat pour « {searchQuery} ». Essaie un autre terme ou crée une nouvelle habitude.
-        </div>
-      ) : (
-        <>
-          {(
-            displayOrder === 'good-first'
-              ? (['good', 'bad'] as const)
-              : (['bad', 'good'] as const)
-          )
-            .filter(section => (section === 'bad' ? showBadHabits : showGoodHabits))
-            .map(section => {
-            const config =
-              section === 'bad'
-                ? {
-                    title: '🔥 Mauvaises habitudes',
-                    totalCount: badHabits.reduce((acc, group) => acc + group.habits.length, 0),
-                    accentColor: '#FF4D4D',
-                    groupedHabits: searchActive ? filteredBadHabits : badHabits,
-                    type: 'bad' as const,
-                  }
-                : {
-                    title: '✨ Bonnes habitudes',
-                    totalCount: goodHabits.reduce((acc, group) => acc + group.habits.length, 0),
-                    accentColor: '#4DA6FF',
-                    groupedHabits: searchActive ? filteredGoodHabits : goodHabits,
-                    type: 'good' as const,
-                  }
-
-            return (
-              <HabitSection
-                key={config.type}
-                title={config.title}
-                totalCount={config.totalCount}
-                accentColor={config.accentColor}
-                groupedHabits={config.groupedHabits}
-                type={config.type}
-                todayCountsMap={todayCountsMap}
-                openCategoryKey={openCategoryKey}
-                onToggleCategory={handleToggleCategory}
-                registerScrollContainer={handleRegisterScrollContainer}
-                getCategoryRef={getCategoryRef}
-              />
-            )
-          })}
-          <SectionSnap id="categories-section" className="space-y-4 rounded-3xl p-4 sm:p-6">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-white/40">Pilotage</p>
-                <h2 className="text-2xl font-semibold text-white">Gestion des catégories personnalisées</h2>
-                <p className="text-sm text-white/60">
-                  Crée, renomme ou supprime des regroupements pour organiser tes habitudes.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCategoriesOpen(prev => !prev)}
-                className="rounded-2xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
-                data-floating-hide-on-press
-              >
-                {categoriesOpen ? 'Masquer' : 'Afficher'}
-              </button>
-            </div>
-            {categoriesOpen && (
-              <div className="space-y-4">
-                <CategoryOverview stats={categoryStats} />
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <CategoryManager />
+        <div className={`w-full max-w-5xl overflow-hidden rounded-3xl border border-white/5 bg-black/30 ${searchActive ? 'max-h-[70vh]' : 'max-h-[40vh]'}`}>
+          <div className="h-full w-full overflow-y-auto p-4 sm:p-6 space-y-4">
+            {searchActive ? (
+              filteredResults.length > 0 ? (
+                filteredResults.map(habit => {
+                  const todayCount = todayCountsMap.get(habit.id) ?? 0
+                  return (
+                    <div
+                      key={habit.id}
+                      className="rounded-2xl border border-white/10 bg-black/40 p-4 transition hover:border-white/30"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <Link href={`/habits/${habit.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                          <div
+                            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl"
+                            style={{ backgroundColor: `${habit.color || '#6b7280'}20` }}
+                          >
+                            {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
+                          </div>
+                          <p className="truncate text-base font-semibold text-white">{habit.name}</p>
+                        </Link>
+                        <div className="w-full sm:w-auto">
+                          <HabitQuickActions
+                            habitId={habit.id}
+                            habitType={habit.type as 'good' | 'bad'}
+                            trackingMode={habit.tracking_mode as 'binary' | 'counter'}
+                            initialCount={todayCount}
+                            habitName={habit.name}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/30 p-6 text-center text-sm text-white/70">
+                  Aucun résultat pour « {searchQuery} ». Essaie un autre terme ou crée une nouvelle habitude.
                 </div>
+              )
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/70">
+                Tape un mot-clé ou utilise le bouton Recherche pour commencer.
               </div>
             )}
-          </SectionSnap>
-        </>
-      )}
+          </div>
+        </div>
+      </SectionSnap>
+
+      <>
+        {(
+          displayOrder === 'good-first'
+            ? (['good', 'bad'] as const)
+            : (['bad', 'good'] as const)
+        )
+          .filter(section => (section === 'bad' ? showBadHabits : showGoodHabits))
+          .map(section => {
+          const config =
+            section === 'bad'
+              ? {
+                  title: '🔥 Mauvaises habitudes',
+                  totalCount: badHabits.reduce((acc, group) => acc + group.habits.length, 0),
+                  accentColor: '#FF4D4D',
+                  groupedHabits: searchActive ? filteredBadHabits : badHabits,
+                  type: 'bad' as const,
+                }
+              : {
+                  title: '✨ Bonnes habitudes',
+                  totalCount: goodHabits.reduce((acc, group) => acc + group.habits.length, 0),
+                  accentColor: '#4DA6FF',
+                  groupedHabits: searchActive ? filteredGoodHabits : goodHabits,
+                  type: 'good' as const,
+                }
+
+          return (
+            <HabitSection
+              key={config.type}
+              title={config.title}
+              totalCount={config.totalCount}
+              accentColor={config.accentColor}
+              groupedHabits={config.groupedHabits}
+              type={config.type}
+              todayCountsMap={todayCountsMap}
+              openCategoryKey={openCategoryKey}
+              onToggleCategory={handleToggleCategory}
+              registerScrollContainer={handleRegisterScrollContainer}
+              getCategoryRef={getCategoryRef}
+            />
+          )
+        })}
+        <SectionSnap id="categories-section" className="space-y-4 rounded-3xl p-4 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-white/40">Pilotage</p>
+              <h2 className="text-2xl font-semibold text-white">Gestion des catégories personnalisées</h2>
+              <p className="text-sm text-white/60">
+                Crée, renomme ou supprime des regroupements pour organiser tes habitudes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCategoriesOpen(prev => !prev)}
+              className="rounded-2xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+              data-floating-hide-on-press
+            >
+              {categoriesOpen ? 'Masquer' : 'Afficher'}
+            </button>
+          </div>
+          {categoriesOpen && (
+            <div className="space-y-4">
+              <CategoryOverview stats={categoryStats} />
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <CategoryManager />
+              </div>
+            </div>
+          )}
+        </SectionSnap>
+      </>
     </section>
   )
 }
