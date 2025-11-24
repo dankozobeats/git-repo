@@ -97,6 +97,7 @@ export default function HabitSectionsClient({
   const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [searchActivated, setSearchActivated] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [lockedSection, setLockedSection] = useState<'good' | 'bad' | null>(null)
   const [activeScrollContainerInfo, setActiveScrollContainerInfo] = useState<{
     key: string
@@ -125,23 +126,33 @@ export default function HabitSectionsClient({
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [openCategoryKey, displayOrder])
 
-  const openSearchSection = useCallback(
-    (focusInput: boolean) => {
-      setSearchActivated(true)
-      window.setTimeout(() => {
-        scrollToSearchSection()
-        if (focusInput) {
-          searchInputRef.current?.focus()
-        }
-      }, 50)
-    },
-    []
-  )
+  const openSearchSection = useCallback((focusInput: boolean) => {
+    setSearchActivated(true)
+    window.setTimeout(() => {
+      scrollToSearchSection()
+      if (focusInput) {
+        searchInputRef.current?.focus()
+      }
+    }, 50)
+  }, [])
 
   const closeSearchSection = useCallback(() => {
+    if (isMobile) return
     setSearchActivated(false)
     scrollBackToActiveSection()
-  }, [scrollBackToActiveSection])
+  }, [scrollBackToActiveSection, isMobile])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const update = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('resize', update)
+    }
+  }, [])
 
   useEffect(() => {
     if (!openCategoryKey && lockedSection) {
@@ -284,14 +295,19 @@ export default function HabitSectionsClient({
   }, [openSearchSection])
 
   const handleSearchInputBlur = useCallback(() => {
+    if (isMobile) return
     if (!searchQuery.trim()) {
       closeSearchSection()
     }
-  }, [searchQuery, closeSearchSection])
+  }, [searchQuery, closeSearchSection, isMobile])
+
+  const searchSectionActive = isMobile || searchActivated
 
   return (
     <section className="space-y-6">
-      {coachMessage && <CoachRoastBubble message={coachMessage} variant="inline" />}
+      {coachMessage && (
+        isMobile ? <CoachRoastBubble message={coachMessage} variant="toast" /> : <CoachRoastBubble message={coachMessage} variant="inline" />
+      )}
 
       <SectionSnap
         id="search-section"

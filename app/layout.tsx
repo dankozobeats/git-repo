@@ -21,7 +21,6 @@ const mainNav: SidebarNavItem[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/reports/history', label: 'Historique', icon: 'history' },
   { href: '/report', label: 'Coach IA', icon: 'coach' },
-  { href: '/reports/compare', label: 'Comparer', icon: 'compare' },
   { href: '/habits/stats', label: 'Stats détaillées', icon: 'stats' },
 ]
 
@@ -49,13 +48,15 @@ export default async function RootLayout({
     <html lang="fr">
       <body className="antialiased bg-[#0c0f1a] text-[#E0E0E0]">
         <div className="min-h-screen md:overflow-hidden">
-          <DashboardSidebar
-            mainNav={mainNav}
-            utilityNav={utilityNav}
-            userEmail={userEmail}
-            avatarInitial={avatarInitial}
-          />
-          <div className="md:ml-64 md:h-screen md:overflow-y-auto pt-0">
+          {isAuthenticated && (
+            <DashboardSidebar
+              mainNav={mainNav}
+              utilityNav={utilityNav}
+              userEmail={userEmail}
+              avatarInitial={avatarInitial}
+            />
+          )}
+          <div className={`${isAuthenticated ? 'md:ml-64 md:h-screen md:overflow-y-auto' : ''} pt-0`}>
             {children}
           </div>
           {isAuthenticated && <FloatingQuickActions />}
