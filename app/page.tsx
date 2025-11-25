@@ -14,10 +14,6 @@ type HabitRow = Database['public']['Tables']['habits']['Row'] & {
   total_logs?: number | null
   total_craquages?: number | null
 }
-type HabitGroup = {
-  category: CategoryRow | null
-  habits: HabitRow[]
-}
 type CategoryStat = {
   id: string
   name: string
@@ -71,9 +67,6 @@ export default async function Home() {
     .eq('event_date', today)
 
   const categoriesList = categories ?? []
-  const categoriesMap = new Map<string, CategoryRow>(
-    categoriesList.map(category => [category.id, category])
-  )
   const safeBadHabits = badHabits ?? []
   const safeGoodHabits = goodHabits ?? []
 
@@ -91,32 +84,6 @@ export default async function Home() {
     safeGoodHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
   const hasActivityToday = badHabitsLoggedToday + goodHabitsLoggedToday > 0
 
-  const getCategoryMeta = (categoryId: string | null): CategoryRow | null => {
-    if (!categoryId) return null
-    return categoriesMap.get(categoryId) ?? null
-  }
-
-  const groupByCategory = (habitsList: HabitRow[]): HabitGroup[] => {
-    const map = new Map<string, HabitGroup>()
-
-    habitsList.forEach(habit => {
-      const key = habit.category_id ?? 'uncategorized'
-      if (!map.has(key)) {
-        map.set(key, {
-          category: getCategoryMeta(habit.category_id ?? null),
-          habits: [],
-        })
-      }
-      map.get(key)!.habits.push(habit)
-    })
-
-    return Array.from(map.values()).sort((a, b) =>
-      (a.category?.name || 'Sans catégorie').localeCompare(b.category?.name || 'Sans catégorie')
-    )
-  }
-
-  const groupedBadHabits = groupByCategory(safeBadHabits)
-  const groupedGoodHabits = groupByCategory(safeGoodHabits)
   const allActiveHabits = [...safeBadHabits, ...safeGoodHabits]
   const categoryStats = buildCategoryStats(categoriesList, allActiveHabits)
   const totalHabits = allActiveHabits.length
@@ -194,7 +161,6 @@ export default async function Home() {
     ? 'Les statistiques se mettent à jour immédiatement à chaque action.'
     : 'Commence par valider une habitude ou ajoute-en une nouvelle.'
   const cookieStore = await cookies()
-  const dashboardOrder = cookieStore.get('dashboardOrder')?.value === 'good-first' ? 'good-first' : 'bad-first'
   const showGoodHabits = cookieStore.get('showGoodHabits')?.value !== 'false'
   const showBadHabits = cookieStore.get('showBadHabits')?.value !== 'false'
   const showFocusCard = cookieStore.get('showFocusCard')?.value !== 'false'
@@ -241,11 +207,11 @@ export default async function Home() {
 
         <div id="active-habits-section">
           <HabitSectionsClient
-            badHabits={groupedBadHabits}
-            goodHabits={groupedGoodHabits}
+            badHabits={safeBadHabits}
+            goodHabits={safeGoodHabits}
+            categories={categoriesList}
             todayCounts={todayCountsRecord}
             categoryStats={categoryStats}
-            displayOrder={dashboardOrder}
             showBadHabits={showBadHabits}
             showGoodHabits={showGoodHabits}
             coachMessage={showCoachBubble ? randomRoastBanner : undefined}

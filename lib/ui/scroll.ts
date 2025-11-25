@@ -3,12 +3,20 @@
 let snapTimeout: number | null = null
 export const HABIT_SEARCH_EVENT = 'habit-search-open'
 
+export function disableSnap() {
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.add('no-snap')
+}
+
+export function enableSnap() {
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.remove('no-snap')
+}
+
 function scrollWithSnapControl(element: HTMLElement | null) {
   if (typeof window === 'undefined' || !element) return
-  const container = document.scrollingElement
-  if (!container) return
 
-  container.classList.add('no-snap')
+  disableSnap()
   const rect = element.getBoundingClientRect()
   const targetY = window.scrollY + rect.top - window.innerHeight / 2 + rect.height / 2
   const targetX = window.scrollX + rect.left - window.innerWidth / 2 + rect.width / 2
@@ -24,7 +32,7 @@ function scrollWithSnapControl(element: HTMLElement | null) {
   }
 
   snapTimeout = window.setTimeout(() => {
-    container.classList.remove('no-snap')
+    enableSnap()
     snapTimeout = null
   }, 450)
 }
@@ -34,7 +42,7 @@ export function animateAndCenterCategoryAccordion(element: HTMLElement | null) {
 }
 
 export function scrollToSearchSection() {
-  const section = document.getElementById('search-section')
+  const section = document.getElementById('searchBlock')
   scrollWithSnapControl(section)
 }
 

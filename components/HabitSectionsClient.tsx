@@ -1,14 +1,12 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect, useRef, type MutableRefObject } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import CategoryManager from '@/components/CategoryManager'
 import CoachRoastBubble from '@/components/CoachRoastBubble'
-import { ChevronDown, ListChecks, Search as SearchIcon } from 'lucide-react'
-import { useScrollLock } from '@/hooks/useScrollLock'
-import SectionSnap from '@/components/SectionSnap'
-import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
+import { Search as SearchIcon, ChevronDown } from 'lucide-react'
+import { HABIT_SEARCH_EVENT, scrollToSearchSection, disableSnap, enableSnap } from '@/lib/ui/scroll'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -19,32 +17,16 @@ type HabitRow = Database['public']['Tables']['habits']['Row'] & {
   total_craquages?: number | null
 }
 
-type HabitGroup = {
-  category: CategoryRow | null
-  habits: HabitRow[]
-}
-
 type HabitSectionsClientProps = {
-  badHabits: HabitGroup[]
-  goodHabits: HabitGroup[]
+  goodHabits: HabitRow[]
+  badHabits: HabitRow[]
+  categories: CategoryRow[]
   todayCounts: Record<string, number>
   categoryStats: CategoryStat[]
-  displayOrder?: 'bad-first' | 'good-first'
   showBadHabits?: boolean
   showGoodHabits?: boolean
   coachMessage?: string
 }
-
-const HABIT_VARIANT_STYLES = {
-  good: {
-    headerAccent: 'text-emerald-300',
-    iconBg: 'bg-emerald-500/15 text-emerald-300',
-  },
-  bad: {
-    headerAccent: 'text-[#ff7a7a]',
-    iconBg: 'bg-red-500/15 text-red-300',
-  },
-} as const
 
 type CategoryStat = {
   id: string
@@ -53,97 +35,98 @@ type CategoryStat = {
   count: number
 }
 
-let snapRestoreTimeout: number | null = null
-
-function scrollToCenter(element: HTMLElement | null) {
-  if (typeof window === 'undefined' || !element) return
-
-  const scrollElement = document.scrollingElement || document.documentElement
-  if (!scrollElement) return
-
-  scrollElement.classList.add('no-snap')
-
-  const rect = element.getBoundingClientRect()
-  const viewportHeight = window.innerHeight
-  const targetY = window.scrollY + rect.top - viewportHeight / 2 + rect.height / 2
-
-  window.scrollTo({
-    top: Math.max(0, targetY),
-    behavior: 'smooth',
-  })
-
-  if (snapRestoreTimeout) {
-    window.clearTimeout(snapRestoreTimeout)
-  }
-
-  snapRestoreTimeout = window.setTimeout(() => {
-    scrollElement.classList.remove('no-snap')
-    snapRestoreTimeout = null
-  }, 400)
-}
+type CategoryFilterValue = 'all' | 'uncategorized' | string
 
 export default function HabitSectionsClient({
-  badHabits,
   goodHabits,
+  badHabits,
+  categories,
   todayCounts,
   categoryStats,
-  displayOrder = 'bad-first',
   showBadHabits = true,
   showGoodHabits = true,
   coachMessage,
 }: HabitSectionsClientProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const normalizedQuery = searchQuery.trim().toLowerCase()
-  const [openCategoryKey, setOpenCategoryKey] = useState<string | null>(null)
+  const [goodCategoryFilter, setGoodCategoryFilter] = useState<CategoryFilterValue>('all')
+  const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('all')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [searchActivated, setSearchActivated] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [lockedSection, setLockedSection] = useState<'good' | 'bad' | null>(null)
-  const [activeScrollContainerInfo, setActiveScrollContainerInfo] = useState<{
-    key: string
-    node: HTMLDivElement
-  } | null>(null)
-  const activeScrollContainer = activeScrollContainerInfo?.node ?? null
   const searchInputRef = useRef<HTMLInputElement | null>(null)
-  const prevSearchValueRef = useRef('')
-  const categoryRefs = useRef(new Map<string, MutableRefObject<HTMLDivElement | null>>())
+  const categoriesList = categories ?? []
   const todayCountsMap = useMemo(
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
   )
-  useScrollLock(Boolean(lockedSection))
+  const categoryMap = useMemo(() => new Map(categoriesList.map(category => [category.id, category])), [categoriesList])
 
-  const scrollBackToActiveSection = useCallback(() => {
-    const targetType =
-      openCategoryKey?.startsWith('good-')
-        ? 'good'
-        : openCategoryKey?.startsWith('bad-')
-          ? 'bad'
-          : displayOrder === 'good-first'
-            ? 'good'
-            : 'bad'
-    const target = document.getElementById(`${targetType}-habits-section`)
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [openCategoryKey, displayOrder])
+  const filterByQuery = useCallback(
+    (habitList: HabitRow[]) => {
+      const normalized = searchQuery.trim().toLowerCase()
+      if (!normalized) return habitList
+      return habitList.filter(habit => habit.name.toLowerCase().includes(normalized))
+    },
+    [searchQuery]
+  )
 
-  const openSearchSection = useCallback((focusInput: boolean) => {
-    setSearchActivated(true)
-    window.setTimeout(() => {
-      scrollToSearchSection()
-      if (focusInput) {
-        searchInputRef.current?.focus()
-      }
-    }, 50)
+  const filterByCategory = useCallback((habitList: HabitRow[], filterValue: CategoryFilterValue) => {
+    if (filterValue === 'all') return habitList
+    if (filterValue === 'uncategorized') {
+      return habitList.filter(habit => !habit.category_id)
+    }
+    return habitList.filter(habit => habit.category_id === filterValue)
   }, [])
 
-  const closeSearchSection = useCallback(() => {
-    if (isMobile) return
-    setSearchActivated(false)
-    scrollBackToActiveSection()
-  }, [scrollBackToActiveSection, isMobile])
+  const filteredGoodHabits = useMemo(
+    () => filterByCategory(filterByQuery(goodHabits), goodCategoryFilter),
+    [filterByCategory, filterByQuery, goodHabits, goodCategoryFilter]
+  )
+
+  const filteredBadHabits = useMemo(
+    () => filterByCategory(filterByQuery(badHabits), badCategoryFilter),
+    [badHabits, badCategoryFilter, filterByCategory, filterByQuery]
+  )
+
+  const searchResults = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase()
+    if (!normalized) return []
+    return [...goodHabits, ...badHabits].filter(habit => habit.name.toLowerCase().includes(normalized))
+  }, [goodHabits, badHabits, searchQuery])
+
+  const handleSearchFocus = useCallback(() => {
+    setSearchActivated(true)
+    disableSnap()
+  }, [])
+
+  const handleSearchBlur = useCallback(() => {
+    if (!searchQuery.trim()) {
+      setSearchActivated(false)
+    }
+    enableSnap()
+  }, [searchQuery])
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+  }, [])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    const handleSearchOpen = () => {
+      setSearchActivated(true)
+      disableSnap()
+      scrollToSearchSection()
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus()
+      })
+    }
+
+    window.addEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
+    return () => {
+      window.removeEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
+    }
+  }, [])
+
+  useEffect(() => {
     const update = () => {
       setIsMobile(window.innerWidth < 768)
     }
@@ -154,441 +137,171 @@ export default function HabitSectionsClient({
     }
   }, [])
 
-  useEffect(() => {
-    if (!openCategoryKey && lockedSection) {
-      setLockedSection(null)
-    }
-  }, [openCategoryKey, lockedSection])
-
-  const handleRegisterScrollContainer = useCallback((key: string, container: HTMLDivElement | null) => {
-    setActiveScrollContainerInfo(prev => {
-      if (!container) {
-        if (prev?.key === key) {
-          return null
-        }
-        return prev
-      }
-      return { key, node: container }
-    })
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const handleSearchOpen = () => openSearchSection(true)
-    window.addEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
-    return () => {
-      window.removeEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
-    }
-  }, [openSearchSection])
-
-  const getCategoryRef = useCallback((key: string) => {
-    if (!categoryRefs.current.has(key)) {
-      categoryRefs.current.set(key, { current: null } as MutableRefObject<HTMLDivElement | null>)
-    }
-    return categoryRefs.current.get(key)!
-  }, [])
-
-  const handleToggleCategory = useCallback(
-    (section: 'good' | 'bad', categoryKey: string, isOpening: boolean) => {
-      setOpenCategoryKey(prev => {
-        if (isOpening) {
-          if (prev === categoryKey) return prev
-          setLockedSection(section)
-          const ref = getCategoryRef(categoryKey)
-          window.setTimeout(() => {
-            scrollToCenter(ref.current)
-          }, 20)
-          return categoryKey
-        }
-
-        if (prev === categoryKey) {
-          setLockedSection(null)
-          setActiveScrollContainerInfo(null)
-          return null
-        }
-        return prev
-      })
-    },
-    [getCategoryRef]
-  )
-
-  useEffect(() => {
-    if (!lockedSection || !activeScrollContainer) return
-
-    let lastTouchY = 0
-
-    const handleWheel = (event: WheelEvent) => {
-      if (!activeScrollContainer) return
-      const target = event.target as Node
-      if (activeScrollContainer.contains(target)) return
-      event.preventDefault()
-      activeScrollContainer.scrollTop += event.deltaY
-    }
-
-    const handleTouchStart = (event: TouchEvent) => {
-      lastTouchY = event.touches[0]?.clientY ?? 0
-    }
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (!activeScrollContainer) return
-      const target = event.target as Node
-      if (activeScrollContainer.contains(target)) return
-      if (event.cancelable) {
-        event.preventDefault()
-      }
-      const currentY = event.touches[0]?.clientY ?? 0
-      const delta = lastTouchY - currentY
-      lastTouchY = currentY
-      activeScrollContainer.scrollTop += delta
-    }
-
-    document.addEventListener('wheel', handleWheel, { passive: false })
-    document.addEventListener('touchstart', handleTouchStart, { passive: false })
-    document.addEventListener('touchmove', handleTouchMove, { passive: false })
-
-    return () => {
-      document.removeEventListener('wheel', handleWheel)
-      document.removeEventListener('touchstart', handleTouchStart)
-      document.removeEventListener('touchmove', handleTouchMove)
-    }
-  }, [lockedSection, activeScrollContainer])
-
-  const filterGroups = (groups: HabitGroup[]) =>
-    groups
-      .map(group => {
-        if (!normalizedQuery) return group
-        const filteredHabits = group.habits.filter(habit => habit.name.toLowerCase().includes(normalizedQuery))
-        return { ...group, habits: filteredHabits }
-      })
-      .filter(group => group.habits.length > 0)
-
-  const filteredBadHabits = useMemo(() => filterGroups(badHabits), [badHabits, normalizedQuery])
-  const filteredGoodHabits = useMemo(() => filterGroups(goodHabits), [goodHabits, normalizedQuery])
-  const allHabitsList = useMemo(
-    () => [...badHabits.flatMap(group => group.habits), ...goodHabits.flatMap(group => group.habits)],
-    [badHabits, goodHabits]
-  )
-  const filteredResults = useMemo(
-    () => (normalizedQuery ? allHabitsList.filter(habit => habit.name.toLowerCase().includes(normalizedQuery)) : []),
-    [allHabitsList, normalizedQuery]
-  )
-  const searchActive = normalizedQuery.length > 0
-
-  const handleSearchInputChange = useCallback(
-    (value: string) => {
-      setSearchQuery(value)
-      const trimmed = value.trim()
-      if (trimmed.length > 0) {
-        if (!searchActivated) {
-          openSearchSection(false)
-        }
-      } else if (prevSearchValueRef.current.length > 0) {
-        closeSearchSection()
-      }
-      prevSearchValueRef.current = trimmed
-    },
-    [searchActivated, closeSearchSection, openSearchSection]
-  )
-
-  const handleSearchInputFocus = useCallback(() => {
-    openSearchSection(false)
-  }, [openSearchSection])
-
-  const handleSearchInputBlur = useCallback(() => {
-    if (isMobile) return
-    if (!searchQuery.trim()) {
-      closeSearchSection()
-    }
-  }, [searchQuery, closeSearchSection, isMobile])
-
-  const searchSectionActive = isMobile || searchActivated
-
   return (
     <section className="space-y-6">
-      {coachMessage && (
-        isMobile ? <CoachRoastBubble message={coachMessage} variant="toast" /> : <CoachRoastBubble message={coachMessage} variant="inline" />
-      )}
+      {coachMessage && (isMobile ? <CoachRoastBubble message={coachMessage} variant="toast" /> : <CoachRoastBubble message={coachMessage} variant="inline" />)}
 
-      <SectionSnap
-        id="search-section"
-        disableSnap={!searchActivated}
-        className={`flex w-full flex-col items-center justify-center gap-6 px-4 transition-all duration-300 ${
-          searchActivated
-            ? 'min-h-screen py-8 opacity-100 scale-100'
-            : 'min-h-0 max-h-0 overflow-hidden py-0 opacity-0 scale-95 pointer-events-none'
-        }`}
+      <div
+        id="mainScrollArea"
+        className="snap-y snap-mandatory overflow-y-auto rounded-3xl border border-white/5 bg-black/10 p-4 h-screen"
       >
-        <div className="w-full max-w-3xl space-y-3">
-          <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
-          <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={event => handleSearchInputChange(event.target.value)}
-              onFocus={handleSearchInputFocus}
-              onBlur={handleSearchInputBlur}
-              placeholder="Rechercher une habitude…"
-              className="w-full rounded-2xl border border-white/10 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-[#FF4D4D]/60 focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]/20"
-            />
-          </div>
-        </div>
-        <div className={`w-full max-w-5xl overflow-hidden rounded-3xl border border-white/5 bg-black/30 ${searchActive ? 'max-h-[70vh]' : 'max-h-[40vh]'}`}>
-          <div className="h-full w-full overflow-y-auto p-4 sm:p-6 space-y-4">
-            {searchActive ? (
-              filteredResults.length > 0 ? (
-                filteredResults.map(habit => {
-                  const todayCount = todayCountsMap.get(habit.id) ?? 0
-                  return (
-                    <div
-                      key={habit.id}
-                      className="rounded-2xl border border-white/10 bg-black/40 p-4 transition hover:border-white/30"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <Link href={`/habits/${habit.id}`} className="flex items-center gap-3 min-w-0 flex-1">
-                          <div
-                            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-xl"
-                            style={{ backgroundColor: `${habit.color || '#6b7280'}20` }}
-                          >
-                            {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
-                          </div>
-                          <p className="truncate text-base font-semibold text-white">{habit.name}</p>
-                        </Link>
-                        <div className="w-full sm:w-auto">
-                          <HabitQuickActions
-                            habitId={habit.id}
-                            habitType={habit.type as 'good' | 'bad'}
-                            trackingMode={habit.tracking_mode as 'binary' | 'counter'}
-                            initialCount={todayCount}
-                            habitName={habit.name}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/30 p-6 text-center text-sm text-white/70">
-                  Aucun résultat pour « {searchQuery} ». Essaie un autre terme ou crée une nouvelle habitude.
-                </div>
-              )
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/70">
-                Tape un mot-clé ou utilise le bouton Recherche pour commencer.
-              </div>
-            )}
-          </div>
-        </div>
-      </SectionSnap>
-
-      <>
-        {(
-          displayOrder === 'good-first'
-            ? (['good', 'bad'] as const)
-            : (['bad', 'good'] as const)
-        )
-          .filter(section => (section === 'bad' ? showBadHabits : showGoodHabits))
-          .map(section => {
-          const config =
-            section === 'bad'
-              ? {
-                  title: '🔥 Mauvaises habitudes',
-                  totalCount: badHabits.reduce((acc, group) => acc + group.habits.length, 0),
-                  accentColor: '#FF4D4D',
-                  groupedHabits: searchActive ? filteredBadHabits : badHabits,
-                  type: 'bad' as const,
-                }
-              : {
-                  title: '✨ Bonnes habitudes',
-                  totalCount: goodHabits.reduce((acc, group) => acc + group.habits.length, 0),
-                  accentColor: '#4DA6FF',
-                  groupedHabits: searchActive ? filteredGoodHabits : goodHabits,
-                  type: 'good' as const,
-                }
-
-          return (
-            <HabitSection
-              key={config.type}
-              title={config.title}
-              totalCount={config.totalCount}
-              accentColor={config.accentColor}
-              groupedHabits={config.groupedHabits}
-              type={config.type}
-              todayCountsMap={todayCountsMap}
-              openCategoryKey={openCategoryKey}
-              onToggleCategory={handleToggleCategory}
-              registerScrollContainer={handleRegisterScrollContainer}
-              getCategoryRef={getCategoryRef}
-            />
-          )
-        })}
-        <SectionSnap id="categories-section" className="space-y-4 rounded-3xl p-4 sm:p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-white/40">Pilotage</p>
-              <h2 className="text-2xl font-semibold text-white">Gestion des catégories personnalisées</h2>
-              <p className="text-sm text-white/60">
-                Crée, renomme ou supprime des regroupements pour organiser tes habitudes.
-              </p>
+        <section id="searchBlock" className="scroll-section space-y-4 py-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
+            <div className="relative mt-3">
+              <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={event => handleSearchChange(event.target.value)}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+                placeholder="Rechercher une habitude…"
+                className="w-full rounded-2xl border border-white/10 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-[#FF4D4D]/60 focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]/20"
+              />
             </div>
-            <button
-              type="button"
-              onClick={() => setCategoriesOpen(prev => !prev)}
-              className="rounded-2xl border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
-              data-floating-hide-on-press
-            >
-              {categoriesOpen ? 'Masquer' : 'Afficher'}
-            </button>
           </div>
-          {categoriesOpen && (
-            <div className="space-y-4">
-              <CategoryOverview stats={categoryStats} />
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <CategoryManager />
-              </div>
+          {searchActivated && searchQuery.trim() && (
+            <div className="space-y-3">
+              {searchResults.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/30 p-4 text-center text-sm text-white/70">
+                  Aucun résultat pour « {searchQuery} »
+                </div>
+              ) : (
+                searchResults.map(habit => (
+                  <HabitRowCard
+                    key={habit.id}
+                    habit={habit}
+                    type={habit.type as 'good' | 'bad'}
+                    todayCount={todayCountsMap.get(habit.id) ?? 0}
+                    category={habit.category_id ? categoryMap.get(habit.category_id) ?? null : null}
+                  />
+                ))
+              )}
             </div>
           )}
-        </SectionSnap>
-      </>
+        </section>
+
+        {showGoodHabits && (
+          <section id="goodHabitsSection" className="scroll-section py-8">
+            <HabitSectionHeader
+              title="✨ Bonnes habitudes"
+              count={filteredGoodHabits.length}
+              filterId="goodHabitsFilter"
+              filterValue={goodCategoryFilter}
+              onFilterChange={setGoodCategoryFilter}
+              categories={categoriesList}
+            />
+            <HabitList habits={filteredGoodHabits} type="good" todayCountsMap={todayCountsMap} categoryMap={categoryMap} />
+          </section>
+        )}
+
+        {showBadHabits && (
+          <section id="badHabitsSection" className="scroll-section py-8">
+            <HabitSectionHeader
+              title="⚡ Mauvaises habitudes"
+              count={filteredBadHabits.length}
+              filterId="badHabitsFilter"
+              filterValue={badCategoryFilter}
+              onFilterChange={setBadCategoryFilter}
+              categories={categoriesList}
+            />
+            <HabitList habits={filteredBadHabits} type="bad" todayCountsMap={todayCountsMap} categoryMap={categoryMap} />
+          </section>
+        )}
+      </div>
+
+      <div className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+        <button
+          type="button"
+          onClick={() => setCategoriesOpen(prev => !prev)}
+          className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/5"
+        >
+          <span className="text-xs uppercase tracking-[0.3em] text-white/60">Catégories personnalisées</span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {categoriesOpen && (
+          <div className="space-y-4">
+            <CategoryOverview stats={categoryStats} />
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <CategoryManager />
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   )
 }
 
-type HabitSectionProps = {
+type HabitSectionHeaderProps = {
   title: string
-  totalCount: number
-  accentColor: string
-  groupedHabits: HabitGroup[]
-  type: 'good' | 'bad'
-  todayCountsMap: Map<string, number>
-  openCategoryKey: string | null
-  onToggleCategory: (section: 'good' | 'bad', categoryKey: string, isOpening: boolean) => void
-  registerScrollContainer: (key: string, container: HTMLDivElement | null) => void
-  getCategoryRef: (key: string) => MutableRefObject<HTMLDivElement | null>
+  count: number
+  filterId: string
+  filterValue: CategoryFilterValue
+  onFilterChange: (value: CategoryFilterValue) => void
+  categories: CategoryRow[]
 }
 
-function HabitSection({
-  title,
-  totalCount,
-  accentColor,
-  groupedHabits,
-  type,
-  todayCountsMap,
-  openCategoryKey,
-  onToggleCategory,
-  registerScrollContainer,
-  getCategoryRef,
-}: HabitSectionProps) {
-  const variant = HABIT_VARIANT_STYLES[type]
-
+function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories }: HabitSectionHeaderProps) {
   return (
-    <SectionSnap id={`${type}-habits-section`} className="space-y-6 py-4 scroll-mt-24">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.35em] text-white/40">Tableau de bord</p>
-        <h2 className={`text-2xl font-semibold md:text-3xl ${variant.headerAccent}`}>
-          {title} <span className="text-white/60">({totalCount})</span>
-        </h2>
+        <h3 className="text-2xl font-semibold text-white">
+          {title} <span className="text-white/50">({count})</span>
+        </h3>
       </div>
-
-      {groupedHabits.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-6 text-center text-sm text-white/60">
-          Aucune habitude {type === 'good' ? 'positive' : 'négative'} ne correspond à cette recherche.
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {groupedHabits.map(group => {
-            const baseId = group.category?.id || 'uncategorized'
-            const categoryKey = `${type}-${baseId}`
-            const isOpen = openCategoryKey ? openCategoryKey === categoryKey : false
-
-            return (
-              <HabitCategoryPanel
-                key={categoryKey}
-                group={group}
-                type={type}
-                variant={variant}
-                todayCountsMap={todayCountsMap}
-                isOpen={isOpen}
-                categoryKey={categoryKey}
-                onToggleCategory={() => onToggleCategory(type, categoryKey, !isOpen)}
-                registerScrollContainer={registerScrollContainer}
-                categoryRef={getCategoryRef(categoryKey)}
-              />
-            )
-          })}
-        </div>
-      )}
-    </SectionSnap>
+      <div className="w-full sm:w-64">
+        <label htmlFor={filterId} className="mb-1 block text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+          Filtre par catégorie
+        </label>
+        <select
+          id={filterId}
+          value={filterValue}
+          onChange={event => onFilterChange(event.target.value as CategoryFilterValue)}
+          className="mobile-ios-filter w-full rounded-2xl border border-white/15 bg-[#0d1326]/80 px-4 py-3 text-sm font-medium text-white shadow-inner shadow-black/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
+        >
+          <option value="all">Toutes les catégories</option>
+          {categories.map(category => (
+            <option key={category.id} value={category.id}>
+              {`${category.icon || '📂'} ${category.name}`}
+            </option>
+          ))}
+          <option value="uncategorized">Sans catégorie</option>
+        </select>
+      </div>
+    </div>
   )
 }
 
-type HabitCategoryPanelProps = {
-  group: HabitGroup
+type HabitListProps = {
+  habits: HabitRow[]
   type: 'good' | 'bad'
-  variant: (typeof HABIT_VARIANT_STYLES)['good']
   todayCountsMap: Map<string, number>
-  isOpen: boolean
-  categoryKey: string
-  onToggleCategory: () => void
-  registerScrollContainer: (key: string, container: HTMLDivElement | null) => void
-  categoryRef: MutableRefObject<HTMLDivElement | null>
+  categoryMap: Map<string, CategoryRow>
 }
 
-function HabitCategoryPanel({
-  group,
-  type,
-  variant,
-  todayCountsMap,
-  isOpen,
-  categoryKey,
-  onToggleCategory,
-  registerScrollContainer,
-  categoryRef,
-}: HabitCategoryPanelProps) {
-  const contentRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const node = contentRef.current
-    if (isOpen && node) {
-      registerScrollContainer(categoryKey, node)
-    } else {
-      registerScrollContainer(categoryKey, null)
-      if (node) node.scrollTop = 0
-    }
-  }, [isOpen, registerScrollContainer, categoryKey])
+function HabitList({ habits, type, todayCountsMap, categoryMap }: HabitListProps) {
+  if (habits.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
+        Aucune habitude {type === 'good' ? 'positive' : 'négative'} ne correspond à ce filtre.
+      </div>
+    )
+  }
 
   return (
-    <div ref={categoryRef} className="rounded-3xl bg-gradient-to-b from-white/5 to-transparent p-1">
-      <button
-        type="button"
-        onClick={onToggleCategory}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left sm:px-5"
-        data-floating-hide-on-press
-      >
-        <div className="flex items-center gap-3">
-          <span className={`rounded-full p-2 ${variant.iconBg}`}>
-            <ListChecks className="h-5 w-5" />
-          </span>
-          <div className="text-left">
-            <p className="text-base font-semibold text-white">{group.category?.name ?? 'Sans catégorie'}</p>
-            <p className="text-xs text-white/50">
-              {group.habits.length} routine{group.habits.length > 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        <ChevronDown className={`h-5 w-5 text-white/60 transition duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-      {isOpen && (
-        <div
-          ref={contentRef}
-          className="space-y-4 px-1 py-4 sm:px-2 max-h-[70vh] overflow-y-auto overscroll-contain"
-        >
-          {group.habits.map(habit => (
-            <HabitRowCard key={habit.id} habit={habit} type={type} todayCount={todayCountsMap.get(habit.id) ?? 0} />
-          ))}
-        </div>
-      )}
+    <div className="flex flex-col gap-4" id={`${type}HabitsList`}>
+      {habits.map(habit => (
+        <HabitRowCard
+          key={habit.id}
+          habit={habit}
+          type={type}
+          todayCount={todayCountsMap.get(habit.id) ?? 0}
+          category={habit.category_id ? categoryMap.get(habit.category_id) ?? null : null}
+        />
+      ))}
     </div>
   )
 }
@@ -597,20 +310,24 @@ type HabitRowCardProps = {
   habit: HabitRow
   type: 'good' | 'bad'
   todayCount: number
+  category: CategoryRow | null
 }
 
-function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
+function HabitRowCard({ habit, type, todayCount, category }: HabitRowCardProps) {
+  const categoryLabel = category ? `${category.icon || '📁'} ${category.name}` : null
+
   return (
-    <div className="flex flex-col gap-4 rounded-3xl bg-black/20 px-4 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-      <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4 min-w-0">
+    <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-black/20 px-4 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
         <div
           className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"
           style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
         >
           {habit.icon || (type === 'bad' ? '🔥' : '✨')}
         </div>
-        <div className="min-w-0">
+        <div>
           <p className="text-base font-semibold text-white sm:text-lg">{habit.name}</p>
+          {categoryLabel && <p className="text-sm text-white/60">{categoryLabel}</p>}
         </div>
       </Link>
       <div className="w-full sm:w-auto">
@@ -630,47 +347,27 @@ function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
 }
 
 function CategoryOverview({ stats }: { stats: CategoryStat[] }) {
-  const [open, setOpen] = useState(true)
+  if (stats.length === 0) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+        Aucune catégorie personnalisée.
+      </div>
+    )
+  }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#121428]/80">
-      <button
-        type="button"
-        onClick={() => setOpen(prev => !prev)}
-        className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/5"
-      >
-        <div>
-          <span className="text-xs uppercase tracking-[0.3em] text-white/50 block">Vue d'ensemble</span>
-          <span className="text-sm text-white/70">
-            {stats.length} catégorie{stats.length > 1 ? 's' : ''}
+    <div className="space-y-3">
+      {stats.map(stat => (
+        <div key={stat.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-white shadow-inner shadow-black/30">
+          <div className="flex items-center gap-3">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
+            <span className="text-sm font-medium">{stat.name}</span>
+          </div>
+          <span className="text-xs text-white/60">
+            {stat.count} habitude{stat.count > 1 ? 's' : ''}
           </span>
         </div>
-        <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      <div className={`space-y-3 px-4 pb-4 text-sm text-white/70 transition-[max-height,opacity] duration-300 ${open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-        {stats.length === 0 ? (
-          <p className="text-white/60">Aucune catégorie personnalisée. Utilise le module ci-dessous pour en créer.</p>
-        ) : (
-          <div className="space-y-2">
-            {stats.map(stat => (
-              <div key={stat.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-white shadow-inner shadow-black/30">
-                <div className="flex items-center gap-3">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stat.color || '#6b7280' }} />
-                  <span className="text-sm font-medium">{stat.name}</span>
-                </div>
-                <span className="text-xs text-white/60">
-                  {stat.count} habitude{stat.count > 1 ? 's' : ''}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      ))}
     </div>
   )
-}
-
-function withAlpha(color: string | null | undefined, alpha: string) {
-  if (!color || !color.startsWith('#')) return color ?? '#FFFFFF'
-  return `${color}${alpha}`
 }

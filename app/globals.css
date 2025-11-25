@@ -13,26 +13,26 @@
 
 html,
 body {
-  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
 }
 
-.no-snap {
+#mainScrollArea {
+  scroll-snap-type: y mandatory;
+  scroll-padding-top: 4rem;
+  scroll-padding-bottom: 4rem;
+}
+
+html.no-snap #mainScrollArea {
   scroll-snap-type: none !important;
 }
 
-@media (max-width: 768px) {
-  .section-snap {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-    min-height: calc(100vh - 60px);
-    margin-bottom: -40px;
-  }
+.scroll-section {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
 
-  .section-snap:last-of-type {
-    margin-bottom: 0;
-    padding-bottom: 5rem;
-  }
+.section-snap {
+  scroll-snap-align: start;
 }
 
 .section-snap-enter {
@@ -62,4 +62,15 @@ body {
 }
 .pdf-export * {
   background-image: none !important;
+}
+
+.mobile-ios-filter {
+  appearance: none;
+  border-radius: 1rem;
+}
+
+#floatingMenu button,
+#floatingMenu a {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
 }
