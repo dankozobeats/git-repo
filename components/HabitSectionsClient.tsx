@@ -58,8 +58,6 @@ export default function HabitSectionsClient({
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
   )
-  const categoryMap = useMemo(() => new Map(categoriesList.map(category => [category.id, category])), [categoriesList])
-
   const filterByQuery = useCallback(
     (habitList: HabitRow[]) => {
       const normalized = searchQuery.trim().toLowerCase()
@@ -128,8 +126,8 @@ export default function HabitSectionsClient({
     <section className="relative z-0 space-y-6">
       {coachMessage && (isMobile ? <CoachRoastBubble message={coachMessage} variant="toast" /> : <CoachRoastBubble message={coachMessage} variant="inline" />)}
 
-      <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] py-4">
-        <div className="space-y-3 rounded-3xl border border-white/10 bg-black/30 p-4 shadow-inner shadow-black/30">
+      <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] px-2 py-3 sm:px-4 sm:py-4">
+        <div className="space-y-3 rounded-3xl border border-white/10 bg-black/30 px-3 py-4 sm:px-4 shadow-inner shadow-black/30">
           <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
@@ -156,7 +154,7 @@ export default function HabitSectionsClient({
       </div>
 
       {hasSearch && (
-        <div id="searchResults" className="space-y-3 rounded-3xl border border-white/10 bg-black/30 p-4">
+        <div id="searchResults" className="space-y-3 rounded-3xl border border-white/10 bg-black/30 px-3 py-4 sm:px-4">
           {searchResults.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-center text-sm text-white/70">
               Aucun résultat pour « {searchQuery} »
@@ -168,7 +166,6 @@ export default function HabitSectionsClient({
                 habit={habit}
                 type={habit.type as 'good' | 'bad'}
                 todayCount={todayCountsMap.get(habit.id) ?? 0}
-                category={habit.category_id ? categoryMap.get(habit.category_id) ?? null : null}
               />
             ))
           )}
@@ -177,7 +174,7 @@ export default function HabitSectionsClient({
 
       <div
         id="mainScrollArea"
-        className={`snap-y snap-mandatory ${hasSearch ? 'hidden' : ''} md:h-screen md:overflow-y-auto`}
+        className={`snap-y snap-mandatory px-2 ${hasSearch ? 'hidden' : ''} md:h-screen md:overflow-y-auto sm:px-4`}
       >
         {showGoodHabits && (
           <section id="goodHabitsSection" className="scroll-section snap-start space-y-4">
@@ -193,7 +190,6 @@ export default function HabitSectionsClient({
               habits={filteredGoodHabits}
               type="good"
               todayCountsMap={todayCountsMap}
-              categoryMap={categoryMap}
               containerId="goodHabitsList"
             />
           </section>
@@ -213,14 +209,13 @@ export default function HabitSectionsClient({
               habits={filteredBadHabits}
               type="bad"
               todayCountsMap={todayCountsMap}
-              categoryMap={categoryMap}
               containerId="badHabitsList"
             />
           </section>
         )}
       </div>
 
-      <div className="relative z-0 space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+      <div className="relative z-0 space-y-4 rounded-3xl border border-white/10 bg-black/20 px-3 py-4 sm:px-4">
         <button
           type="button"
           onClick={() => setCategoriesOpen(prev => !prev)}
@@ -232,7 +227,7 @@ export default function HabitSectionsClient({
         {categoriesOpen && (
           <div className="space-y-4">
             <CategoryOverview stats={categoryStats} />
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-4 sm:px-4">
               <CategoryManager />
             </div>
           </div>
@@ -284,11 +279,10 @@ type HabitListProps = {
   habits: HabitRow[]
   type: 'good' | 'bad'
   todayCountsMap: Map<string, number>
-  categoryMap: Map<string, CategoryRow>
   containerId: string
 }
 
-function HabitList({ habits, type, todayCountsMap, categoryMap, containerId }: HabitListProps) {
+function HabitList({ habits, type, todayCountsMap, containerId }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -305,7 +299,6 @@ function HabitList({ habits, type, todayCountsMap, categoryMap, containerId }: H
           habit={habit}
           type={type}
           todayCount={todayCountsMap.get(habit.id) ?? 0}
-          category={habit.category_id ? categoryMap.get(habit.category_id) ?? null : null}
         />
       ))}
     </div>
@@ -316,14 +309,11 @@ type HabitRowCardProps = {
   habit: HabitRow
   type: 'good' | 'bad'
   todayCount: number
-  category: CategoryRow | null
 }
 
-function HabitRowCard({ habit, type, todayCount, category }: HabitRowCardProps) {
-  const categoryLabel = category ? `${category.icon || '📁'} ${category.name}` : null
-
+function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-black/20 px-4 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+    <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-black/20 px-3 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
         <div
           className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"
@@ -333,7 +323,6 @@ function HabitRowCard({ habit, type, todayCount, category }: HabitRowCardProps) 
         </div>
         <div>
           <p className="text-base font-semibold text-white sm:text-lg">{habit.name}</p>
-          {categoryLabel && <p className="text-sm text-white/60">{categoryLabel}</p>}
         </div>
       </Link>
       <div className="w-full sm:w-auto">
