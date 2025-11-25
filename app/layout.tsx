@@ -46,8 +46,8 @@ export default async function RootLayout({
 
   return (
     <html lang="fr">
-      <body className="antialiased bg-[#0c0f1a] text-[#E0E0E0]">
-        <div className="min-h-screen md:overflow-hidden">
+      <body className="antialiased bg-[#0c0f1a] text-[#E0E0E0] overflow-visible">
+        <div className="min-h-screen overflow-visible">
           {isAuthenticated && (
             <DashboardSidebar
               mainNav={mainNav}

@@ -6,7 +6,7 @@ import HabitQuickActions from '@/components/HabitQuickActions'
 import CategoryManager from '@/components/CategoryManager'
 import CoachRoastBubble from '@/components/CoachRoastBubble'
 import { Search as SearchIcon, ChevronDown } from 'lucide-react'
-import { HABIT_SEARCH_EVENT, scrollToSearchSection, disableSnap, enableSnap } from '@/lib/ui/scroll'
+import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -51,7 +51,6 @@ export default function HabitSectionsClient({
   const [goodCategoryFilter, setGoodCategoryFilter] = useState<CategoryFilterValue>('all')
   const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('all')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
-  const [searchActivated, setSearchActivated] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const categoriesList = categories ?? []
@@ -94,26 +93,12 @@ export default function HabitSectionsClient({
     return [...goodHabits, ...badHabits].filter(habit => habit.name.toLowerCase().includes(normalized))
   }, [goodHabits, badHabits, searchQuery])
 
-  const handleSearchFocus = useCallback(() => {
-    setSearchActivated(true)
-    disableSnap()
-  }, [])
-
-  const handleSearchBlur = useCallback(() => {
-    if (!searchQuery.trim()) {
-      setSearchActivated(false)
-    }
-    enableSnap()
-  }, [searchQuery])
-
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value)
   }, [])
 
   useEffect(() => {
     const handleSearchOpen = () => {
-      setSearchActivated(true)
-      disableSnap()
       scrollToSearchSection()
       requestAnimationFrame(() => {
         searchInputRef.current?.focus()
@@ -137,54 +122,65 @@ export default function HabitSectionsClient({
     }
   }, [])
 
+  const hasSearch = Boolean(searchQuery.trim())
+
   return (
-    <section className="space-y-6">
+    <section className="relative z-0 space-y-6">
       {coachMessage && (isMobile ? <CoachRoastBubble message={coachMessage} variant="toast" /> : <CoachRoastBubble message={coachMessage} variant="inline" />)}
 
-      <div
-        id="mainScrollArea"
-        className="snap-y snap-mandatory overflow-y-auto rounded-3xl border border-white/5 bg-black/10 p-4 h-screen"
-      >
-        <section id="searchBlock" className="scroll-section space-y-4 py-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
-            <div className="relative mt-3">
+      <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] py-4">
+        <div className="space-y-3 rounded-3xl border border-white/10 bg-black/30 p-4 shadow-inner shadow-black/30">
+          <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
               <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={event => handleSearchChange(event.target.value)}
-                onFocus={handleSearchFocus}
-                onBlur={handleSearchBlur}
                 placeholder="Rechercher une habitude…"
                 className="w-full rounded-2xl border border-white/10 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-[#FF4D4D]/60 focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]/20"
+                aria-label="Rechercher une habitude"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => searchInputRef.current?.focus()}
+              className="rounded-2xl border border-white/15 bg-[#0d1326]/80 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+            >
+              Rechercher
+            </button>
           </div>
-          {searchActivated && searchQuery.trim() && (
-            <div className="space-y-3">
-              {searchResults.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/30 p-4 text-center text-sm text-white/70">
-                  Aucun résultat pour « {searchQuery} »
-                </div>
-              ) : (
-                searchResults.map(habit => (
-                  <HabitRowCard
-                    key={habit.id}
-                    habit={habit}
-                    type={habit.type as 'good' | 'bad'}
-                    todayCount={todayCountsMap.get(habit.id) ?? 0}
-                    category={habit.category_id ? categoryMap.get(habit.category_id) ?? null : null}
-                  />
-                ))
-              )}
-            </div>
-          )}
-        </section>
+        </div>
+      </div>
 
+      {hasSearch && (
+        <div id="searchResults" className="space-y-3 rounded-3xl border border-white/10 bg-black/30 p-4">
+          {searchResults.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-center text-sm text-white/70">
+              Aucun résultat pour « {searchQuery} »
+            </div>
+          ) : (
+            searchResults.map(habit => (
+              <HabitRowCard
+                key={habit.id}
+                habit={habit}
+                type={habit.type as 'good' | 'bad'}
+                todayCount={todayCountsMap.get(habit.id) ?? 0}
+                category={habit.category_id ? categoryMap.get(habit.category_id) ?? null : null}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      <div
+        id="mainScrollArea"
+        className={`snap-y snap-mandatory ${hasSearch ? 'hidden' : ''} md:h-screen md:overflow-y-auto`}
+      >
         {showGoodHabits && (
-          <section id="goodHabitsSection" className="scroll-section py-8">
+          <section id="goodHabitsSection" className="scroll-section snap-start space-y-4">
             <HabitSectionHeader
               title="✨ Bonnes habitudes"
               count={filteredGoodHabits.length}
@@ -193,12 +189,18 @@ export default function HabitSectionsClient({
               onFilterChange={setGoodCategoryFilter}
               categories={categoriesList}
             />
-            <HabitList habits={filteredGoodHabits} type="good" todayCountsMap={todayCountsMap} categoryMap={categoryMap} />
+            <HabitList
+              habits={filteredGoodHabits}
+              type="good"
+              todayCountsMap={todayCountsMap}
+              categoryMap={categoryMap}
+              containerId="goodHabitsList"
+            />
           </section>
         )}
 
         {showBadHabits && (
-          <section id="badHabitsSection" className="scroll-section py-8">
+          <section id="badHabitsSection" className="scroll-section snap-start space-y-4">
             <HabitSectionHeader
               title="⚡ Mauvaises habitudes"
               count={filteredBadHabits.length}
@@ -207,12 +209,18 @@ export default function HabitSectionsClient({
               onFilterChange={setBadCategoryFilter}
               categories={categoriesList}
             />
-            <HabitList habits={filteredBadHabits} type="bad" todayCountsMap={todayCountsMap} categoryMap={categoryMap} />
+            <HabitList
+              habits={filteredBadHabits}
+              type="bad"
+              todayCountsMap={todayCountsMap}
+              categoryMap={categoryMap}
+              containerId="badHabitsList"
+            />
           </section>
         )}
       </div>
 
-      <div className="space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+      <div className="relative z-0 space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4">
         <button
           type="button"
           onClick={() => setCategoriesOpen(prev => !prev)}
@@ -245,13 +253,10 @@ type HabitSectionHeaderProps = {
 
 function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories }: HabitSectionHeaderProps) {
   return (
-    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="text-xs uppercase tracking-[0.35em] text-white/40">Tableau de bord</p>
-        <h3 className="text-2xl font-semibold text-white">
-          {title} <span className="text-white/50">({count})</span>
-        </h3>
-      </div>
+    <>
+      <h3 className="text-2xl font-semibold text-white">
+        {title} <span className="text-white/50">({count})</span>
+      </h3>
       <div className="w-full sm:w-64">
         <label htmlFor={filterId} className="mb-1 block text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
           Filtre par catégorie
@@ -271,7 +276,7 @@ function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChang
           <option value="uncategorized">Sans catégorie</option>
         </select>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -280,9 +285,10 @@ type HabitListProps = {
   type: 'good' | 'bad'
   todayCountsMap: Map<string, number>
   categoryMap: Map<string, CategoryRow>
+  containerId: string
 }
 
-function HabitList({ habits, type, todayCountsMap, categoryMap }: HabitListProps) {
+function HabitList({ habits, type, todayCountsMap, categoryMap, containerId }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -292,7 +298,7 @@ function HabitList({ habits, type, todayCountsMap, categoryMap }: HabitListProps
   }
 
   return (
-    <div className="flex flex-col gap-4" id={`${type}HabitsList`}>
+    <div className="flex flex-col gap-4" id={containerId}>
       {habits.map(habit => (
         <HabitRowCard
           key={habit.id}

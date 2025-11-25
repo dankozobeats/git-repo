@@ -81,7 +81,7 @@ export default function MobileHamburgerMenu({ onOpen, isMenuOpen = false }: Mobi
       type="button"
       onClick={onOpen}
       aria-label="Ouvrir le menu principal"
-      className={`fixed right-3 z-50 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/25 bg-[#050915]/95 text-white shadow-2xl transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D4D]/60 md:hidden ${
+      className={`fixed right-3 z-[1200] flex h-12 w-12 items-center justify-center rounded-2xl border border-white/25 bg-[#050915]/95 text-white shadow-2xl transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D4D]/60 md:hidden ${
         canDisplayMenu ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'
       }`}
       style={{ top: targetTop }}

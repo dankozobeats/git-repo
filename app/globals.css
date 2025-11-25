@@ -16,10 +16,17 @@ body {
   scroll-behavior: smooth;
 }
 
+.bg-page {
+  background-color: #0c0f1a;
+}
+
 #mainScrollArea {
-  scroll-snap-type: y mandatory;
   scroll-padding-top: 4rem;
   scroll-padding-bottom: 4rem;
+}
+
+.snap-y {
+  scroll-snap-type: y mandatory;
 }
 
 html.no-snap #mainScrollArea {
@@ -29,6 +36,7 @@ html.no-snap #mainScrollArea {
 .scroll-section {
   scroll-snap-align: start;
   scroll-snap-stop: always;
+  padding: 1.2rem;
 }
 
 .section-snap {

@@ -20,6 +20,7 @@ export default function FloatingQuickActions() {
       const delta = Math.abs(currentY - lastScrollYRef.current)
       if (delta < SCROLL_THRESHOLD) return
       lastScrollYRef.current = currentY
+      if (document.documentElement.classList.contains('no-hide-menu')) return
       hideFloatingMenu()
       if (scrollTimeoutRef.current) {
         window.clearTimeout(scrollTimeoutRef.current)
@@ -59,7 +60,7 @@ export default function FloatingQuickActions() {
   return (
     <div
       id="floatingMenu"
-      className={`fixed ${positionClass} z-50 flex flex-col items-center gap-3 transition-all duration-200 ${
+      className={`fixed ${positionClass} z-[1500] flex flex-col items-center gap-3 transition-all duration-200 ${
         hidden ? 'translate-x-20 opacity-0' : 'translate-x-0 opacity-100'
       }`}
     >

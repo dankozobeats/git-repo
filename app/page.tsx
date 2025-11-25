@@ -172,7 +172,7 @@ export default async function Home() {
   ]
 
   return (
-    <main className="min-h-screen bg-[#0c0f1a] text-[#E0E0E0]">
+    <main className="min-h-screen overflow-visible bg-[#0c0f1a] text-[#E0E0E0]">
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-10 md:py-10">
         {showFocusCard && (
           <section className="section-snap rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 md:py-10 md:px-8" aria-live="polite">

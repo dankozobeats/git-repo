@@ -54,7 +54,7 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
     <>
       <MobileHamburgerMenu onOpen={() => setMobileOpen(true)} isMenuOpen={mobileOpen} />
 
-      <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] md:flex">
+      <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] md:flex z-[9999]">
         <SidebarContent
           mainNav={mainNav}
           utilityNav={utilityNav}
@@ -67,14 +67,14 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
       </aside>
 
       <div
-        className={`fixed inset-0 z-50 bg-black/70 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-[9998] bg-black/70 transition-opacity duration-300 md:hidden ${
           mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         onClick={() => setMobileOpen(false)}
       />
 
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] transition-transform duration-300 md:hidden ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

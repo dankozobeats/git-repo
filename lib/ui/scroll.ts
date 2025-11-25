@@ -42,7 +42,7 @@ export function animateAndCenterCategoryAccordion(element: HTMLElement | null) {
 }
 
 export function scrollToSearchSection() {
-  const section = document.getElementById('searchBlock')
+  const section = document.getElementById('searchBar')
   scrollWithSnapControl(section)
 }
 
