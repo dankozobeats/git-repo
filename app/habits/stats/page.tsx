@@ -1,30 +1,38 @@
 'use client'
 
-// Page analytics des habitudes : exploite les hooks Supabase pour afficher graphiques et résumés.
+// Premium analytics dashboard for habits, orchestrating data hooks and premium UI components.
 
-import { useMemo, useState, type ReactNode } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Loader2, RefreshCcw } from 'lucide-react'
-import { useHabitStats, type HabitStatsPeriod } from '@/lib/habits/useHabitStats'
-import { useWeeklyPerformance } from '@/lib/habits/useWeeklyPerformance'
+import { useCallback, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import HabitStatsModal from '@/components/HabitStatsModal'
+import StatsHeader from '@/components/stats/StatsHeader'
+import PeriodSelector from '@/components/stats/PeriodSelector'
+import SummaryCards from '@/components/stats/SummaryCards'
+import StatsCard from '@/components/stats/StatsCard'
+import StatsLoadingSkeleton from '@/components/stats/StatsLoadingSkeleton'
+import StatsErrorState from '@/components/stats/StatsErrorState'
+import TopHabitsList from '@/components/stats/TopHabitsList'
 import { CumulativeChart } from '@/components/stats/CumulativeChart'
 import { DailyBars } from '@/components/stats/DailyBars'
 import { GoodBadCompare } from '@/components/stats/GoodBadCompare'
 import { HabitHeatmap } from '@/components/stats/HabitHeatmap'
 import { WeekdayPerformanceChart } from '@/components/stats/WeekdayPerformanceChart'
-import HabitStatsModal from '@/components/HabitStatsModal'
+import { useHabitStats, type HabitStatsPeriod, type TopHabitPoint } from '@/lib/habits/useHabitStats'
+import { useWeeklyPerformance } from '@/lib/habits/useWeeklyPerformance'
 
-const PERIOD_OPTIONS: HabitStatsPeriod[] = [7, 30, 90, 'all']
+type SelectedHabit = Pick<TopHabitPoint, 'id' | 'name' | 'type'>
 
-type SelectedHabit = {
-  id: string
-  name: string
-  type: 'good' | 'bad'
+const PERIOD_LABELS: Record<HabitStatsPeriod, string> = {
+  7: '7 derniers jours',
+  30: '30 derniers jours',
+  90: '90 derniers jours',
+  all: 'Depuis le début',
 }
 
 export default function HabitStatsPage() {
+  const router = useRouter()
   const [period, setPeriod] = useState<HabitStatsPeriod>(30)
-  // Récupère les statistiques cumulées/daily sur la période choisie.
+
   const { data, loading, error, refresh } = useHabitStats(period)
   const {
     data: weeklyData,
@@ -33,36 +41,15 @@ export default function HabitStatsPage() {
     refresh: refreshWeekly,
   } = useWeeklyPerformance(period)
 
-  // Calcule un résumé global (nombre de bonnes vs mauvaises actions).
   const summary = useMemo(() => {
-    if (!data) {
-      return {
-        good: 0,
-        bad: 0,
-        total: 0,
-      }
-    }
-
+    if (!data) return { good: 0, bad: 0, total: 0 }
     const good = data.daily.reduce((sum, day) => sum + day.good, 0)
     const bad = data.daily.reduce((sum, day) => sum + day.bad, 0)
-
-    return {
-      good,
-      bad,
-      total: good + bad,
-    }
+    return { good, bad, total: good + bad }
   }, [data])
 
-  const topHabits = data?.topHabits ?? []
-  const [selectedHabit, setSelectedHabit] = useState<SelectedHabit | null>(null)
-  // Détermine les meilleurs/pire jours via les données hebdomadaires.
   const weekdaySummary = useMemo(() => {
-    if (!weeklyData?.length) {
-      return {
-        productive: '—',
-        cravings: '—',
-      }
-    }
+    if (!weeklyData?.length) return { productive: '—', cravings: '—' }
     const best = weeklyData.reduce((acc, entry) => (entry.good > acc.good ? entry : acc))
     const worst = weeklyData.reduce((acc, entry) => (entry.bad > acc.bad ? entry : acc))
     return {
@@ -71,216 +58,136 @@ export default function HabitStatsPage() {
     }
   }, [weeklyData])
 
-  // Construit l'ensemble de la page stats : header, états d'erreur/chargement, graphiques et modale.
+  const periodLabel = PERIOD_LABELS[period]
+  const topHabits = data?.topHabits ?? []
+
+  const [selectedHabit, setSelectedHabit] = useState<SelectedHabit | null>(null)
+
+  const handlePeriodChange = useCallback((next: HabitStatsPeriod) => {
+    setPeriod(next)
+  }, [])
+
+  const handleSelectHabit = useCallback((habit: TopHabitPoint) => {
+    setSelectedHabit({
+      id: habit.id,
+      name: habit.name,
+      type: habit.type,
+    })
+  }, [])
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedHabit(null)
+  }, [])
+
+  const handleLoginRedirect = useCallback(() => {
+    router.push('/login')
+  }, [router])
+
+  const showAuthError = error === 'AUTH'
+  const genericError = error && error !== 'AUTH' ? error : null
+
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 font-sans">
-      <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
-        <header className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30 space-y-6">
+    <main className="relative min-h-screen overflow-hidden bg-[#01030a] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.25),transparent_50%),radial-gradient(circle_at_bottom,_rgba(236,72,153,0.18),transparent_45%)]" />
+      <div className="relative mx-auto max-w-6xl px-4 py-10 space-y-8">
+        <StatsHeader
+          periodLabel={periodLabel}
+          description="Observe tes signaux forts et faibles, synthétisés via notre pipeline IA premium."
+        />
+
+        <section className="rounded-[36px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_30px_100px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-gray-950/40 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:border-white/30 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Retour dashboard
-              </Link>
-              <p className="mt-4 text-xs uppercase tracking-[0.3em] text-white">Analytique</p>
-              <h1 className="text-3xl font-bold text-white">Statistiques d&apos;habitudes</h1>
-              <p className="text-sm text-gray-400">
-                Explore tes tendances sur plusieurs périodes et identifie rapidement les zones à améliorer.
+              <p className="text-xs uppercase tracking-[0.4em] text-white/60">Fenêtre d'analyse</p>
+              <h2 className="mt-2 text-2xl font-semibold">Sélectionne la période à analyser</h2>
+              <p className="mt-2 text-sm text-white/60">
+                Ajuste l&apos;horizon pour recalculer toutes les métriques à la volée.
               </p>
             </div>
-            <div className="flex gap-3">
-              {PERIOD_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setPeriod(option)}
-                  className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                    period === option
-                      ? 'border-red-500/70 bg-red-500/20 text-white'
-                      : 'border-white/10 text-gray-400 hover:border-white/30'
-                  }`}
-                >
-                  {option === 'all' ? 'Tout' : `${option} j`}
-                </button>
-              ))}
-            </div>
+            <PeriodSelector value={period} onChange={handlePeriodChange} disabled={loading} />
           </div>
+        </section>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { label: 'Actions positives', value: summary.good, color: 'text-emerald-400' },
-              { label: 'Craquages', value: summary.bad, color: 'text-red-400' },
-              { label: 'Total entrées', value: summary.total, color: 'text-white' },
-            ].map((card) => (
-              <div key={card.label} className="rounded-2xl border border-white/10 bg-gray-950/50 p-4 shadow-inner shadow-black/40">
-                <p className="text-xs uppercase tracking-[0.3em] text-gray-400">{card.label}</p>
-                <p className={`mt-3 text-3xl font-bold ${card.color}`}>{card.value}</p>
-              </div>
-            ))}
-          </div>
-        </header>
+        {showAuthError ? (
+          <StatsErrorState
+            title="Tu dois être connecté"
+            description="Connecte-toi pour déverrouiller tes analytics personnalisées."
+            actionLabel="Aller à la connexion"
+            onAction={handleLoginRedirect}
+            variant="warning"
+          />
+        ) : (
+          <>
+            {genericError && (
+              <StatsErrorState
+                title="Impossible de charger toutes les données"
+                description={genericError}
+                actionLabel="Réessayer"
+                onAction={refresh}
+              />
+            )}
 
-        {error === 'AUTH' && (
-          <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-8 text-center shadow-lg shadow-black/30">
-            <p className="text-lg font-semibold text-white">Tu dois être connecté</p>
-            <p className="mt-2 text-sm text-gray-400">Connecte-toi pour consulter tes statistiques personnalisées.</p>
-            <Link
-              href="/login"
-              className="mt-4 inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-            >
-              Aller à la connexion
-            </Link>
-          </section>
-        )}
+            {!data && loading && <StatsLoadingSkeleton />}
 
-        {error && error !== 'AUTH' && (
-          <section className="rounded-2xl border border-red-500/30 bg-red-950/30 p-6 text-center shadow-lg shadow-black/30">
-            <p className="text-lg font-semibold text-white">Impossible de charger les statistiques</p>
-            <p className="mt-2 text-sm text-gray-300">{error}</p>
-            <button
-              onClick={refresh}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/40"
-            >
-              <RefreshCcw className="h-4 w-4" /> Réessayer
-            </button>
-          </section>
-        )}
+            {data && (
+              <>
+                <SummaryCards data={summary} />
 
-        {!data && loading && (
-          <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-10 text-center shadow-lg shadow-black/30">
-            <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-red-500" />
-            <p className="text-sm text-gray-400">Analyse des données en cours...</p>
-          </section>
-        )}
-
-        {data && (
-          <section className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <StatsCard title="Progression cumulative" subtitle="Total good vs bad cumulés">
-                <CumulativeChart data={data.cumulative} />
-              </StatsCard>
-
-              <StatsCard title="Progression journalière" subtitle="Sommes quotidiennes">
-                <DailyBars data={data.daily} />
-              </StatsCard>
-
-              <StatsCard
-                title="Comparatif good / bad"
-                subtitle="Visualise le poids relatif des actions"
-              >
-                <GoodBadCompare data={data.daily} />
-              </StatsCard>
-
-              <StatsCard title="Heatmap quotidienne" subtitle="Vue style GitHub">
-                <HabitHeatmap data={data.heatmap} />
-              </StatsCard>
-            </div>
-
-            <StatsCard title="Performance par jour" subtitle="Compare les actions selon les jours de la semaine">
-              {weeklyError && weeklyError !== 'AUTH' ? (
-                <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-gray-950/50 p-4 text-center text-sm text-gray-400">
-                  <p>Impossible de charger les performances hebdo.</p>
-                  <button
-                    onClick={refreshWeekly}
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs uppercase tracking-wide text-white transition hover:border-white/30"
-                  >
-                    <RefreshCcw className="h-3.5 w-3.5" />
-                    Recharger
-                  </button>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <StatsCard title="Progression cumulative" subtitle="Total bonnes vs mauvaises actions cumulées">
+                    <CumulativeChart data={data.cumulative} />
+                  </StatsCard>
+                  <StatsCard title="Progression journalière" subtitle="Sommes quotidiennes sur la période">
+                    <DailyBars data={data.daily} />
+                  </StatsCard>
+                  <StatsCard title="Comparatif good / bad" subtitle="Poids relatif des actions quotidiennes">
+                    <GoodBadCompare data={data.daily} />
+                  </StatsCard>
+                  <StatsCard title="Heatmap quotidienne" subtitle="Vue calendaire façon GitHub">
+                    <HabitHeatmap data={data.heatmap} />
+                  </StatsCard>
                 </div>
-              ) : (
-                <>
-                  {weeklyLoading && (
-                    <div className="mb-4 flex items-center gap-2 text-sm text-gray-400">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Chargement...
-                    </div>
+
+                <StatsCard title="Performance par jour" subtitle="Compare les tendances selon les jours de la semaine">
+                  {weeklyError && weeklyError !== 'AUTH' && (
+                    <StatsErrorState
+                      title="Données hebdo indisponibles"
+                      description="Réessaie pour recharger les performances par jour."
+                      actionLabel="Recharger"
+                      onAction={refreshWeekly}
+                      variant="warning"
+                    />
                   )}
-                  {weeklyData && <WeekdayPerformanceChart data={weeklyData} />}
-                  <div className="mt-4 grid gap-4 text-sm text-gray-300 sm:grid-cols-2">
-                    <div className="rounded-xl border border-white/10 bg-gray-950/50 p-3">
-                      <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Jour le plus productif</p>
-                      <p className="mt-2 text-lg font-semibold text-white">{weekdaySummary.productive}</p>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-gray-950/50 p-3">
-                      <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Jour avec le plus de craquages</p>
-                      <p className="mt-2 text-lg font-semibold text-white">{weekdaySummary.cravings}</p>
-                    </div>
-                  </div>
-                </>
-              )}
-            </StatsCard>
+                  {weeklyLoading && <StatsLoadingSkeleton rows={1} height="md" />}
+                  {!weeklyError && weeklyData && (
+                    <>
+                      <WeekdayPerformanceChart data={weeklyData} />
+                      <div className="mt-4 grid gap-4 text-sm text-white/70 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+                          <p className="text-xs uppercase tracking-[0.4em] text-white/60">Jour le plus productif</p>
+                          <p className="mt-2 text-lg font-semibold text-white">{weekdaySummary.productive}</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+                          <p className="text-xs uppercase tracking-[0.4em] text-white/60">Jour avec plus de craquages</p>
+                          <p className="mt-2 text-lg font-semibold text-white">{weekdaySummary.cravings}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </StatsCard>
 
-            <div className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Classement</p>
-                  <h3 className="text-xl font-semibold text-white">Top habitudes</h3>
-                  <p className="text-sm text-gray-400">
-                    Basé sur le nombre total d&apos;actions enregistrées pendant la période.
-                  </p>
-                </div>
-                <button
-                  onClick={refresh}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-300 transition hover:border-white/30 hover:text-white"
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  Rafraîchir
-                </button>
-              </div>
-              <div className="mt-6 space-y-3">
-                {topHabits.length === 0 && (
-                  <p className="text-sm text-gray-500">Aucune donnée disponible pour cette période.</p>
-                )}
-                {topHabits.map(habit => (
-                  <button
-                    type="button"
-                    key={habit.id}
-                    onClick={() =>
-                      setSelectedHabit({
-                        id: habit.id,
-                        name: habit.name,
-                        type: habit.type,
-                      })
-                    }
-                    className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-gray-950/50 px-4 py-3 text-left text-sm transition hover:border-white/30"
-                  >
-                    <div>
-                      <p className="font-semibold text-white">{habit.name}</p>
-                      <p className="text-xs uppercase tracking-wide text-gray-500">
-                        {habit.type === 'bad' ? 'Habitude négative' : 'Habitude positive'}
-                      </p>
-                    </div>
-                    <span className="text-lg font-bold text-white">{habit.total}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
+                <TopHabitsList
+                  habits={topHabits}
+                  onSelect={handleSelectHabit}
+                  onRefresh={refresh}
+                />
+              </>
+            )}
+          </>
         )}
-        {selectedHabit && <HabitStatsModal habit={selectedHabit} onClose={() => setSelectedHabit(null)} />}
       </div>
+
+      {selectedHabit && <HabitStatsModal habit={selectedHabit} onClose={handleCloseModal} />}
     </main>
-  )
-}
-
-type StatsCardProps = {
-  title: string
-  subtitle?: string
-  children: ReactNode
-}
-
-// Boîte utilitaire homogène pour les sous-sections de graphiques/statistiques.
-function StatsCard({ title, subtitle, children }: StatsCardProps) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30">
-      <div className="mb-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-gray-400">{title}</p>
-        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
-      </div>
-      {children}
-    </div>
   )
 }

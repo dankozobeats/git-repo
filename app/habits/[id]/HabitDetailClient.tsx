@@ -1,5 +1,6 @@
 'use client'
 
+// Client component orchestrating all interactive widgets for a single habit view.
 import { useState } from 'react'
 import HabitCounter from './HabitCounter'
 import { WeeklyCalendar } from '@/components/WeeklyCalendar'
@@ -7,6 +8,7 @@ import { DayReportModal } from '@/components/DayReportModal'
 import GoalSettingsModal from './GoalSettingsModal'
 import GamificationPanel from './GamificationPanel'
 import HabitCoach from './HabitCoach'
+import type { HabitCalendarMap, HabitStats } from '@/lib/habits/computeHabitStats'
 
 type Habit = {
   id: string
@@ -15,7 +17,7 @@ type Habit = {
   icon: string | null
   color: string
   type: 'good' | 'bad'
-  tracking_mode: 'binary' | 'counter'
+  tracking_mode: 'binary' | 'counter' | null
   goal_value: number | null
   goal_type: 'daily' | 'weekly' | 'monthly' | null
   goal_description: string | null
@@ -25,211 +27,195 @@ type Habit = {
 
 type Props = {
   habit: Habit
-  calendarData: Record<string, number>
-  todayCount: number
-  totalCount: number
-  last7DaysCount: number
-  currentStreak: number
+  calendarData: HabitCalendarMap
+  stats: HabitStats
 }
 
-export default function HabitDetailClient({
-  habit,
-  calendarData,
-  todayCount,
-  totalCount,
-  last7DaysCount,
-  currentStreak,
-}: Props) {
+export default function HabitDetailClient({ habit, calendarData, stats }: Props) {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [count, setCount] = useState(todayCount)
+  const [count, setCount] = useState(stats.todayCount)
 
   const isBadHabit = habit.type === 'bad'
-  const statColor = isBadHabit ? 'text-[#FF4D4D]' : 'text-[#4DA6FF]'
+  const statColor = isBadHabit ? 'text-[#FF6B6B]' : 'text-[#5EEAD4]'
+  const labelColor = isBadHabit ? 'text-[#FFB4A2]' : 'text-[#BAE6FD]'
 
-  // Calculer le % du mois actuel
-  const today = new Date()
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-  const currentMonthData = Object.entries(calendarData)
-    .filter(([date]) => new Date(date) >= firstDayOfMonth)
-  const daysInMonth = today.getDate()
-  const monthPercentage = daysInMonth > 0 ? Math.round((currentMonthData.length / daysInMonth) * 100) : 0
+  const dynamicCoachStats = {
+    totalCount: stats.totalCount,
+    last7DaysCount: stats.last7DaysCount,
+    currentStreak: stats.currentStreak,
+    todayCount: count,
+    monthPercentage: stats.monthCompletionRate,
+  }
 
   const getContextualMessage = () => {
     if (isBadHabit) {
-      if (currentStreak > 7) return "Wow, un vrai champion de la régularité... dans le mauvais sens. 🏆"
-      if (currentStreak > 3) return "Tu commences à prendre un rythme là. Continue comme ça... ou pas. 😏"
-      if (totalCount > 30) return "30+ craquages en 28 jours. Tu fais ça professionnellement ? 💀"
-      if (totalCount > 10) return "Au moins tu es honnête avec toi-même. C'est déjà ça. 🤷"
-      if (totalCount === 0) return "Parfait ! Continue comme ça. 👏"
-      return "Bon... on fait ce qu'on peut. 😅"
-    } else {
-      if (currentStreak > 7) return "7 jours d'affilée ! Tu commences à devenir sérieux. 🔥"
-      if (currentStreak > 3) return "Bien joué ! Continue sur cette lancée. 💪"
-      if (totalCount > 30) return "30+ fois en 28 jours ! Respect. 🎯"
-      if (totalCount > 10) return "C'est un bon début. Continue ! ✨"
-      if (totalCount === 0) return "Allez, commence quelque part ! 🚀"
-      return "Chaque petit pas compte. 🌱"
+      if (stats.currentStreak > 7) return 'Forte occurrence cette semaine, documente les déclencheurs.'
+      if (stats.totalCount === 0) return 'Parfait, reste concentré sur les signaux faibles.'
+      if (count === 0) return "Tu tiens bon aujourd'hui — verrouille cette énergie."
+      return 'Identifie la prochaine tentation et prépare une parade.'
     }
+    if (stats.currentStreak > 7) return 'Série solide, verrouille tes routines clés.'
+    if (stats.last7DaysCount >= 5) return 'Très belle moyenne hebdo, conserve ta mécanique.'
+    if (count === 0) return 'Commence par une action minimale pour enclencher la journée.'
+    return 'Chaque validation te rapproche de la version attendue de toi-même.'
   }
+
+  const sectionCard =
+    'rounded-[28px] border border-white/10 bg-white/[0.02] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur'
 
   return (
     <>
-      <div className="mx-auto max-w-5xl px-4 py-6 space-y-6 sm:py-8 sm:space-y-8">
-        {/* Counter Section */}
-        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#1b1b1f] to-[#121214] p-5 shadow-2xl shadow-black/30 sm:p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="space-y-6">
+        <section className={`${sectionCard} space-y-6`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Aujourd&apos;hui</p>
-              <h2 className="mt-1 text-xl font-bold text-white sm:text-2xl">Action immédiate</h2>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Focus du jour</p>
+              <h2 className="mt-1 text-2xl font-semibold text-white">Action immédiate</h2>
             </div>
-            <span className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/60">
-              {isBadHabit ? 'Statut du jour' : 'Progression du jour'}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-white/15 px-4 py-1 text-xs font-semibold text-white/70">
+                {habit.tracking_mode === 'counter' ? 'Mode compteur' : 'Mode simple'}
+              </span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1 text-xs font-semibold text-white/80 transition hover:border-white/60"
+                onClick={() => setIsGoalModalOpen(true)}
+              >
+                🎯 Ajuster l&apos;objectif
+              </button>
+            </div>
           </div>
+
           <div
-            className={`rounded-2xl border px-4 py-4 md:px-6 md:py-6 ${
+            className={`flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:px-7 sm:py-6 ${
               isBadHabit
-                ? 'border-[#FF4D4D]/40 bg-[#200f12]'
-                : 'border-[#4DA6FF]/30 bg-[#0f1c2d]'
+                ? 'border-[#FF6B6B]/40 bg-[#1A0E11]'
+                : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
             }`}
           >
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50 mb-3">Statut</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className={`text-xl font-bold sm:text-2xl md:text-3xl ${isBadHabit ? 'text-[#FF4D4D]' : 'text-[#4DA6FF]'}`}>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">Statut</p>
+                <p className={`mt-2 text-3xl font-semibold ${isBadHabit ? 'text-[#FF6B6B]' : 'text-[#5EEAD4]'}`}>
                   {isBadHabit
                     ? count > 0
                       ? `${count} craquage${count > 1 ? 's' : ''}`
                       : 'Aucun craquage'
                     : count > 0
                     ? 'Habitude validée'
-                    : 'Pas encore validée'}
+                    : 'En attente'}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-white/70">
+                <p className="mt-2 text-sm text-white/70">
                   {isBadHabit
                     ? count > 0
-                      ? 'Tu as déclaré un craquage aujourd’hui. Note ce qui a déclenché pour reprendre le contrôle.'
-                      : 'Toujours clean aujourd’hui. Tiens bon !'
+                      ? 'Note rapidement le contexte pour identifier tes leviers de contrôle.'
+                      : 'Status clean pour le moment, garde cette vigilance.'
                     : count > 0
-                    ? 'Habitude cochée pour aujourd’hui, continue sur ta lancée.'
-                    : 'Commence par une action simple pour lancer la journée.'}
+                    ? 'Momentum enclenché, verrouille ta progression par une répétition bonus.'
+                    : 'Une micro-action suffit pour basculer dans le camp des disciplinés.'}
                 </p>
               </div>
               <span
-                className={`rounded-full px-4 py-1 text-xs font-semibold border ${
+                className={`inline-flex items-center justify-center rounded-full border px-4 py-1 text-xs font-semibold ${
                   count > 0
                     ? isBadHabit
-                      ? 'border-[#FF4D4D] text-[#FF4D4D]'
-                      : 'border-[#4DA6FF] text-[#4DA6FF]'
-                    : 'border-white/30 text-white/70'
+                      ? 'border-[#FF6B6B] text-[#FF6B6B]'
+                      : 'border-[#5EEAD4] text-[#5EEAD4]'
+                    : 'border-white/20 text-white/60'
                 }`}
               >
-                {isBadHabit
-                  ? count > 0
-                    ? 'Craquage détecté'
-                    : 'Aucun craquage'
-                  : count > 0
-                  ? 'Validée'
-                  : 'À faire'}
+                {count > 0 ? (isBadHabit ? 'Craquage détecté' : 'Validée') : 'À lancer'}
               </span>
             </div>
+            <div className="grid gap-3 text-sm text-white/70 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">Streak</p>
+                <p className={`mt-1 text-2xl font-semibold ${statColor}`}>{stats.currentStreak} j</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">Moy. 7j</p>
+                <p className={`mt-1 text-2xl font-semibold ${labelColor}`}>{stats.last7DaysCount}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">Ce mois</p>
+                <p className="mt-1 text-2xl font-semibold text-white">{stats.monthCompletionRate}%</p>
+              </div>
+            </div>
           </div>
-          <div className="mt-6">
-            <HabitCounter
-              habitId={habit.id}
-              habitType={habit.type}
-              trackingMode={habit.tracking_mode || 'binary'}
-              goalValue={habit.goal_value}
-              goalType={habit.goal_type}
-              todayCount={count}
-              onCountChange={setCount}
-              habitName={habit.name}
-              streak={currentStreak}
-              totalLogs={totalCount}
-              totalCraquages={isBadHabit ? totalCount : 0}
-            />
-          </div>
+
+          <HabitCounter
+            habitId={habit.id}
+            habitType={habit.type}
+            trackingMode={habit.tracking_mode || 'binary'}
+            goalValue={habit.goal_value}
+            goalType={habit.goal_type}
+            todayCount={count}
+            onCountChange={setCount}
+            habitName={habit.name}
+            streak={stats.currentStreak}
+            totalLogs={stats.totalCount}
+            totalCraquages={isBadHabit ? stats.totalCount : 0}
+          />
         </section>
 
-        {/* Stats Section */}
-        <section className="rounded-3xl border border-white/5 bg-[#121420] p-6 shadow-2xl shadow-black/30">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-            <h2 className="text-xl md:text-2xl font-bold text-white">Statistiques</h2>
+        <section className={sectionCard}>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Performance</p>
+              <h2 className="text-2xl font-semibold text-white">Statistiques clés</h2>
+            </div>
             <span className="text-xs uppercase tracking-[0.3em] text-white/50">
-              Période glissante 28j
+              Fenêtre {stats.rangeInDays}j
             </span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
-              { label: 'Total (28j)', value: totalCount, color: statColor },
-              {
-                label: 'Semaine',
-                value: last7DaysCount,
-                color: isBadHabit ? 'text-orange-400' : 'text-green-300',
-              },
-              {
-                label: 'Streak 🔥',
-                value: currentStreak,
-                color: isBadHabit ? 'text-yellow-400' : 'text-blue-300',
-              },
-              { label: 'Ce mois', value: `${monthPercentage}%`, color: 'text-purple-300' },
+              { label: 'Total période', value: stats.totalCount, accent: statColor },
+              { label: '7 derniers jours', value: stats.last7DaysCount, accent: labelColor },
+              { label: 'Streak actif', value: stats.currentStreak, accent: 'text-[#FDE68A]' },
+              { label: 'Focus jour', value: count, accent: 'text-[#C4B5FD]' },
             ].map(stat => (
               <div
                 key={stat.label}
-                className="rounded-2xl border border-white/5 bg-[#0c0d17] p-5 text-center shadow-inner shadow-black/40"
+                className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 text-center shadow-inner shadow-black/40"
               >
-                <div className={`text-3xl md:text-4xl font-bold ${stat.color}`}>{stat.value}</div>
-                <p className="mt-2 text-xs md:text-sm text-white/60">{stat.label}</p>
+                <p className={`text-3xl font-semibold ${stat.accent}`}>{stat.value}</p>
+                <p className="mt-2 text-xs tracking-wide text-white/60">{stat.label}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Gamification */}
         <GamificationPanel
           habit={habit}
           calendarData={calendarData}
-          totalCount={totalCount}
-          last7DaysCount={last7DaysCount}
-          currentStreak={currentStreak}
+          totalCount={stats.totalCount}
+          last7DaysCount={stats.last7DaysCount}
+          currentStreak={stats.currentStreak}
         />
 
-        <HabitCoach
-          habitId={habit.id}
-          stats={{
-            totalCount,
-            last7DaysCount,
-            currentStreak,
-            todayCount: count,
-            monthPercentage,
-          }}
-        />
+        <HabitCoach habitId={habit.id} stats={dynamicCoachStats} />
 
-        {/* NOUVEAU Calendrier Section */}
-        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#0e121f] to-[#090b13] p-6 shadow-2xl shadow-black/30">
+        <section className={sectionCard}>
           <WeeklyCalendar
             habitId={habit.id}
             habitType={habit.type}
             calendarData={calendarData}
             trackingMode={habit.tracking_mode}
-            onDayClick={(date) => setSelectedDate(date)}
+            onDayClick={date => setSelectedDate(date)}
           />
         </section>
 
-        {/* Message Section */}
         <section
-          className={`rounded-3xl border text-center p-6 shadow-lg shadow-black/30 ${
-            isBadHabit ? 'border-[#FF4D4D]/40 bg-[#2A1010]' : 'border-[#4DA6FF]/30 bg-[#0F1F33]'
+          className={`rounded-[28px] border p-6 text-center shadow-lg ${
+            isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
           }`}
         >
-          <p className="text-base md:text-lg text-white/90 italic">
-            &ldquo;{getContextualMessage()}&rdquo;
-          </p>
+          <p className="text-base text-white/90">&ldquo;{getContextualMessage()}&rdquo;</p>
         </section>
       </div>
 
-      {/* Modals */}
       <GoalSettingsModal
         habitId={habit.id}
         currentGoal={{
@@ -241,11 +227,7 @@ export default function HabitDetailClient({
         onClose={() => setIsGoalModalOpen(false)}
       />
 
-      <DayReportModal
-        date={selectedDate || ''}
-        isOpen={!!selectedDate}
-        onClose={() => setSelectedDate(null)}
-      />
+      <DayReportModal date={selectedDate || ''} isOpen={!!selectedDate} onClose={() => setSelectedDate(null)} />
     </>
   )
 }

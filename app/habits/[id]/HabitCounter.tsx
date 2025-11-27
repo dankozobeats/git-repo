@@ -5,7 +5,7 @@ import { Plus, Minus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import { getBinaryStatusLabel, isSuccess } from '@/lib/habits/status'
-import { toastRoastCraquage, toastRoastCorrection, toastRoastSuccess } from '@/lib/coach/coach'
+import { toastRoastCorrection } from '@/lib/coach/coach'
 
 type HabitCounterProps = {
   habitId: string
@@ -75,12 +75,6 @@ export default function HabitCounter({
         throw new Error('check-in failed')
       }
 
-      showToast(
-        habitType === 'good'
-          ? toastRoastSuccess(habitName, streak + 1, totalLogs + 1)
-          : toastRoastCraquage(habitName, streak + 1, totalCraquages + 1),
-        habitType === 'good' ? 'success' : 'error'
-      )
       onCountChange?.(1)
       startTransition(() => router.refresh())
     } catch (error) {
@@ -137,21 +131,6 @@ export default function HabitCounter({
       const data = await res.json()
       const newCount = typeof data.count === 'number' ? data.count : optimisticCount
       setCount(newCount)
-
-      if (isBadHabit) {
-        showToast(toastRoastCraquage(habitName, streak + newCount, totalCraquages + newCount), 'error')
-      } else if (goalValue) {
-        showToast(
-          toastRoastSuccess(
-            habitName,
-            streak + (newCount >= goalValue ? newCount : 1),
-            totalLogs + newCount
-          ),
-          'success'
-        )
-      } else {
-        showToast(toastRoastSuccess(habitName, streak + newCount, totalLogs + newCount), 'success')
-      }
 
       onCountChange?.(newCount)
       startTransition(() => router.refresh())

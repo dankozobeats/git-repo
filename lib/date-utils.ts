@@ -1,55 +1,79 @@
-const CLIENT_TIMEZONE = process.env.NEXT_PUBLIC_APP_TIMEZONE ?? 'Europe/Paris'
-const SERVER_TIMEZONE = process.env.APP_TIMEZONE ?? CLIENT_TIMEZONE
+/**
+ * Description: Utilitaires partagés pour normaliser et formatter les dates côté client.
+ * Objectif: Centraliser les conversions ISO et affichages humains cohérents dans toute l'app.
+ * Utilisation: Importer { formatDateKey, formatDateHuman } depuis '@/lib/date-utils' dans composants/hooks.
+ */
+export type FormatDateHumanOptions = {
+  includeTime?: boolean
+  timeOnly?: boolean
+}
 
-export const DEFAULT_TIMEZONE =
-  typeof window === 'undefined' ? SERVER_TIMEZONE : CLIENT_TIMEZONE
+/**
+ * Description: Génère une clé date AAAA-MM-JJ stable pour les regroupements.
+ * Objectif: Réduire les duplications dans les hooks manipulant des séries temporelles.
+ * Utilisation: const key = formatDateKey(report.created_at)
+ */
+export function formatDateKey(date: string | Date) {
+  const value = date instanceof Date ? date : new Date(date)
+  return value.toISOString().split('T')[0]
+}
 
-type DateParts = { year: string; month: string; day: string }
+/**
+ * Description: Produit une version lisible d'une date selon les besoins.
+ * Objectif: Garantir une apparence homogène (locale fr-FR) des labels temporels.
+ * Utilisation: formatDateHuman(new Date(), { includeTime: true })
+ */
+export function formatDateHuman(date: string | Date, options: FormatDateHumanOptions = {}) {
+  const value = date instanceof Date ? date : new Date(date)
+  const locale = 'fr-FR'
 
-const extractParts = (date: Date, timeZone: string): DateParts => {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
+  if (options.timeOnly) {
+    return value.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const datePart = value.toLocaleDateString(locale, {
+    weekday: 'short',
     day: '2-digit',
+    month: 'short',
   })
 
-  const parts = formatter.formatToParts(date)
-  const find = (type: string) => parts.find(p => p.type === type)?.value ?? '00'
-
-  return {
-    year: find('year'),
-    month: find('month'),
-    day: find('day'),
+  if (options.includeTime) {
+    const timePart = value.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+    return `${datePart} · ${timePart}`
   }
+
+  return datePart
 }
 
-export const getTodayDateISO = (timeZone: string = DEFAULT_TIMEZONE) => {
-  const { year, month, day } = extractParts(new Date(), timeZone)
-  return `${year}-${month}-${day}`
+/**
+ * Description: Retourne l'ISO string AAAA-MM-JJ de la date du jour en local time.
+ * Objectif: Simplifier l'accès au jour courant sans répéter la logique Date partout.
+ * Utilisation: const today = getTodayDateISO()
+ */
+export function getTodayDateISO() {
+  return formatDateKey(new Date())
 }
 
-export const toUtcDate = (isoDate: string) => {
-  const [year, month, day] = isoDate.split('-').map(part => Number(part))
-  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
+/**
+ * Description: Indique si une date est strictement dans le futur (comparaison jour calendrier).
+ * Objectif: Empêcher les interactions sur des jours non commencés dans les calendriers hebdo/mensuels.
+ * Utilisation: const disabled = isFutureDate(dateString)
+ */
+export function isFutureDate(date: string | Date) {
+  const candidate = date instanceof Date ? date : new Date(date)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const normalized = new Date(candidate)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized.getTime() > today.getTime()
 }
 
-export const isFutureDate = (
-  isoDate: string,
-  timeZone: string = DEFAULT_TIMEZONE
-) => {
-  const today = toUtcDate(getTodayDateISO(timeZone))
-  const target = toUtcDate(isoDate)
-  return target.getTime() > today.getTime()
-}
-
-export const isSameDay = (a: string, b: string) =>
-  toUtcDate(a).getTime() === toUtcDate(b).getTime()
-
-export const clampToToday = (
-  isoDate: string,
-  timeZone: string = DEFAULT_TIMEZONE
-) => {
-  const today = getTodayDateISO(timeZone)
-  return isFutureDate(isoDate, timeZone) ? today : isoDate
+/**
+ * Description: Convertit une date arbitraire vers un objet Date normalisé UTC (00:00).
+ * Objectif: Offrir un référentiel unique pour les calculs statistiques côté client/serveur.
+ * Utilisation: const utc = toUtcDate(dateString)
+ */
+export function toUtcDate(date: string | Date) {
+  const value = date instanceof Date ? date : new Date(date)
+  return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()))
 }

@@ -1,3 +1,4 @@
+// Header component handling cross-habit navigation with premium styling cues.
 import Link from 'next/link'
 import type { Database } from '@/types/database'
 
@@ -10,8 +11,8 @@ type HabitDetailHeaderProps = {
 
 export default function HabitDetailHeader({ habit, allHabits }: HabitDetailHeaderProps) {
   const categoryKey = habit.category_id ?? 'uncategorized'
-  const habitsInCategory = allHabits.filter(h => (h.category_id ?? 'uncategorized') === categoryKey)
-  const currentIndex = habitsInCategory.findIndex(h => h.id === habit.id)
+  const habitsInCategory = allHabits.filter(candidate => (candidate.category_id ?? 'uncategorized') === categoryKey)
+  const currentIndex = habitsInCategory.findIndex(candidate => candidate.id === habit.id)
 
   const prevHabit = currentIndex > 0 ? habitsInCategory[currentIndex - 1] : null
   const nextHabit =
@@ -21,7 +22,7 @@ export default function HabitDetailHeader({ habit, allHabits }: HabitDetailHeade
 
   const navigateButton = (targetHabit: HabitRow | null, direction: 'prev' | 'next') => {
     if (!targetHabit) {
-      return <div className="w-11 h-11" aria-hidden />
+      return <div className="h-12 w-12" aria-hidden />
     }
 
     const label = direction === 'prev' ? 'Habitude précédente' : 'Habitude suivante'
@@ -29,7 +30,7 @@ export default function HabitDetailHeader({ habit, allHabits }: HabitDetailHeade
     return (
       <Link
         href={`/habits/${targetHabit.id}`}
-        className="w-11 h-11 flex items-center justify-center rounded-full bg-neutral-900/40 border border-neutral-800 text-neutral-300 shadow-sm hover:bg-neutral-800/50 transition"
+        className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-white/70 transition hover:border-white/40 hover:text-white"
         aria-label={`${label} : ${targetHabit.name}`}
       >
         {direction === 'prev' ? '←' : '→'}
@@ -38,11 +39,14 @@ export default function HabitDetailHeader({ habit, allHabits }: HabitDetailHeade
   }
 
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+    <div className="flex items-center justify-between rounded-[32px] border border-white/10 bg-white/[0.02] px-5 py-4 shadow-[0_15px_45px_rgba(0,0,0,0.35)] backdrop-blur">
       {navigateButton(prevHabit, 'prev')}
-      <div className="flex flex-col items-center text-center px-4">
-        <p className="text-xs uppercase tracking-[0.3em] text-white/50">Navigation</p>
-        <p className="mt-1 text-base font-semibold text-white truncate max-w-[220px]">{habit.name}</p>
+      <div className="flex flex-col items-center text-center">
+        <p className="text-[10px] uppercase tracking-[0.5em] text-white/40">Navigation</p>
+        <p className="mt-2 max-w-[250px] truncate text-base font-semibold text-white">{habit.name}</p>
+        <p className="text-xs text-white/50">
+          {habitsInCategory.length} habitude{habitsInCategory.length > 1 ? 's' : ''} dans cette catégorie
+        </p>
       </div>
       {navigateButton(nextHabit, 'next')}
     </div>

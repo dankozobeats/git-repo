@@ -1,27 +1,29 @@
 'use client'
 
-// Page client de création d'habitude : gère formulaires, presets et insertion Supabase.
+// Page client de création d'habitude : refonte premium avec validations SMART et audit IA local.
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
+import FormMessage from '@/components/FormMessage'
+import AICoachSmartAudit from '@/components/AICoachSmartAudit'
+import { ArrowLeft, Palette, Sparkles, Wand2 } from 'lucide-react'
 
-// Suggestions pour accélérer la création d'une habitude négative.
+// Suggestions rapides pour guider l'utilisateur selon la nature de l'habitude.
 const BAD_PRESETS = [
-  { name: 'Fast-food', icon: '🍔', color: '#ef4444' },
-  { name: 'Scroll social media', icon: '📱', color: '#f97316' },
-  { name: 'Snooze alarm', icon: '⏰', color: '#eab308' },
+  { name: 'Fast-food du soir', icon: '🍔', color: '#ef4444' },
+  { name: 'Scroll réseaux', icon: '📱', color: '#f97316' },
+  { name: 'Snooze interminable', icon: '⏰', color: '#eab308' },
   { name: 'Procrastination', icon: '🛋️', color: '#a855f7' },
-  { name: 'Cigarettes', icon: '🚬', color: '#6b7280' },
-  { name: 'Alcool', icon: '🍺', color: '#f59e0b' },
+  { name: 'Cigarette impulsive', icon: '🚬', color: '#6b7280' },
+  { name: 'Apéro quotidien', icon: '🍺', color: '#f59e0b' },
 ]
 
-// Suggestions pour les routines positives les plus fréquentes.
 const GOOD_PRESETS = [
-  { name: 'Sport', icon: '💪', color: '#10b981' },
-  { name: 'Lecture', icon: '📚', color: '#3b82f6' },
-  { name: 'Méditation', icon: '🧘', color: '#8b5cf6' },
+  { name: 'Session sport', icon: '💪', color: '#10b981' },
+  { name: 'Lecture focus', icon: '📚', color: '#3b82f6' },
+  { name: 'Méditation 10 min', icon: '🧘', color: '#8b5cf6' },
   { name: 'Eau (8 verres)', icon: '💧', color: '#06b6d4' },
   { name: 'Sommeil 8h', icon: '😴', color: '#6366f1' },
   { name: 'Fruits & légumes', icon: '🥗', color: '#22c55e' },
@@ -32,6 +34,8 @@ type Category = {
   name: string
   color: string | null
 }
+
+type SmartErrorField = 'name' | 'description' | 'dailyGoal' | 'category' | 'trackingMode'
 
 export default function NewHabitPage() {
   const router = useRouter()
@@ -46,12 +50,13 @@ export default function NewHabitPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [categoryId, setCategoryId] = useState('')
+  const [errors, setErrors] = useState<Partial<Record<SmartErrorField, string>>>({})
 
-  // Variables dérivées utilisées pour afficher et stocker les paramètres.
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
+  const vagueKeywords = useMemo(() => ['habitude', 'truc', 'chose', 'améliorer', 'meilleur', 'projet'], [])
 
-  // Charge la liste des catégories légères depuis l'API route.
+  // Charge les catégories disponibles via l'API interne.
   useEffect(() => {
     const fetchCategories = async () => {
       const res = await fetch('/api/categories')
@@ -62,17 +67,81 @@ export default function NewHabitPage() {
     fetchCategories()
   }, [])
 
-  // Insère la nouvelle habitude dans Supabase après validation formulaire.
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  const clearError = useCallback((field: SmartErrorField) => {
+    setErrors(prev => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }, [])
+
+  // Sélection rapide d'un preset : applique nom, couleur et emoji cohérents.
+  const selectPreset = useCallback(
+    (preset: typeof BAD_PRESETS[number]) => {
+      setName(preset.name)
+      setIcon(preset.icon)
+      setColor(preset.color)
+      clearError('name')
+    },
+    [clearError]
+  )
+
+  // Valide les critères SMART et accumule les messages UX.
+  const validateSmart = () => {
+    const trimmedName = name.trim()
+    const trimmedDescription = description.trim()
+    const newErrors: Partial<Record<SmartErrorField, string>> = {}
+
+    if (trimmedName.length < 4) {
+      newErrors.name = 'Le nom doit contenir au moins 4 caractères précis.'
+    } else if (vagueKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword))) {
+      newErrors.name = 'Précise le nom avec un verbe concret (ex: "Limiter le fast-food").'
+    }
+
+    if (trackingMode !== 'binary' && trackingMode !== 'counter') {
+      newErrors.trackingMode = 'Choisis un mode de suivi pour planifier ton rythme.'
+    }
+
+    if (trackingMode === 'binary' && trimmedDescription.length < 10) {
+      newErrors.description = 'Ajoute une description (10 caractères minimum) pour clarifier la routine.'
+    }
+
+    if (trackingMode === 'counter') {
+      if (!dailyGoalValue || dailyGoalValue < 1) {
+        newErrors.dailyGoal = 'Définis un volume mesurable (minimum 1).'
+      } else if (dailyGoalValue > 20) {
+        newErrors.dailyGoal = 'Reste dans une zone atteignable (maximum 20 unités).'
+      }
+    }
+
+    if (!categoryId && categories.length > 0) {
+      newErrors.category = 'Sélectionne une catégorie pertinente pour cette habitude.'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Insère la nouvelle habitude dans Supabase après une validation SMART complète.
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setIsLoading(true)
+
+    const isValid = validateSmart()
+    if (!isValid) {
+      setIsLoading(false)
+      return
+    }
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return
+    if (!user) {
+      setIsLoading(false)
+      return
+    }
 
-    const habitData: any = {
+    const habitData: Record<string, unknown> = {
       user_id: user.id,
       name,
       icon,
@@ -80,6 +149,7 @@ export default function NewHabitPage() {
       description,
       type: habitType,
       tracking_mode: trackingMode,
+      category_id: categoryId,
     }
 
     if (trackingMode === 'counter') {
@@ -87,331 +157,302 @@ export default function NewHabitPage() {
       habitData.daily_goal_value = dailyGoalValue
     }
 
-    habitData.category_id = categoryId || null
-
-    const { error } = await supabase
-      .from('habits')
-      .insert(habitData)
-
-    if (!error) {
-      router.push('/')
-      router.refresh()
-    } else {
+    const { error } = await supabase.from('habits').insert(habitData)
+    if (error) {
       console.error('Error creating habit:', error)
       setIsLoading(false)
+      return
     }
+
+    router.push('/')
+    router.refresh()
   }
 
-  // Applique rapidement une suggestion (nom/emoji/couleur).
-  function selectPreset(preset: typeof BAD_PRESETS[0]) {
-    setName(preset.name)
-    setIcon(preset.icon)
-    setColor(preset.color)
-  }
+  const heroTitle =
+    habitType === 'bad' ? 'Optimise tes routines pour éviter les craquages.' : 'Consolide les habitudes positives.'
 
-  // Construit l'interface immersive : sections explicatives et formulaire multi-étapes.
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 font-sans">
-      <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
-        <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-gray-900/40 px-4 py-2 text-sm font-semibold text-gray-300 transition hover:border-white/40 hover:text-white"
-          >
-            ← Retour au dashboard
-          </Link>
-          <p className="text-xs uppercase tracking-[0.3em] text-white">
-            Création d'une nouvelle habitude
-          </p>
+    <main className="min-h-screen bg-gradient-to-b from-[#05070f] via-[#080b16] to-[#0f172a] text-white">
+      <div className="mx-auto max-w-6xl px-4 py-10 space-y-10">
+        <header className="rounded-3xl border border-white/10 bg-white/5 px-6 py-8 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-4">
+              <p className="text-xs uppercase tracking-[0.4em] text-white/60">Studio Habitudes</p>
+              <h1 className="text-4xl font-semibold text-white">Créer une habitude SMART</h1>
+              <p className="text-base text-white/70">{heroTitle} Chaque paramètre se met à jour en temps réel.</p>
+            </div>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Retour au dashboard
+            </Link>
+          </div>
         </header>
 
-        <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30 space-y-6">
-          <div className="space-y-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-white">Studio</p>
-            <h1 className="text-3xl font-bold text-white">Nouvelle habitude</h1>
-            <p className="text-sm text-gray-400">
-              Sélectionne le type, la catégorie et les paramètres. L'aperçu à droite reflète
-              instantanément le style général de ton dashboard.
-            </p>
-            <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-              <span className="rounded-full border border-white/10 px-3 py-1">
-                Dark UI
-              </span>
-              <span className="rounded-full border border-white/10 px-3 py-1">
-                Données Supabase
-              </span>
-              <span className="rounded-full border border-white/10 px-3 py-1">
-                Accordéons intelligents
-              </span>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-gray-950/60 p-5 shadow-lg shadow-black/30">
-            <p className="text-xs uppercase tracking-[0.3em] text-white mb-3">
-              Aperçu visuel
-            </p>
-            <div className="rounded-2xl border border-white/10 bg-gray-900/60 p-4 space-y-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-semibold">BadHabit Tracker 🔥</span>
-                <span className="text-gray-400">+ Nouvelle</span>
-              </div>
-              <div className="rounded-xl bg-gray-950/60 p-3">
-                <p className="text-sm font-semibold">Aujourd'hui, c'est le moment de tracker !</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Exemple visuel inspiré du dashboard principal.
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-[0.3em]">
-                      Mauvaises habitudes
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+            <div className="space-y-8">
+              {/* Section type & mode */}
+              <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Type</p>
+                  <h2 className="text-xl font-semibold">Nature de l’habitude</h2>
+                  <p className="text-sm text-white/60">
+                    Sélectionne la polarité principale et le mode de suivi. Ces paramètres pilotent les règles SMART.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[{ key: 'bad', label: '🔥 Mauvaise habitude', helper: 'Idéal pour limiter les craquages.' }, { key: 'good', label: '✨ Bonne habitude', helper: 'Pour valider une action positive.' }].map(option => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => {
+                        setHabitType(option.key as 'bad' | 'good')
+                        setColor(option.key === 'bad' ? '#ef4444' : '#10b981')
+                      }}
+                      className={`rounded-2xl border px-4 py-4 text-left transition hover:scale-[1.02] ${
+                        habitType === option.key
+                          ? 'border-white/30 bg-gradient-to-br from-white/15 to-transparent text-white'
+                          : 'border-white/10 bg-black/30 text-white/70 hover:border-white/20'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold">{option.label}</p>
+                      <p className="text-xs text-white/60 mt-1">{option.helper}</p>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Mode</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {[{ key: 'binary', label: '✓ Oui/Non', helper: 'Une validation par jour.' }, { key: 'counter', label: '🔢 Compteur', helper: 'Plusieurs occurrences à suivre.' }].map(option => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => {
+                          setTrackingMode(option.key as 'binary' | 'counter')
+                          clearError('trackingMode')
+                        }}
+                        className={`rounded-2xl border px-4 py-4 text-left transition hover:scale-[1.02] ${
+                          trackingMode === option.key
+                            ? 'border-sky-500/40 bg-gradient-to-br from-sky-500/30 to-transparent text-white'
+                            : 'border-white/10 bg-black/30 text-white/70 hover:border-white/20'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold">{option.label}</p>
+                        <p className="text-xs text-white/60 mt-1">{option.helper}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <FormMessage type="error" message={errors.trackingMode} />
+                </div>
+
+                {trackingMode === 'counter' && (
+                  <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.35em] text-white/60">Objectif</p>
+                        <h3 className="text-base font-semibold">
+                          {habitType === 'good' ? 'Objectif minimum quotidien' : 'Limite maximum quotidienne'}
+                        </h3>
+                      </div>
+                      <div className="text-4xl font-bold text-white">{dailyGoalValue}</div>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={20}
+                      value={dailyGoalValue}
+                      onChange={event => {
+                        setDailyGoalValue(Number(event.target.value))
+                        clearError('dailyGoal')
+                      }}
+                      className="w-full accent-[#C084FC]"
+                    />
+                    <p className="text-xs text-white/60">
+                      Maintiens un objectif atteignable entre 1 et 20 pour conserver la motivation.
                     </p>
-                    <p className="text-sm font-semibold">Finance (2)</p>
+                    <FormMessage type="error" message={errors.dailyGoal} />
                   </div>
-                  <button className="rounded-full bg-red-600 px-3 py-1 text-xs font-semibold">
-                    + Craquage
+                )}
+              </section>
+
+              {/* Section catégorie + suggestions */}
+              <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie & presets</p>
+                  <h2 className="text-xl font-semibold">Contexte et inspirations</h2>
+                  <p className="text-sm text-white/60">Associe cette habitude à une catégorie claire puis choisis un preset pour gagner du temps.</p>
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie</label>
+                  <select
+                    value={categoryId}
+                    onChange={event => {
+                      setCategoryId(event.target.value)
+                      clearError('category')
+                    }}
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/50"
+                  >
+                    <option value="">Sélectionnez une catégorie</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  <FormMessage type="error" message={errors.category} />
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60 mb-2">Suggestions</p>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {presets.map(preset => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => selectPreset(preset)}
+                        className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-white/30 hover:bg-black/50"
+                      >
+                        <div className="text-2xl">{preset.icon}</div>
+                        <p className="mt-2 text-sm font-semibold text-white">{preset.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Section identité */}
+              <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Identité</p>
+                  <h2 className="text-xl font-semibold">Nom, icône et description</h2>
+                  <p className="text-sm text-white/60">Décris précisément l’habitude pour qu’elle soit compréhensible dans le dashboard.</p>
+                </div>
+                <div>
+                  <label htmlFor="name" className="text-xs uppercase tracking-[0.35em] text-white/60">
+                    Nom précis *
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={event => {
+                      setName(event.target.value)
+                      clearError('name')
+                    }}
+                    placeholder="Ex: Limiter le fast-food à 1 fois"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/40"
+                  />
+                  <FormMessage type="error" message={errors.name} />
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="icon" className="text-xs uppercase tracking-[0.35em] text-white/60 flex items-center gap-2">
+                      Icône <Wand2 className="h-3.5 w-3.5 text-white/60" />
+                    </label>
+                    <input
+                      id="icon"
+                      type="text"
+                      value={icon}
+                      onChange={event => setIcon(event.target.value)}
+                      placeholder="🔥"
+                      maxLength={2}
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-2xl text-white placeholder:text-white/40 focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/40"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="color" className="text-xs uppercase tracking-[0.35em] text-white/60 flex items-center gap-2">
+                      Couleur <Palette className="h-3.5 w-3.5 text-white/60" />
+                    </label>
+                    <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                      <input
+                        id="color"
+                        type="color"
+                        value={color}
+                        onChange={event => setColor(event.target.value)}
+                        className="h-12 w-16 rounded-xl border border-white/10 bg-transparent"
+                      />
+                      <span className="font-mono text-sm text-white/70">{color}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="text-xs uppercase tracking-[0.35em] text-white/60">
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    value={description}
+                    onChange={event => {
+                      setDescription(event.target.value)
+                      clearError('description')
+                    }}
+                    rows={4}
+                    placeholder="Décris pourquoi et quand tu veux réaliser cette habitude."
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/40"
+                  />
+                  <FormMessage type="error" message={errors.description} />
+                </div>
+              </section>
+
+              {/* CTA final */}
+              <section className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <Link
+                    href="/"
+                    className="flex-1 rounded-2xl border border-white/10 bg-black/30 px-6 py-3 text-center text-sm font-semibold text-white/70 transition hover:border-white/30 hover:text-white"
+                  >
+                    Annuler
+                  </Link>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 rounded-2xl bg-gradient-to-r from-[#FF4D4D] via-[#FB7185] to-[#F97316] px-6 py-3 text-center text-sm font-semibold text-white shadow-[0_20px_60px_rgba(249,115,22,0.45)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {isLoading ? 'Création...' : 'Créer cette habitude'}
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
-                  L'UI finale s'aligne avec les sections accordéon de l'accueil.
-                </p>
-              </div>
+              </section>
+            </div>
+
+            {/* Colonne latérale avec l'audit IA SMART */}
+            <div className="space-y-6">
+              <AICoachSmartAudit
+                name={name}
+                description={description}
+                trackingMode={trackingMode}
+                dailyGoalValue={dailyGoalValue}
+                onImprove={({ name: improvedName, description: improvedDescription }) => {
+                  setName(improvedName)
+                  setDescription(improvedDescription)
+                  clearError('name')
+                  clearError('description')
+                }}
+              />
+
+              <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40 backdrop-blur">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-5 w-5 text-[#C084FC]" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.35em] text-white/60">Rappels SMART</p>
+                    <h3 className="text-base font-semibold text-white">Checklist express</h3>
+                  </div>
+                </div>
+                <ul className="space-y-2 text-sm text-white/70">
+                  <li>• Spécifique : verbe + contexte.</li>
+                  <li>• Mesurable : nombre clair ou validation unique.</li>
+                  <li>• Atteignable : objectif ≤ 20 unités.</li>
+                  <li>• Pertinent : lie-la à une catégorie.</li>
+                  <li>• Temporel : planifie un moment précis.</li>
+                </ul>
+              </section>
             </div>
           </div>
-        </section>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30 space-y-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white mb-3">
-                Type d'habitude
-              </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHabitType('bad')
-                    setColor('#ef4444')
-                  }}
-                  className={`rounded-xl border px-4 py-4 text-left transition transform duration-200 hover:scale-105 ${
-                    habitType === 'bad'
-                      ? 'border-red-500/70 bg-gradient-to-br from-red-600/80 to-red-500/70 text-white shadow-lg shadow-black/30'
-                      : 'border-gray-800 bg-gray-900/60 text-gray-300 hover:border-gray-700 hover:bg-gray-900'
-                  }`}
-                >
-                  <p className="text-sm font-semibold">🔥 Mauvaise habitude</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Pour traquer les craquages (système Bad Habit).
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHabitType('good')
-                    setColor('#10b981')
-                  }}
-                  className={`rounded-xl border px-4 py-4 text-left transition transform duration-200 hover:scale-105 ${
-                    habitType === 'good'
-                      ? 'border-emerald-500/70 bg-gradient-to-br from-emerald-600/80 to-emerald-500/70 text-white shadow-lg shadow-black/30'
-                      : 'border-gray-800 bg-gray-900/60 text-gray-300 hover:border-gray-700 hover:bg-gray-900'
-                  }`}
-                >
-                  <p className="text-sm font-semibold">✨ Bonne habitude</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Pour valider une routine positive quotidienne.
-                  </p>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white mb-3">
-                Mode de suivi
-              </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setTrackingMode('binary')}
-                  className={`rounded-xl border px-4 py-4 text-left transition transform duration-200 hover:scale-105 ${
-                    trackingMode === 'binary'
-                      ? 'border-sky-500/70 bg-gradient-to-br from-sky-600/80 to-sky-500/70 text-white shadow-lg shadow-black/30'
-                      : 'border-gray-800 bg-gray-900/60 text-gray-300 hover:border-gray-700 hover:bg-gray-900'
-                  }`}
-                >
-                  <p className="text-sm font-semibold">✓ Oui/Non</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Une validation ou un craquage maximum par jour.
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTrackingMode('counter')}
-                  className={`rounded-xl border px-4 py-4 text-left transition transform duration-200 hover:scale-105 ${
-                    trackingMode === 'counter'
-                      ? 'border-sky-500/70 bg-gradient-to-br from-sky-600/80 to-sky-500/70 text-white shadow-lg shadow-black/30'
-                      : 'border-gray-800 bg-gray-900/60 text-gray-300 hover:border-gray-700 hover:bg-gray-900'
-                  }`}
-                >
-                  <p className="text-sm font-semibold">🔢 Compteur</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Permet plusieurs occurrences (ex: verres d'eau).
-                  </p>
-                </button>
-              </div>
-            </div>
-
-            {trackingMode === 'counter' && (
-              <div className="rounded-2xl border border-white/10 bg-gray-900/60 p-5 shadow-inner shadow-black/30">
-                <p className="text-xs uppercase tracking-[0.3em] text-white mb-3">
-                  {habitType === 'good'
-                    ? 'Objectif minimum par jour'
-                    : 'Limite maximum par jour'}
-                </p>
-                <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    value={dailyGoalValue}
-                    onChange={(e) => setDailyGoalValue(parseInt(e.target.value))}
-                    className="md:flex-1 accent-red-500"
-                  />
-                  <div
-                    className={`text-4xl font-bold tabular-nums text-center md:w-24 ${
-                      habitType === 'good' ? 'text-sky-400' : 'text-red-400'
-                    }`}
-                  >
-                    {dailyGoalValue}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-3">
-                  {habitType === 'good'
-                    ? `Objectif à atteindre chaque jour (min ${dailyGoalValue}).`
-                    : `À ne surtout pas dépasser (max ${dailyGoalValue}).`}
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30 space-y-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white mb-2">
-                Catégorie personnalisée
-              </p>
-              <select
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60"
-              >
-                <option value="">Sans catégorie</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white mb-3">
-                Suggestions ({habitType === 'bad' ? 'mauvaises' : 'bonnes'})
-              </p>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {presets.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => selectPreset(preset)}
-                    className="rounded-xl border border-gray-800 bg-gray-900/60 p-4 text-left transition transform hover:border-red-600/40 hover:scale-105"
-                  >
-                    <div className="text-2xl mb-2">{preset.icon}</div>
-                    <p className="text-sm font-semibold text-white">{preset.name}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30 space-y-5">
-            <div>
-              <label htmlFor="name" className="text-xs uppercase tracking-[0.3em] text-white">
-                Nom de l'habitude *
-              </label>
-              <input
-                id="name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Manger des fast-foods"
-                className="mt-2 w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60"
-              />
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label htmlFor="icon" className="text-xs uppercase tracking-[0.3em] text-white">
-                  Icône (emoji)
-                </label>
-                <input
-                  id="icon"
-                  type="text"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="🔥"
-                  maxLength={2}
-                  className="mt-2 w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-2xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60"
-                />
-              </div>
-              <div>
-                <label htmlFor="color" className="text-xs uppercase tracking-[0.3em] text-white">
-                  Couleur
-                </label>
-                <div className="mt-2 flex items-center gap-4">
-                  <input
-                    id="color"
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="h-12 w-16 rounded-lg border border-gray-800 bg-gray-900"
-                  />
-                  <span className="text-sm font-mono text-gray-400">{color}</span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="description" className="text-xs uppercase tracking-[0.3em] text-white">
-                Description (optionnel)
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Pourquoi veux-tu changer cette habitude ?"
-                rows={4}
-                className="mt-2 w-full rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60"
-              />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30">
-            <div className="flex flex-col gap-3 md:flex-row">
-              <Link
-                href="/"
-                className="flex-1 rounded-xl border border-gray-800 bg-gray-950/40 px-6 py-3 text-center text-sm font-semibold text-gray-400 transition hover:border-white/30 hover:text-white"
-              >
-                Annuler
-              </Link>
-              <button
-                type="submit"
-                disabled={isLoading || !name}
-                className="flex-1 rounded-xl bg-red-600 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isLoading ? 'Création...' : "Créer l'habitude"}
-              </button>
-            </div>
-          </section>
         </form>
       </div>
     </main>

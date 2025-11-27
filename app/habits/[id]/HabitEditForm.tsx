@@ -1,12 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+// Formulaire d'édition premium : reprend la refonte SMART avec possibilité de suspendre l'habitude.
+
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
+import FormMessage from '@/components/FormMessage'
+import AICoachSmartAudit from '@/components/AICoachSmartAudit'
+import { Palette, PauseCircle, PlayCircle, Sparkles, Wand2 } from 'lucide-react'
 
 type Habit = Database['public']['Tables']['habits']['Row']
-
 type Category = Database['public']['Tables']['categories']['Row']
 
 type HabitEditFormProps = {
@@ -15,28 +19,28 @@ type HabitEditFormProps = {
 }
 
 const BAD_PRESETS = [
-  { name: 'Fast-food', icon: '🍔', color: '#ef4444' },
-  { name: 'Scroll social media', icon: '📱', color: '#f97316' },
-  { name: 'Snooze alarm', icon: '⏰', color: '#eab308' },
+  { name: 'Fast-food du soir', icon: '🍔', color: '#ef4444' },
+  { name: 'Scroll réseaux', icon: '📱', color: '#f97316' },
+  { name: 'Snooze interminable', icon: '⏰', color: '#eab308' },
   { name: 'Procrastination', icon: '🛋️', color: '#a855f7' },
-  { name: 'Cigarettes', icon: '🚬', color: '#6b7280' },
-  { name: 'Alcool', icon: '🍺', color: '#f59e0b' },
+  { name: 'Cigarette impulsive', icon: '🚬', color: '#6b7280' },
+  { name: 'Apéro quotidien', icon: '🍺', color: '#f59e0b' },
 ]
 
 const GOOD_PRESETS = [
-  { name: 'Sport', icon: '💪', color: '#10b981' },
-  { name: 'Lecture', icon: '📚', color: '#3b82f6' },
-  { name: 'Méditation', icon: '🧘', color: '#8b5cf6' },
+  { name: 'Session sport', icon: '💪', color: '#10b981' },
+  { name: 'Lecture focus', icon: '📚', color: '#3b82f6' },
+  { name: 'Méditation 10 min', icon: '🧘', color: '#8b5cf6' },
   { name: 'Eau (8 verres)', icon: '💧', color: '#06b6d4' },
   { name: 'Sommeil 8h', icon: '😴', color: '#6366f1' },
   { name: 'Fruits & légumes', icon: '🥗', color: '#22c55e' },
 ]
 
+type SmartErrorField = 'name' | 'description' | 'dailyGoal' | 'category' | 'trackingMode'
+
 export default function HabitEditForm({ habit, categories }: HabitEditFormProps) {
   const router = useRouter()
-  const [habitType, setHabitType] = useState<'good' | 'bad'>(
-    (habit.type as 'good' | 'bad') || 'bad'
-  )
+  const [habitType, setHabitType] = useState<'good' | 'bad'>((habit.type as 'good' | 'bad') || 'bad')
   const [trackingMode, setTrackingMode] = useState<'binary' | 'counter'>(
     (habit.tracking_mode as 'binary' | 'counter') || 'binary'
   )
@@ -46,22 +50,79 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
   const [color, setColor] = useState(habit.color || '#ef4444')
   const [description, setDescription] = useState(habit.description || '')
   const [categoryId, setCategoryId] = useState(habit.category_id || '')
+  const [isSuspended, setIsSuspended] = useState<boolean>(habit.is_archived)
   const [isLoading, setIsLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Partial<Record<SmartErrorField, string>>>({})
+  const [formError, setFormError] = useState<string | null>(null)
 
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
+  const vagueKeywords = useMemo(() => ['habitude', 'truc', 'chose', 'améliorer', 'meilleur', 'projet'], [])
 
-  function selectPreset(preset: typeof BAD_PRESETS[number]) {
-    setName(preset.name)
-    setIcon(preset.icon)
-    setColor(preset.color)
+  const clearError = useCallback((field: SmartErrorField) => {
+    setErrors(prev => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }, [])
+
+  const selectPreset = useCallback(
+    (preset: (typeof BAD_PRESETS)[number]) => {
+      setName(preset.name)
+      setIcon(preset.icon)
+      setColor(preset.color)
+      clearError('name')
+    },
+    [clearError]
+  )
+
+  const validateSmart = () => {
+    const trimmedName = name.trim()
+    const trimmedDescription = description.trim()
+    const newErrors: Partial<Record<SmartErrorField, string>> = {}
+
+    if (trimmedName.length < 4) {
+      newErrors.name = 'Le nom doit contenir au moins 4 caractères précis.'
+    } else if (vagueKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword))) {
+      newErrors.name = 'Ajoute un verbe concret et un contexte pour ce nom.'
+    }
+
+    if (trackingMode !== 'binary' && trackingMode !== 'counter') {
+      newErrors.trackingMode = 'Choisis un mode de suivi pour cette habitude.'
+    }
+
+    if (trackingMode === 'binary' && trimmedDescription.length < 10) {
+      newErrors.description = 'Décris la routine (minimum 10 caractères).'
+    }
+
+    if (trackingMode === 'counter') {
+      if (!dailyGoalValue || dailyGoalValue < 1) {
+        newErrors.dailyGoal = 'Objectif minimum: 1 pour rester mesurable.'
+      } else if (dailyGoalValue > 20) {
+        newErrors.dailyGoal = 'Fixe une limite réaliste (≤ 20).'
+      }
+    }
+
+    if (!categoryId && categories.length > 0) {
+      newErrors.category = 'Associe une catégorie pour donner du contexte.'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setIsLoading(true)
-    setErrorMessage(null)
+    setFormError(null)
+
+    const isValid = validateSmart()
+    if (!isValid) {
+      setIsLoading(false)
+      return
+    }
 
     const supabase = createClient()
     const {
@@ -69,7 +130,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setErrorMessage('Session expirée. Merci de vous reconnecter.')
+      setFormError('Session expirée. Merci de vous reconnecter.')
       setIsLoading(false)
       return
     }
@@ -82,6 +143,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
       type: habitType,
       tracking_mode: trackingMode,
       category_id: categoryId || null,
+      is_archived: isSuspended,
       updated_at: new Date().toISOString(),
     }
 
@@ -93,22 +155,15 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
       updates.daily_goal_type = null
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('habits')
       .update(updates)
       .eq('id', habit.id)
       .eq('user_id', user.id)
-      .select()
 
     if (error) {
       console.error('Supabase update error:', error)
-      setErrorMessage('Impossible de mettre à jour cette habitude.')
-      setIsLoading(false)
-      return
-    }
-
-    if (!data || data.length === 0) {
-      setErrorMessage('Aucune mise à jour appliquée.')
+      setFormError('Impossible de mettre à jour cette habitude pour le moment.')
       setIsLoading(false)
       return
     }
@@ -117,233 +172,287 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
     router.refresh()
   }
 
+  const statusLabel = isSuspended ? 'Habitude suspendue' : 'Habitude active'
+  const statusDescription = isSuspended
+    ? 'Cette habitude ne sera plus proposée dans le dashboard tant que tu ne la réactives pas.'
+    : 'Habitude suivie normalement dans toutes les vues.'
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {errorMessage && (
-        <div className="rounded-2xl border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-200">
-          {errorMessage}
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {formError && (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {formError}
         </div>
       )}
 
-      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-4 sm:p-6 space-y-6">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-2">Catégorie personnalisée</p>
-          <select
-            value={categoryId}
-            onChange={e => setCategoryId(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]"
-          >
-            <option value="">Sans catégorie</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-3">Type d&apos;habitude</p>
-          <div className="flex w-full flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => {
-                setHabitType('bad')
-                if (!habit.icon) {
-                  setColor('#ef4444')
-                }
-              }}
-              className={`flex-1 rounded-2xl border px-4 py-4 text-left font-semibold transition ${
-                habitType === 'bad'
-                  ? 'border-[#FF4D4D] bg-[#FF4D4D]/10 text-white shadow-lg shadow-[#FF4D4D]/30'
-                  : 'border-white/10 bg-black/20 text-white/60 hover:border-white/30'
-              }`}
-            >
-              🔥 Mauvaise habitude
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setHabitType('good')
-                if (!habit.icon) {
-                  setColor('#10b981')
-                }
-              }}
-              className={`flex-1 rounded-2xl border px-4 py-4 text-left font-semibold transition ${
-                habitType === 'good'
-                  ? 'border-[#4DA6FF] bg-[#4DA6FF]/10 text-white shadow-lg shadow-[#4DA6FF]/30'
-                  : 'border-white/10 bg-black/20 text-white/60 hover:border-white/30'
-              }`}
-            >
-              ✨ Bonne habitude
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-white/5 bg-[#1A1D2B] p-4 sm:p-6 space-y-6">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-3">Mode de suivi</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setTrackingMode('binary')}
-              className={`rounded-2xl border px-4 py-4 text-left transition ${
-                trackingMode === 'binary'
-                  ? 'border-[#4DA6FF] bg-[#4DA6FF]/10 text-white'
-                  : 'border-white/10 bg-black/20 text-white/60 hover:border-white/30'
-              }`}
-            >
-              <div className="font-semibold mb-1">✓ Oui/Non</div>
-              <p className="text-xs text-white/60">Une fois par jour maximum</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTrackingMode('counter')}
-              className={`rounded-2xl border px-4 py-4 text-left transition ${
-                trackingMode === 'counter'
-                  ? 'border-[#4DA6FF] bg-[#4DA6FF]/10 text-white'
-                  : 'border-white/10 bg-black/20 text-white/60 hover:border-white/30'
-              }`}
-            >
-              <div className="font-semibold mb-1">🔢 Compteur</div>
-              <p className="text-xs text-white/60">Plusieurs fois par jour</p>
-            </button>
-          </div>
-        </div>
-
-        {trackingMode === 'counter' && (
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-4 sm:p-5 space-y-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
-              {habitType === 'good' ? '🎯 Objectif minimum' : '⚠️ Limite maximum'}
-            </p>
-            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center">
-              <input
-                type="range"
-                min="1"
-                max="20"
-                value={dailyGoalValue}
-                onChange={e => setDailyGoalValue(parseInt(e.target.value))}
-                className="w-full accent-[#FF4D4D] sm:flex-1"
-              />
-              <div
-                className={`w-full text-center text-4xl font-bold tabular-nums sm:w-24 ${
-                  habitType === 'good' ? 'text-[#4DA6FF]' : 'text-[#FF4D4D]'
-                }`}
-              >
-                {dailyGoalValue}
-              </div>
-            </div>
-            <p className="text-xs text-white/60">
-              {habitType === 'good'
-                ? `Atteindre au moins ${dailyGoalValue} validations.`
-                : `Ne pas dépasser ${dailyGoalValue} occurrences.`}
-            </p>
-          </div>
-        )}
-
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0] mb-3">
-            Suggestions ({habitType === 'bad' ? 'mauvaises' : 'bonnes'})
-          </p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {presets.map(preset => (
-              <button
-                key={preset.name}
-                type="button"
-                onClick={() => selectPreset(preset)}
-                className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left transition hover:border-white/40"
-              >
-                <div className="text-2xl mb-2">{preset.icon}</div>
-                <p className="text-sm font-semibold text-white truncate">{preset.name}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-4 sm:p-6 space-y-5">
-        <div>
-          <label htmlFor="name" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
-            Nom de l&apos;habitude *
-          </label>
-          <input
-            id="name"
-            type="text"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      {/* Statut & suspension */}
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <label htmlFor="icon" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
-              Icône (emoji)
-            </label>
-            <input
-              id="icon"
-              type="text"
-              value={icon}
-              maxLength={2}
-              onChange={(e) => setIcon(e.target.value)}
-              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-2xl focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]"
-            />
+            <p className="text-xs uppercase tracking-[0.35em] text-white/60">Statut</p>
+            <h2 className="text-xl font-semibold text-white">{statusLabel}</h2>
+            <p className="text-sm text-white/60">{statusDescription}</p>
           </div>
-          <div>
-            <label htmlFor="color" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
-              Couleur
-            </label>
-            <div className="mt-2 flex w-full flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <input
-                id="color"
-                type="color"
-                value={color}
-                onChange={e => setColor(e.target.value)}
-                className="h-12 w-16 rounded-lg border border-white/10 bg-black/20"
-              />
-              <span className="text-sm font-mono text-white/70">{color}</span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="description" className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">
-            Description (optionnel)
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]"
-          />
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-white/5 bg-[#1E1E1E]/80 p-4 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={() => router.push(`/habits/${habit.id}`)}
-            className="flex-1 rounded-2xl border border-white/10 bg-black/20 px-6 py-3 text-center text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
+            onClick={() => setIsSuspended(prev => !prev)}
+            className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
+              isSuspended
+                ? 'border-[#4ade80]/40 bg-[#4ade80]/10 text-[#4ade80]'
+                : 'border-[#fb7185]/40 bg-[#fb7185]/10 text-[#fb7185]'
+            }`}
           >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading || !name.trim()}
-            className={`flex-1 rounded-2xl px-6 py-3 text-center text-sm font-semibold transition ${
-              habitType === 'bad'
-                ? 'bg-[#FF4D4D] text-white hover:bg-[#e04343]'
-                : 'bg-[#4DA6FF] text-white hover:bg-[#3b82ff]'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {isLoading ? 'Enregistrement...' : 'Enregistrer'}
+            {isSuspended ? <PlayCircle className="h-4 w-4" /> : <PauseCircle className="h-4 w-4" />}
+            {isSuspended ? 'Réactiver' : 'Suspendre'}
           </button>
         </div>
       </section>
+
+      <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+        <div className="space-y-8">
+          {/* Type & mode */}
+          <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Type et mode</p>
+              <h2 className="text-xl font-semibold text-white">Paramètres principaux</h2>
+              <p className="text-sm text-white/60">Ajuste la polarité et le mode de suivi pour recalibrer la stratégie.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[{ key: 'bad', label: '🔥 Mauvaise habitude', helper: 'Réduis l’impact de cette routine.' }, { key: 'good', label: '✨ Bonne habitude', helper: 'Renforce ton comportement positif.' }].map(option => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => {
+                    setHabitType(option.key as 'bad' | 'good')
+                    clearError('name')
+                  }}
+                  className={`rounded-2xl border px-4 py-4 text-left transition ${
+                    habitType === option.key
+                      ? 'border-white/30 bg-gradient-to-br from-white/15 to-transparent text-white'
+                      : 'border-white/10 bg-black/30 text-white/70 hover:border-white/20'
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p className="text-xs text-white/60 mt-1">{option.helper}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Mode de suivi</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[{ key: 'binary', label: '✓ Oui/Non', helper: 'Pour une validation unique.' }, { key: 'counter', label: '🔢 Compteur', helper: 'Plusieurs occurrences quotidiennes.' }].map(option => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => {
+                      setTrackingMode(option.key as 'binary' | 'counter')
+                      clearError('trackingMode')
+                    }}
+                    className={`rounded-2xl border px-4 py-4 text-left transition ${
+                      trackingMode === option.key
+                        ? 'border-sky-500/40 bg-gradient-to-br from-sky-500/30 to-transparent text-white'
+                        : 'border-white/10 bg-black/30 text-white/70 hover:border-white/20'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">{option.label}</p>
+                    <p className="text-xs text-white/60 mt-1">{option.helper}</p>
+                  </button>
+                ))}
+              </div>
+              <FormMessage message={errors.trackingMode} />
+            </div>
+
+            {trackingMode === 'counter' && (
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.35em] text-white/60">Objectif quotidien</p>
+                    <p className="text-sm text-white/70">
+                      {habitType === 'good' ? 'Minimum à atteindre' : 'Maximum à ne pas dépasser'}
+                    </p>
+                  </div>
+                  <div className="text-4xl font-bold text-white">{dailyGoalValue}</div>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  value={dailyGoalValue}
+                  onChange={event => {
+                    setDailyGoalValue(Number(event.target.value))
+                    clearError('dailyGoal')
+                  }}
+                  className="w-full accent-[#C084FC]"
+                />
+                <FormMessage message={errors.dailyGoal} />
+              </div>
+            )}
+          </section>
+
+          {/* Catégories + presets */}
+          <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie & inspiration</p>
+              <h2 className="text-xl font-semibold text-white">Repositionne l’habitude</h2>
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie</label>
+              <select
+                value={categoryId}
+                onChange={event => {
+                  setCategoryId(event.target.value)
+                  clearError('category')
+                }}
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/50"
+              >
+                <option value="">Sans catégorie</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <FormMessage message={errors.category} />
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-white/60 mb-2">Suggestions</p>
+              <div className="grid gap-3 md:grid-cols-3">
+                {presets.map(preset => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => selectPreset(preset)}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-white/30 hover:bg-black/50"
+                  >
+                    <div className="text-2xl">{preset.icon}</div>
+                    <p className="mt-2 text-sm font-semibold text-white">{preset.name}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Identité */}
+          <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Identité</p>
+              <h2 className="text-xl font-semibold text-white">Nom, icône et contexte</h2>
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-[0.35em] text-white/60">Nom précis *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={event => {
+                  setName(event.target.value)
+                  clearError('name')
+                }}
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/40"
+                placeholder="Ex: Limiter le fast-food à 1 fois"
+              />
+              <FormMessage message={errors.name} />
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label className="text-xs uppercase tracking-[0.35em] text-white/60 flex items-center gap-2">
+                  Icône <Wand2 className="h-3.5 w-3.5 text-white/60" />
+                </label>
+                <input
+                  type="text"
+                  value={icon}
+                  onChange={event => setIcon(event.target.value)}
+                  maxLength={2}
+                  placeholder="🔥"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-2xl text-white placeholder:text-white/40 focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.35em] text-white/60 flex items-center gap-2">
+                  Couleur <Palette className="h-3.5 w-3.5 text-white/60" />
+                </label>
+                <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={event => setColor(event.target.value)}
+                    className="h-12 w-16 rounded-xl border border-white/10 bg-transparent"
+                  />
+                  <span className="font-mono text-sm text-white/70">{color}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs uppercase tracking-[0.35em] text-white/60">Description</label>
+              <textarea
+                value={description}
+                onChange={event => {
+                  setDescription(event.target.value)
+                  clearError('description')
+                }}
+                rows={4}
+                placeholder="Précise ton intention, ton contexte ou ton déclencheur."
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-[#C084FC] focus:outline-none focus:ring-2 focus:ring-[#C084FC]/40"
+              />
+              <FormMessage message={errors.description} />
+            </div>
+          </section>
+
+          {/* CTA */}
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex-1 rounded-2xl border border-white/10 bg-black/30 px-6 py-3 text-center text-sm font-semibold text-white/70 transition hover:border-white/30 hover:text-white"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-[#FF4D4D] via-[#FB7185] to-[#F97316] px-6 py-3 text-center text-sm font-semibold text-white shadow-[0_20px_60px_rgba(249,115,22,0.45)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isLoading ? 'Enregistrement...' : 'Mettre à jour'}
+              </button>
+            </div>
+          </section>
+        </div>
+
+        {/* Colonne latérale */}
+        <div className="space-y-6">
+          <AICoachSmartAudit
+            name={name}
+            description={description}
+            trackingMode={trackingMode}
+            dailyGoalValue={dailyGoalValue}
+            onImprove={({ name: improvedName, description: improvedDescription }) => {
+              setName(improvedName)
+              setDescription(improvedDescription)
+              clearError('name')
+              clearError('description')
+            }}
+          />
+
+          <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40 backdrop-blur">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-[#C084FC]" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-white/60">Astuces</p>
+                <h3 className="text-base font-semibold text-white">Checklist d’édition</h3>
+              </div>
+            </div>
+            <ul className="space-y-2 text-sm text-white/70">
+              <li>• Ajuste le statut pour suspendre ou relancer une habitude en douceur.</li>
+              <li>• Utilise les presets pour réécrire rapidement un nom ou une couleur.</li>
+              <li>• Rappelle-toi que les objectifs counters restent entre 1 et 20.</li>
+            </ul>
+          </section>
+        </div>
+      </div>
     </form>
   )
 }

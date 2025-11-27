@@ -1,27 +1,31 @@
 'use client'
 
+// Button with confirmation to delete the habit inside the premium toolbar.
 type Props = {
   habitId: string
   habitName: string
 }
 
 export default function DeleteButton({ habitId, habitName }: Props) {
-  const handleDelete = (e: React.FormEvent) => {
+  const handleDelete = (event: React.FormEvent) => {
     if (!confirm(`Supprimer "${habitName}" et tous ses logs ?`)) {
-      e.preventDefault()
+      event.preventDefault()
     }
   }
 
-  const baseClasses =
-    'w-full h-11 rounded-lg px-4 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D4D]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090f]'
-
   return (
-    <form action={`/api/habits/${habitId}/delete`} method="POST" className="flex-1" onSubmit={handleDelete}>
+    <form
+      action={`/api/habits/${habitId}/delete`}
+      method="POST"
+      className="flex-1"
+      onSubmit={handleDelete}
+    >
       <button
         type="submit"
-        className={`${baseClasses} border border-[#FF4D4D]/40 bg-[#2A0F0F] text-[#FF4D4D] hover:border-[#FF4D4D]/60 hover:bg-[#3b1414]`}
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-[#FF6B6B]/50 bg-[#2A0F14] px-5 text-sm font-semibold text-[#FF9B9B] transition hover:border-[#FF6B6B] hover:text-[#FFE4E6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B6B]/60"
       >
-        🗑️ Supprimer
+        <span aria-hidden>🗑️</span>
+        Supprimer
       </button>
     </form>
   )

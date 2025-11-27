@@ -7,8 +7,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { toastRoastCraquage, toastRoastSuccess } from '@/lib/coach/coach'
-
 type HabitQuickActionsProps = {
   habitId: string
   habitType: 'good' | 'bad'
@@ -59,7 +57,7 @@ export default function HabitQuickActions({
   const safeLogs = Math.max(0, totalLogs)
   const safeCraquages = Math.max(0, totalCraquages)
 
-  // Effectue un check-in rapide et déclenche les toasts sarcastiques.
+  // Effectue un check-in rapide et rafraîchit les données locales/serveur.
   const handleAction = async () => {
     if (disablePrimary) return
     setIsSubmitting(true)
@@ -75,12 +73,6 @@ export default function HabitQuickActions({
       setCount(newCount)
       startTransition(() => router.refresh())
 
-      const payloadStreak = habitType === 'good' ? safeStreak + 1 : safeStreak
-      if (habitType === 'bad') {
-        onHabitValidated?.(toastRoastCraquage(habitName, payloadStreak, safeCraquages + newCount), 'success')
-      } else {
-        onHabitValidated?.(toastRoastSuccess(habitName, payloadStreak, safeLogs + newCount), 'success')
-      }
     } catch (error) {
       console.error(error)
       onHabitValidated?.('Impossible de mettre à jour', 'error')

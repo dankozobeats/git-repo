@@ -2,8 +2,8 @@
 
 // Modale de sélection rapide permettant de parcourir les rapports IA d'une journée.
 
-import { Fragment } from 'react'
 import { X } from 'lucide-react'
+import { formatDateHuman } from '@/lib/date-utils'
 
 export type ReportModalProps = {
   open: boolean
@@ -30,7 +30,7 @@ export default function ReportModal({ open, date, reports, selectedReportId, onS
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/60">Rapports du</p>
-            <h3 className="text-2xl font-semibold">{date ?? 'Date inconnue'}</h3>
+            <h3 className="text-2xl font-semibold">{date ? formatDateHuman(date) : 'Date inconnue'}</h3>
           </div>
           <button onClick={onClose} className="rounded-full border border-white/20 p-2 text-white/70 transition hover:text-white">
             <X className="h-5 w-5" />
@@ -43,10 +43,7 @@ export default function ReportModal({ open, date, reports, selectedReportId, onS
           <div className="grid gap-4 md:grid-cols-[220px,1fr]">
             <div className="rounded-2xl border border-white/10 bg-black/20 p-3 space-y-2 max-h-[360px] overflow-y-auto">
               {reports.map(report => {
-                const time = new Date(report.created_at).toLocaleTimeString('fr-FR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
+                const time = formatDateHuman(report.created_at, { timeOnly: true })
                 const isActive = report.id === activeReport?.id
                 return (
                   <button

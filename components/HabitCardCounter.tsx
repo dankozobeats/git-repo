@@ -50,22 +50,6 @@ export function HabitCardCounter({ habit, todayCount, todayEvents: initialEvents
         const data = await res.json()
         setEvents(prev => [...prev, data])
         
-        // Toast selon le type d'habitude
-        if (isBadHabit) {
-          if (optimisticCount === 1) {
-            showToast('Premier craquage... ça arrive 😏', 'info')
-          } else if (optimisticCount >= 5) {
-            showToast(`${optimisticCount} craquages ! Tu te lâches là 💀`, 'error')
-          } else {
-            showToast(`Craquage n°${optimisticCount}`, 'info')
-          }
-        } else {
-          if (optimisticCount >= habit.daily_goal_value) {
-            showToast('🎯 Objectif atteint ! Bien joué !', 'success')
-          } else {
-            showToast(`+1 ! Encore ${habit.daily_goal_value - optimisticCount} pour l'objectif`, 'success')
-          }
-        }
       } else {
         // Rollback en cas d'erreur
         setCount(count)

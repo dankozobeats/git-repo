@@ -1,11 +1,16 @@
 // Page serveur de détail d'une habitude : récupère les logs et statistiques associés.
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+// Server component powering the habit detail page with streamlined data access.
 import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
 import HabitDetailClient from './HabitDetailClient'
 import DeleteButton from './DeleteButton'
-import { getTodayDateISO, toUtcDate } from '@/lib/date-utils'
 import HabitDetailHeader from '@/components/HabitDetailHeader'
+import { createClient } from '@/lib/supabase/server'
+import { getTodayDateISO } from '@/lib/date-utils'
+import { getHabitById } from '@/lib/habits/getHabitById'
+import { getHabitCalendar } from '@/lib/habits/getHabitCalendar'
+import { computeHabitStats } from '@/lib/habits/computeHabitStats'
+import { getUserHabits } from '@/lib/habits/getUserHabits'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -13,187 +18,114 @@ interface PageProps {
 
 export default async function HabitDetailPage({ params }: PageProps) {
   const { id } = await params
-  // Client Supabase serveur requis pour sécuriser l'accès et hydrater les props.
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) {
     redirect('/login')
   }
 
-  const { data: habit } = await supabase
-    .from('habits')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+  const habitPromise = getHabitById({
+    client: supabase,
+    habitId: id,
+    userId: user.id,
+  })
+  const navigationHabitsPromise = getUserHabits({
+    client: supabase,
+    userId: user.id,
+  })
 
+  const habit = await habitPromise
   if (!habit) {
-    // Fallback statique si l'ID ne correspond à aucune habitude de l'utilisateur.
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">❌ Habitude non trouvée</h1>
-          <p className="text-gray-400 mb-6">Cette habitude n'existe pas ou a été supprimée.</p>
-          <Link 
-            href="/" 
-            className="inline-block bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-medium transition"
-          >
-            ← Retour au dashboard
-          </Link>
-        </div>
-      </div>
-    )
+    notFound()
   }
 
-  const todayStr = getTodayDateISO()
-  const todayDate = toUtcDate(todayStr)
-  const fourWeeksAgo = new Date(todayDate)
-  fourWeeksAgo.setUTCDate(todayDate.getUTCDate() - 28)
+  const todayISO = getTodayDateISO()
+  const { calendarData, todayCount } = await getHabitCalendar({
+    client: supabase,
+    habitId: id,
+    trackingMode: habit.tracking_mode,
+    todayISO,
+    rangeInDays: 28,
+  })
 
-  // Récupérer les données pour le calendrier
-  let calendarData: Record<string, number> = {}
-  let todayCount = 0
+  const stats = computeHabitStats({
+    calendarData,
+    todayISO,
+    todayCount,
+    rangeInDays: 28,
+  })
 
-  if (habit.tracking_mode === 'counter') {
-    // Mode compteur : s'appuie sur habit_events pour compter plusieurs enregistrements par jour.
-    const { data: events } = await supabase
-      .from('habit_events')
-      .select('*')
-      .eq('habit_id', id)
-      .gte('event_date', fourWeeksAgo.toISOString().split('T')[0])
-      .order('occurred_at', { ascending: true })
-
-    calendarData = (events || []).reduce((acc, event) => {
-      const date = event.event_date
-      if (!acc[date]) acc[date] = 0
-      acc[date]++
-      return acc
-    }, {} as Record<string, number>)
-
-    todayCount = (events || []).filter(e => e.event_date === todayStr).length
-
-  } else {
-    // Mode binaire : un log par jour suffit à marquer la case dans le calendrier.
-    const { data: logs } = await supabase
-      .from('logs')
-      .select('*')
-      .eq('habit_id', id)
-      .gte('completed_date', fourWeeksAgo.toISOString().split('T')[0])
-      .order('completed_date', { ascending: false })
-
-    calendarData = (logs || []).reduce((acc, log) => {
-      acc[log.completed_date] = 1
-      return acc
-    }, {} as Record<string, number>)
-
-    const hasLogToday = (logs || []).some(log => log.completed_date === todayStr)
-    todayCount = hasLogToday ? 1 : 0
-  }
-
-  // Calculer les stats
-  const totalCount = Object.values(calendarData).reduce((sum, count) => sum + count, 0)
-  
-  const sevenDaysAgo = new Date(todayDate)
-  sevenDaysAgo.setUTCDate(todayDate.getUTCDate() - 7)
-  const last7DaysCount = Object.entries(calendarData)
-    .filter(([date]) => toUtcDate(date) >= sevenDaysAgo)
-    .reduce((sum, [_, count]) => sum + count, 0)
-
-  // Calculer le streak
-  let currentStreak = 0
-  let checkDate = new Date(todayDate)
-  for (let i = 0; i < 90; i++) {
-    const dateStr = checkDate.toISOString().split('T')[0]
-    if (calendarData[dateStr] && calendarData[dateStr] > 0) {
-      currentStreak++
-      checkDate.setUTCDate(checkDate.getUTCDate() - 1)
-    } else if (i === 0) {
-      checkDate.setUTCDate(checkDate.getUTCDate() - 1)
-      continue
-    } else {
-      break
-    }
-  }
-
-  // Liste complète des habitudes actives utilisée par HabitDetailHeader pour la navigation.
-  const { data: userHabits } = await supabase
-    .from('habits')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('is_archived', false)
-    .order('name', { ascending: true })
+  const userHabits = await navigationHabitsPromise
+  const navigationHabits =
+    userHabits.find(existingHabit => existingHabit.id === habit.id) !== undefined
+      ? userHabits
+      : [habit, ...userHabits]
 
   const isBadHabit = habit.type === 'bad'
+  const badgeColor = isBadHabit ? 'text-[#FF5F5F] border-[#FF5F5F]/50' : 'text-[#4DD0FB] border-[#4DD0FB]/50'
 
-  // Rend la page détail avec header statique et composant client pour visualisations.
   return (
-    <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
-      <section className="border-b border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#151515] to-[#0f0f0f]">
-        <div className="mx-auto max-w-5xl px-4 py-5 sm:py-8 space-y-5">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-3 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
-          >
-            ← Retour au dashboard
-          </Link>
+    <main className="min-h-screen bg-[#050505] text-[#F8FAFC]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+        <Link
+          href="/"
+          className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
+        >
+          <span aria-hidden>←</span>
+          Retour au dashboard
+        </Link>
 
-          <HabitDetailHeader habit={habit} allHabits={userHabits || [habit]} />
+        <HabitDetailHeader habit={habit} allHabits={navigationHabits} />
 
-          <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+        <section className="rounded-[32px] border border-white/8 bg-white/[0.02] p-6 shadow-[0_25px_80px_rgba(0,0,0,0.4)] backdrop-blur">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 items-start gap-4">
               <div
-                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl text-2xl shadow-inner md:h-16 md:w-16 md:text-3xl"
-                style={{ backgroundColor: `${habit.color}33` }}
+                className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/10 text-3xl shadow-inner shadow-black/30 sm:h-20 sm:w-20 sm:text-4xl"
+                style={{ backgroundColor: `${habit.color || '#1F2937'}1a` }}
               >
                 {habit.icon || (isBadHabit ? '🔥' : '✨')}
               </div>
-              <div className="min-w-0 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="max-w-full truncate text-2xl font-bold text-white md:text-3xl">{habit.name}</h1>
-                  <span
-                    className={`flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                      isBadHabit
-                        ? 'border-[#FF4D4D] text-[#FF4D4D]'
-                        : 'border-[#4DA6FF] text-[#4DA6FF]'
-                    }`}
-                  >
-                    {isBadHabit ? '🔥 Mauvaise habitude' : '✨ Bonne habitude'}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/60">
+                    Habitude
+                  </span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeColor}`}>
+                    {isBadHabit ? 'Mauvaise habitude' : 'Bonne habitude'}
                   </span>
                   {habit.tracking_mode === 'counter' && (
-                    <span className="flex-shrink-0 rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/80">
-                      🔢 Compteur ({habit.daily_goal_type === 'minimum' ? 'min' : 'max'}:{' '}
-                      {habit.daily_goal_value})
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80">
+                      Compteur · {habit.daily_goal_type === 'minimum' ? 'Min' : 'Max'} {habit.daily_goal_value ?? 0}
                     </span>
                   )}
                 </div>
-                {habit.description && (
-                  <p className="max-w-full break-words text-sm text-[#A0A0A0]">{habit.description}</p>
-                )}
+                <div>
+                  <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{habit.name}</h1>
+                  {habit.description && (
+                    <p className="mt-2 max-w-2xl text-sm text-white/70">{habit.description}</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
               <Link
-                href={`/habits/${id}/edit`}
-                className="flex h-11 w-full flex-1 items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 text-center text-sm font-semibold text-white transition-all duration-200 hover:border-white/40 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4DA6FF]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090f] sm:w-auto"
+                href={`/habits/${habit.id}/edit`}
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
-                <span aria-hidden>✏️</span> Modifier
+                ✏️ Modifier
               </Link>
-              <DeleteButton habitId={id} habitName={habit.name} />
+              <DeleteButton habitId={habit.id} habitName={habit.name} />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <HabitDetailClient
-        habit={habit}
-        calendarData={calendarData}
-        todayCount={todayCount}
-        totalCount={totalCount}
-        last7DaysCount={last7DaysCount}
-        currentStreak={currentStreak}
-      />
+        <HabitDetailClient habit={habit} calendarData={calendarData} stats={stats} />
+      </div>
     </main>
   )
 }
