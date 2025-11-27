@@ -23,7 +23,7 @@ export default function AICoachMessage({
   // Les variantes compactes (toast) utilisent une largeur contrainte pour rester lisibles dans les overlays.
   const isToastVariant = variant === 'toast'
   const containerPadding = isToastVariant ? 'px-4 py-4' : 'px-5 py-5 sm:px-6 sm:py-6'
-  const containerWidth = isToastVariant ? 'max-w-[350px]' : 'w-full'
+  const containerWidth = isToastVariant ? 'w-full max-w-full sm:max-w-[350px]' : 'w-full max-w-full'
   const iconSize = isToastVariant ? 'h-10 w-10' : 'h-12 w-12'
   const messageSize = isToastVariant ? 'text-sm' : 'text-base'
   const ctaSize = isToastVariant ? 'text-xs' : 'text-sm'

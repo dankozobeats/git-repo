@@ -12,6 +12,8 @@ const SCROLL_THRESHOLD = 10
 export default function FloatingQuickActions() {
   // Verrouille l'affichage tant que le token n'est pas trouvé dans le storage.
   const [menuLocked, setMenuLocked] = useState(true)
+  // Flag d'hydratation pour aligner la classe initiale entre SSR et client.
+  const [isHydrated, setIsHydrated] = useState(false)
   // Indique si le menu doit être momentanément caché pendant le scroll.
   const [temporarilyHidden, setTemporarilyHidden] = useState(false)
   // Conserve la dernière position verticale connue pour mesurer les déplacements.
@@ -21,6 +23,7 @@ export default function FloatingQuickActions() {
 
   // Vérifie la présence du token dans localStorage et attache les réactions au scroll.
   useEffect(() => {
+    setIsHydrated(true)
     if (typeof window === 'undefined') return
     let hasToken = false
     // Try/catch nécessaire car l'accès au localStorage peut échouer selon l'environnement.
@@ -84,12 +87,14 @@ export default function FloatingQuickActions() {
 
   // Classes utilitaires Next/Tailwind pour positionner le menu selon le viewport.
   const positionClass = 'bottom-6 right-4 sm:right-8'
+  const shouldHideMenu = !isHydrated || menuLocked
 
   // Rend le menu flottant avec trois actions principales (recherche, création, rapport).
   return (
     <div
       id="floatingMenu"
-      className={`${menuLocked ? 'hidden ' : ''}fixed ${positionClass} z-[1500] flex flex-col items-center gap-3 transition-all duration-200 ${
+      suppressHydrationWarning
+      className={`${shouldHideMenu ? 'hidden ' : ''}fixed ${positionClass} z-[1500] flex flex-col items-center gap-3 transition-all duration-200 ${
         temporarilyHidden ? 'translate-x-20 opacity-0' : 'translate-x-0 opacity-100'
       }`}
     >

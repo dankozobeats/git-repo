@@ -84,6 +84,8 @@ export default function HabitSectionsClient({
   const coachHideTimerRef = useRef<number | null>(null)
   const coachCleanupTimerRef = useRef<number | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const feedbackRef = useRef<HTMLDivElement | null>(null)
+  const coachContainerRef = useRef<HTMLDivElement | null>(null)
   const categoriesList = categories ?? []
   const todayCountsMap = useMemo(
     // Convertit l'objet provenant du serveur en Map pour des lookups rapides.
@@ -180,44 +182,77 @@ export default function HabitSectionsClient({
     setToastMessage({ message, variant })
   }, [])
 
+  const clearCoachTimers = useCallback(() => {
+    if (coachHideTimerRef.current) {
+      window.clearTimeout(coachHideTimerRef.current)
+      coachHideTimerRef.current = null
+    }
+    if (coachCleanupTimerRef.current) {
+      window.clearTimeout(coachCleanupTimerRef.current)
+      coachCleanupTimerRef.current = null
+    }
+  }, [])
+
+  const hideCoachBanner = useCallback(() => {
+    clearCoachTimers()
+    setCoachVisible(false)
+    coachCleanupTimerRef.current = window.setTimeout(() => setCoachBanner(null), 200)
+  }, [clearCoachTimers])
+
   // Synchronise la bannière coach côté client uniquement pour éviter les soucis SSR (window inexistant serveur).
   useEffect(() => {
     if (!coachMessage) {
-      setCoachVisible(false)
-      setCoachBanner(null)
-      if (coachHideTimerRef.current) window.clearTimeout(coachHideTimerRef.current)
-      if (coachCleanupTimerRef.current) window.clearTimeout(coachCleanupTimerRef.current)
+      hideCoachBanner()
       return
     }
+
     setCoachBanner(coachMessage)
     setCoachVisible(true)
-    if (coachHideTimerRef.current) window.clearTimeout(coachHideTimerRef.current)
-    if (coachCleanupTimerRef.current) window.clearTimeout(coachCleanupTimerRef.current)
+    clearCoachTimers()
     coachHideTimerRef.current = window.setTimeout(() => {
-      setCoachVisible(false)
-      coachCleanupTimerRef.current = window.setTimeout(() => setCoachBanner(null), 400)
+      hideCoachBanner()
     }, 6500)
+
     return () => {
-      if (coachHideTimerRef.current) window.clearTimeout(coachHideTimerRef.current)
-      if (coachCleanupTimerRef.current) window.clearTimeout(coachCleanupTimerRef.current)
+      clearCoachTimers()
     }
-  }, [coachMessage])
+  }, [coachMessage, clearCoachTimers, hideCoachBanner])
+
+  // Ferme la bulle lorsqu'un clic/pointeur se produit ailleurs dans la page.
+  useEffect(() => {
+    if (!coachBanner) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!coachContainerRef.current) return
+      if (!coachContainerRef.current.contains(event.target as Node)) {
+        hideCoachBanner()
+      }
+    }
+    window.addEventListener('pointerdown', handlePointerDown, true)
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, true)
+    }
+  }, [coachBanner, hideCoachBanner])
 
   const hasSearch = Boolean(searchQuery.trim())
 
   // Prépare la zone de feedback : accompagne la bulle coach (auto-hide) et le toast premium.
   const feedbackSection = toastMessage || coachBanner ? (
-    <div id="habit-feedback-area" className="mx-auto w-full max-w-6xl">
+    <div
+      id="habit-feedback-area"
+      ref={feedbackRef}
+      className="mx-auto w-full max-w-6xl space-y-3 px-2 sm:px-0"
+    >
       {coachBanner && (
         <div
-          className={`overflow-hidden transition-[max-height,opacity,margin] duration-500 ease-in-out ${
-            coachVisible ? 'max-h-96 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'
+          ref={coachContainerRef}
+          className={`transition-all duration-300 ease-out ${
+            coachVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
           }`}
         >
           <AICoachMessage
             // Variante roast pour conserver le ton sarcastique tout en gardant le design premium partagé.
             message={coachBanner}
-            variant='roast'
+            variant="roast"
           />
         </div>
       )}
@@ -230,6 +265,12 @@ export default function HabitSectionsClient({
       )}
     </div>
   ) : null
+
+  // Défile automatiquement jusqu'au message important quand une action (coach ou toast) est déclenchée.
+  useEffect(() => {
+    if (!feedbackRef.current || (!toastMessage && !coachBanner)) return
+    feedbackRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+  }, [toastMessage, coachBanner])
 
   // Barre de recherche plein écran pour aligner les contrôles avec la grille principale.
   const searchBarSection = (
@@ -286,8 +327,8 @@ export default function HabitSectionsClient({
   // Rend la zone principale: recherche sticky, sections filtrées et gestion des catégories.
   return (
     <section className="relative z-0 space-y-6">
-      {feedbackSection}
       {searchBarSection}
+      {feedbackSection}
       {searchResultsSection}
 
       <div
