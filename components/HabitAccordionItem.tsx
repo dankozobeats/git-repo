@@ -33,6 +33,10 @@ export default function HabitAccordionItem({
   const icon = habit.icon || (type === 'bad' ? '🔥' : '✨')
   const isBad = type === 'bad'
   const hasValue = todayCount > 0
+  const counterRequired =
+    habit.tracking_mode === 'counter' && typeof habit.daily_goal_value === 'number' && habit.daily_goal_value > 0
+      ? habit.daily_goal_value
+      : 1
 
   const statusLabel = isBad
     ? hasValue
@@ -126,6 +130,7 @@ export default function HabitAccordionItem({
               habitType={type}
               trackingMode={habit.tracking_mode}
               initialCount={todayCount}
+              counterRequired={counterRequired}
               habitName={habit.name}
               streak={habit.current_streak ?? 0}
               totalLogs={habit.total_logs ?? undefined}

@@ -56,7 +56,12 @@ export default function HomeHabitsPanel({ badGroups, goodGroups, allHabits }: Ho
         <div className="space-y-2">
           {filteredHabits.length > 0 ? (
             filteredHabits.map(habit => (
-              <HabitCard key={habit.id} habit={habit} onActionComplete={() => rememberCategory(habit.category_id)} />
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                onActionComplete={() => rememberCategory(habit.category_id)}
+                hideWhenCompleted
+              />
             ))
           ) : (
             <div className="rounded-2xl border border-dashed border-white/10 bg-gray-900/40 px-4 py-6 text-center text-sm text-gray-400">

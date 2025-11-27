@@ -6,6 +6,14 @@ type RouteContext = { params: Promise<{ id: string }> }
 
 const getToday = () => getTodayDateISO()
 
+// Normalise la cible quotidienne : 1 pour les habitudes binaires, goal explicite pour un compteur.
+const resolveCounterRequirement = (trackingMode: 'binary' | 'counter' | null, dailyGoal: number | null) => {
+  if (trackingMode === 'counter' && typeof dailyGoal === 'number' && dailyGoal > 0) {
+    return dailyGoal
+  }
+  return 1
+}
+
 export async function POST(
   _request: NextRequest,
   { params }: RouteContext
@@ -28,7 +36,7 @@ export async function POST(
     error: habitError,
   } = await supabase
     .from('habits')
-    .select('id, type, tracking_mode, goal_value')
+    .select('id, type, tracking_mode, goal_value, daily_goal_value')
     .eq('id', habitId)
     .eq('user_id', user.id)
     .single()
@@ -40,6 +48,7 @@ export async function POST(
 
   const completedDate = getToday()
   const isCounter = habit.tracking_mode === 'counter'
+  const counterRequired = resolveCounterRequirement(habit.tracking_mode, habit.daily_goal_value)
 
   if (isCounter) {
     const { error: insertError } = await supabase.from('habit_events').insert({
@@ -75,10 +84,15 @@ export async function POST(
       )
     }
 
+    const currentCount = eventCount ?? 0
+    const goalReached = currentCount >= counterRequired
+
     return NextResponse.json({
       success: true,
-      count: eventCount ?? 0,
-      goalReached: false,
+      count: currentCount,
+      goalReached,
+      counterRequired,
+      remaining: Math.max(0, counterRequired - currentCount),
     })
   }
 
@@ -124,15 +138,18 @@ export async function POST(
     )
   }
 
+  const persistedCount = typeof todayCount === 'number' ? todayCount : 1
   const goalReached =
     habit.type === 'good' && typeof habit.goal_value === 'number'
-      ? (todayCount ?? 0) >= habit.goal_value
-      : false
+      ? persistedCount >= habit.goal_value
+      : persistedCount >= counterRequired
 
   return NextResponse.json({
     success: true,
-    count: todayCount ?? 1,
+    count: persistedCount,
     goalReached,
+    counterRequired,
+    remaining: Math.max(0, counterRequired - persistedCount),
   })
 }
 

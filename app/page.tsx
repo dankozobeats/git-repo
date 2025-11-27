@@ -8,6 +8,7 @@ import { getRandomMessage } from '@/lib/coach/roastMessages'
 import type { Database } from '@/types/database'
 import HabitSectionsClient from '@/components/HabitSectionsClient'
 import ViewHabitsButton from '@/components/ViewHabitsButton'
+import AICoachMessage from '@/components/AICoachMessage' // Design premium unifié pour tous les messages IA.
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -97,7 +98,7 @@ export default async function Home() {
   const categoryStats = buildCategoryStats(categoriesList, allActiveHabits)
   const totalHabits = allActiveHabits.length
   const todayCountsRecord: Record<string, number> = Object.fromEntries(todayCounts)
-  const randomRoastBanner = getRandomMessage()
+  const generatedRoastMessage = getRandomMessage()
 
   // Génère un message contextuel selon l'activité du jour (utilisé dans la carte focus).
   const getSmartMessage = () => {
@@ -167,7 +168,7 @@ export default async function Home() {
   }
 
   // Prépare les textes dynamiques et préférences d'affichage stockées en cookies.
-  const { message: displayMessage } = getSmartMessage()
+  const { message: generatedCoachMessage } = getSmartMessage()
   const heroSubtitle = hasActivityToday
     ? 'Les statistiques se mettent à jour immédiatement à chaque action.'
     : 'Commence par valider une habitude ou ajoute-en une nouvelle.'
@@ -176,11 +177,29 @@ export default async function Home() {
   const showBadHabits = cookieStore.get('showBadHabits')?.value !== 'false'
   const showFocusCard = cookieStore.get('showFocusCard')?.value !== 'false'
   const showCoachBubble = cookieStore.get('showCoachBubble')?.value !== 'false'
+  const showHabitDescriptions = cookieStore.get('showHabitDescriptions')?.value !== 'false'
   const heroStats = [
     { label: 'Bonnes actions', value: goodHabitsLoggedToday, accent: '#4DA6FF' },
     { label: 'Craquages', value: badHabitsLoggedToday, accent: '#FF4D4D' },
     { label: 'Habitudes actives', value: totalHabits, accent: '#E0E0E0' },
   ]
+
+  // Section client centralisant la recherche, les toasts premium et l'affichage des habitudes.
+  const habitDashboardSection = (
+    <div id="active-habits-section">
+      <HabitSectionsClient
+        badHabits={safeBadHabits}
+        goodHabits={safeGoodHabits}
+        categories={categoriesList}
+        todayCounts={todayCountsRecord}
+        categoryStats={categoryStats}
+        showBadHabits={showBadHabits}
+        showGoodHabits={showGoodHabits}
+        coachMessage={showCoachBubble ? generatedRoastMessage : undefined}
+        showHabitDescriptions={showHabitDescriptions}
+      />
+    </div>
+  )
 
   // Rend la page dashboard côté serveur en passant les données nécessaires au client.
   return (
@@ -191,7 +210,7 @@ export default async function Home() {
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex-1">
               <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Focus du jour</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">{displayMessage}</h2>
+              <AICoachMessage message={generatedCoachMessage} variant="default" showCTA />
               <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
             </div>
             <div className="flex w-full flex-col gap-2 md:w-auto">
@@ -217,18 +236,7 @@ export default async function Home() {
         </section>
         )}
 
-        <div id="active-habits-section">
-          <HabitSectionsClient
-            badHabits={safeBadHabits}
-            goodHabits={safeGoodHabits}
-            categories={categoriesList}
-            todayCounts={todayCountsRecord}
-            categoryStats={categoryStats}
-            showBadHabits={showBadHabits}
-            showGoodHabits={showGoodHabits}
-            coachMessage={showCoachBubble ? randomRoastBanner : undefined}
-          />
-        </div>
+        {habitDashboardSection}
 
         {totalHabits === 0 && (
           <div className="rounded-3xl border border-dashed border-white/10 bg-[#1E1E1E]/60 p-8 text-center">

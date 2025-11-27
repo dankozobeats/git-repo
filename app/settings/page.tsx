@@ -8,6 +8,7 @@ const SHOW_GOOD_COOKIE = 'showGoodHabits'
 const SHOW_BAD_COOKIE = 'showBadHabits'
 const SHOW_FOCUS_COOKIE = 'showFocusCard'
 const SHOW_COACH_COOKIE = 'showCoachBubble'
+const SHOW_HABIT_DESCRIPTION_COOKIE = 'showHabitDescriptions'
 
 const updateDashboardPreferences = async (formData: FormData) => {
   'use server'
@@ -16,6 +17,7 @@ const updateDashboardPreferences = async (formData: FormData) => {
   const showBad = formData.get('showBadHabits') === 'on'
   const showFocus = formData.get('showFocusCard') === 'on'
   const showCoach = formData.get('showCoachBubble') === 'on'
+  const showDescriptions = formData.get('showHabitDescriptions') === 'on'
 
   const cookieStore = await cookies()
   cookieStore.set(DASHBOARD_ORDER_COOKIE, order, {
@@ -26,6 +28,10 @@ const updateDashboardPreferences = async (formData: FormData) => {
   cookieStore.set(SHOW_BAD_COOKIE, showBad ? 'true' : 'false', { path: '/', maxAge: 60 * 60 * 24 * 365 })
   cookieStore.set(SHOW_FOCUS_COOKIE, showFocus ? 'true' : 'false', { path: '/', maxAge: 60 * 60 * 24 * 365 })
   cookieStore.set(SHOW_COACH_COOKIE, showCoach ? 'true' : 'false', { path: '/', maxAge: 60 * 60 * 24 * 365 })
+  cookieStore.set(SHOW_HABIT_DESCRIPTION_COOKIE, showDescriptions ? 'true' : 'false', {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  })
   revalidatePath('/')
   revalidatePath('/settings')
   redirect('/')
@@ -47,6 +53,7 @@ export default async function SettingsPage() {
   const showBad = cookieStore.get(SHOW_BAD_COOKIE)?.value !== 'false'
   const showFocus = cookieStore.get(SHOW_FOCUS_COOKIE)?.value !== 'false'
   const showCoach = cookieStore.get(SHOW_COACH_COOKIE)?.value !== 'false'
+  const showDescriptions = cookieStore.get(SHOW_HABIT_DESCRIPTION_COOKIE)?.value !== 'false'
 
   return (
     <main className="min-h-screen bg-[#0c0f1a] text-[#E0E0E0]">
@@ -128,6 +135,12 @@ export default async function SettingsPage() {
                 label="Bulles Coach Roast"
                 description="Active ou coupe les messages sarcastiques."
                 defaultChecked={showCoach}
+              />
+              <PreferenceToggle
+                id="showHabitDescriptions"
+                label="Descriptions des cartes"
+                description="Affiche ou masque la description (limitée à 2 lignes)."
+                defaultChecked={showDescriptions}
               />
             </div>
 

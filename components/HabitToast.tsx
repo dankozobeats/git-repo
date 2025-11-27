@@ -1,8 +1,8 @@
 'use client'
 
 // Toast premium affiché dans le flux pour confirmer la validation d'une habitude.
-import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle, AlertTriangle } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import AICoachMessage from '@/components/AICoachMessage' // Garantit le même visuel que les autres messages IA.
 
 type HabitToastProps = {
   message: string
@@ -11,7 +11,8 @@ type HabitToastProps = {
   onComplete?: () => void
 }
 
-const DEFAULT_DURATION = 10000
+// Durée d'affichage par défaut réduite pour éviter que le toast ne bloque la vue.
+const DEFAULT_DURATION = 4000
 
 export default function HabitToast({
   message,
@@ -21,35 +22,42 @@ export default function HabitToast({
 }: HabitToastProps) {
   // Suit la phase d'animation pour synchroniser l'entrée/sortie CSS.
   const [phase, setPhase] = useState<'enter' | 'exit'>('enter')
+  const exitTimerRef = useRef<number | null>(null)
+  const cleanupTimerRef = useRef<number | null>(null)
 
   // Déclenche la fermeture après la durée demandée pour éviter l'accumulation de toasts.
   useEffect(() => {
-    const exitTimer = window.setTimeout(() => setPhase('exit'), Math.max(0, duration - 200))
-    const cleanupTimer = window.setTimeout(() => onComplete?.(), duration)
+    exitTimerRef.current = window.setTimeout(() => setPhase('exit'), Math.max(0, duration - 200))
+    cleanupTimerRef.current = window.setTimeout(() => onComplete?.(), duration)
     return () => {
-      window.clearTimeout(exitTimer)
-      window.clearTimeout(cleanupTimer)
+      if (exitTimerRef.current) window.clearTimeout(exitTimerRef.current)
+      if (cleanupTimerRef.current) window.clearTimeout(cleanupTimerRef.current)
     }
   }, [duration, onComplete])
 
-  // Sélectionne l'icône selon la variante (succès ou erreur réseau).
-  const Icon = useMemo(() => (variant === 'error' ? AlertTriangle : CheckCircle), [variant])
-  const accentClasses = variant === 'error' ? 'text-red-300 bg-red-300/10' : 'text-emerald-200 bg-emerald-300/10'
+  // Gère la fermeture manuelle via la croix intégrée au design premium.
+  const handleManualClose = useCallback(() => {
+    if (exitTimerRef.current) {
+      window.clearTimeout(exitTimerRef.current)
+      exitTimerRef.current = null
+    }
+    if (cleanupTimerRef.current) {
+      window.clearTimeout(cleanupTimerRef.current)
+      cleanupTimerRef.current = null
+    }
+    setPhase('exit')
+    cleanupTimerRef.current = window.setTimeout(() => onComplete?.(), 200)
+  }, [onComplete])
+
+  // Rend un container plein largeur pour s'aligner sur la barre de recherche et conserver la cohérence visuelle.
+  const liveMode = variant === 'error' ? 'assertive' : 'polite'
 
   return (
     <div
-      aria-live="polite"
+      aria-live={liveMode}
       className={`habit-toast-wrapper ${phase === 'enter' ? 'habit-toast-enter' : 'habit-toast-exit'}`}
     >
-      <div className="flex w-full items-start gap-3 rounded-3xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white shadow-2xl shadow-black/40 backdrop-blur-xl">
-        <span className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-2xl ${accentClasses}`}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <div className="flex-1">
-          <p className="text-xs uppercase tracking-[0.35em] text-white/60">Habitude validée</p>
-          <p className="mt-1 text-base font-semibold text-white/90">{message}</p>
-        </div>
-      </div>
+      <AICoachMessage message={message} variant="toast" showCTA onClose={handleManualClose} />
     </div>
   )
 }

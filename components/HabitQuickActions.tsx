@@ -14,6 +14,7 @@ type HabitQuickActionsProps = {
   habitType: 'good' | 'bad'
   trackingMode: 'binary' | 'counter' | null
   initialCount: number
+  counterRequired?: number | null
   habitName: string
   streak?: number
   totalLogs?: number
@@ -26,6 +27,7 @@ export default function HabitQuickActions({
   habitType,
   trackingMode,
   initialCount,
+  counterRequired,
   habitName,
   streak = 0,
   totalLogs = 0,
@@ -37,11 +39,20 @@ export default function HabitQuickActions({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isPending, startTransition] = useTransition()
+  // Cible dynamique permettant de savoir quand un compteur est considéré comme terminé.
+  const [requiredCount, setRequiredCount] = useState(() => {
+    if (typeof counterRequired === 'number' && counterRequired > 0) {
+      return counterRequired
+    }
+    return trackingMode === 'counter' ? Number.POSITIVE_INFINITY : 1
+  })
 
   // Déduit les états d'UI en fonction de la configuration de suivi.
   const isCounterMode = trackingMode === 'counter'
   const hasValue = count > 0
-  const disablePrimary = isSubmitting || isPending || (!isCounterMode && hasValue)
+  const isFullyValidated = count >= requiredCount
+  const disablePrimary = isSubmitting || isPending || isFullyValidated
+  const remaining = Number.isFinite(requiredCount) ? Math.max(0, requiredCount - count) : null
 
   // Valeurs sécurisées utilisées pour calculer les punchlines.
   const safeStreak = Math.max(0, streak)
@@ -57,6 +68,10 @@ export default function HabitQuickActions({
       if (!res.ok) throw new Error(await res.text())
       const data = await res.json()
       const newCount = typeof data.count === 'number' ? data.count : count + 1
+      if (typeof data.counterRequired === 'number' && data.counterRequired > 0) {
+        // Stocke le seuil renvoyé par l'API afin d'éviter toute divergence côté client.
+        setRequiredCount(data.counterRequired)
+      }
       setCount(newCount)
       startTransition(() => router.refresh())
 
@@ -100,6 +115,7 @@ export default function HabitQuickActions({
 
   // Texte du bouton principal selon type/mode de suivi.
   const primaryLabel = () => {
+    if (isFullyValidated) return 'Validée ✓'
     if (habitType === 'bad') {
       if (hasValue && !isCounterMode) return 'Craquée'
       return '+ Craquage'
@@ -123,7 +139,6 @@ export default function HabitQuickActions({
         >
           {primaryLabel()}
         </button>
-
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
             <button

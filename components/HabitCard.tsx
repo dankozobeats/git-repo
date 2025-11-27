@@ -16,12 +16,30 @@ export type HabitWithMeta = Database['public']['Tables']['habits']['Row'] & {
 type HabitCardProps = {
   habit: HabitWithMeta
   onActionComplete?: () => void
+  hideWhenCompleted?: boolean
 }
 
-export default function HabitCard({ habit, onActionComplete }: HabitCardProps) {
+const resolveCounterRequirement = (habit: HabitWithMeta) => {
+  if (habit.tracking_mode === 'counter' && typeof habit.daily_goal_value === 'number' && habit.daily_goal_value > 0) {
+    return habit.daily_goal_value
+  }
+  return 1
+}
+
+export default function HabitCard({ habit, onActionComplete, hideWhenCompleted = false }: HabitCardProps) {
   const icon = habit.icon || (habit.type === 'bad' ? '🔥' : '✨')
   const hasLoggedToday = habit.todayCount > 0
   const badgeLabel = habit.type === 'bad' ? 'craquage' : 'action'
+  const counterRequired = resolveCounterRequirement(habit)
+  const counterCurrent = Math.max(0, habit.todayCount)
+  const remaining = Math.max(0, counterRequired - counterCurrent)
+  const isCounterHabit = counterRequired > 1
+  const isCompleted = counterCurrent >= counterRequired
+
+  // Optionnel : permet de masquer entièrement la carte quand on n'affiche que les habitudes à valider.
+  if (hideWhenCompleted && isCompleted) {
+    return null
+  }
 
   return (
     <div
@@ -56,6 +74,20 @@ export default function HabitCard({ habit, onActionComplete }: HabitCardProps) {
             {habit.description && (
               <span className="hidden text-sm text-gray-400 md:block">{habit.description}</span>
             )}
+            {isCounterHabit && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <span
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                    isCompleted ? 'border-emerald-400/40 text-emerald-200' : 'border-sky-400/40 text-sky-200'
+                  }`}
+                >
+                  {isCompleted ? 'Validée ✓' : `${remaining} restant${remaining > 1 ? 's' : ''}`}
+                </span>
+                <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white/70">
+                  {counterCurrent}/{counterRequired}
+                </span>
+              </div>
+            )}
           </div>
         </Link>
 
@@ -78,6 +110,7 @@ export default function HabitCard({ habit, onActionComplete }: HabitCardProps) {
             habitType={habit.type as 'good' | 'bad'}
             trackingMode={habit.tracking_mode}
             initialCount={habit.todayCount}
+            counterRequired={counterRequired}
             habitName={habit.name}
             variant="compact"
             onActionComplete={onActionComplete}
@@ -90,6 +123,7 @@ export default function HabitCard({ habit, onActionComplete }: HabitCardProps) {
             habitType={habit.type as 'good' | 'bad'}
             trackingMode={habit.tracking_mode}
             initialCount={habit.todayCount}
+            counterRequired={counterRequired}
             habitName={habit.name}
             streak={habit.current_streak ?? undefined}
             totalLogs={habit.total_logs ?? undefined}

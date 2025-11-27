@@ -6,8 +6,8 @@ import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import CategoryManager from '@/components/CategoryManager'
-import CoachRoastBubble from '@/components/CoachRoastBubble'
 import HabitToast from '@/components/HabitToast'
+import AICoachMessage from '@/components/AICoachMessage' // Design unifié pour bulles IA tempo et toasts premium.
 import { Search as SearchIcon, ChevronDown } from 'lucide-react'
 import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
 import type { Database } from '@/types/database'
@@ -29,6 +29,7 @@ type HabitSectionsClientProps = {
   showBadHabits?: boolean
   showGoodHabits?: boolean
   coachMessage?: string
+  showHabitDescriptions?: boolean
 }
 
 type CategoryStat = {
@@ -38,7 +39,24 @@ type CategoryStat = {
   count: number
 }
 
-type CategoryFilterValue = 'all' | 'uncategorized' | string
+type CategoryFilterValue = 'all' | 'uncategorized' | 'pending' | 'completed' | string
+
+// Calcule la cible quotidienne d'un compteur (1 pour les binaires).
+const resolveCounterRequirement = (habit: HabitRow) => {
+  if (habit.tracking_mode === 'counter' && typeof habit.daily_goal_value === 'number' && habit.daily_goal_value > 0) {
+    return habit.daily_goal_value
+  }
+  return 1
+}
+
+// Retourne l'état actuel d'un compteur pour faciliter les filtres/badges.
+const buildCounterState = (habit: HabitRow, todayCount: number) => {
+  const required = resolveCounterRequirement(habit)
+  const current = Math.max(0, todayCount)
+  const remaining = Math.max(0, required - current)
+  const isCompleted = current >= required
+  return { required, current, remaining, isCompleted }
+}
 
 export default function HabitSectionsClient({
   goodHabits,
@@ -49,15 +67,22 @@ export default function HabitSectionsClient({
   showBadHabits = true,
   showGoodHabits = true,
   coachMessage,
+  showHabitDescriptions = true,
 }: HabitSectionsClientProps) {
   // États locaux pour piloter recherche, filtres et UI responsive.
   const [searchQuery, setSearchQuery] = useState('')
-  const [goodCategoryFilter, setGoodCategoryFilter] = useState<CategoryFilterValue>('all')
-  const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('all')
+  // Filtres statuts par défaut : on ne montre que les habitudes à valider au premier rendu.
+  const [goodCategoryFilter, setGoodCategoryFilter] = useState<CategoryFilterValue>('pending')
+  const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('pending')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   // Stocke le message du toast premium pour le diffuser dans la zone feedback.
   const [toastMessage, setToastMessage] = useState<{ message: string; variant: 'success' | 'error' } | null>(null)
+  // Contrôle la bulle coach roast locale pour répliquer la disparition progressive.
+  const [coachBanner, setCoachBanner] = useState<string | null>(null)
+  const [coachVisible, setCoachVisible] = useState(false)
+  const coachHideTimerRef = useRef<number | null>(null)
+  const coachCleanupTimerRef = useRef<number | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const categoriesList = categories ?? []
   const todayCountsMap = useMemo(
@@ -75,24 +100,40 @@ export default function HabitSectionsClient({
     [searchQuery]
   )
 
-  const filterByCategory = useCallback((habitList: HabitRow[], filterValue: CategoryFilterValue) => {
-    if (filterValue === 'all') return habitList
-    if (filterValue === 'uncategorized') {
-      return habitList.filter(habit => !habit.category_id)
-    }
-    return habitList.filter(habit => habit.category_id === filterValue)
-  }, [])
+  const filterByMenuSelection = useCallback(
+    (habitList: HabitRow[], filterValue: CategoryFilterValue) => {
+      return habitList.filter(habit => {
+        const todayCount = todayCountsMap.get(habit.id) ?? 0
+        const counterState = buildCounterState(habit, todayCount)
+
+        if (filterValue === 'pending') {
+          return !counterState.isCompleted
+        }
+        if (filterValue === 'completed') {
+          return counterState.isCompleted
+        }
+        if (filterValue === 'uncategorized') {
+          return !habit.category_id
+        }
+        if (filterValue === 'all') {
+          return true
+        }
+        return habit.category_id === filterValue
+      })
+    },
+    [todayCountsMap]
+  )
 
   // Liste filtrée affichée dans la section "bonnes habitudes".
   const filteredGoodHabits = useMemo(
-    () => filterByCategory(filterByQuery(goodHabits), goodCategoryFilter),
-    [filterByCategory, filterByQuery, goodHabits, goodCategoryFilter]
+    () => filterByMenuSelection(filterByQuery(goodHabits), goodCategoryFilter),
+    [filterByMenuSelection, filterByQuery, goodHabits, goodCategoryFilter]
   )
 
   // Liste filtrée affichée dans la section "mauvaises habitudes".
   const filteredBadHabits = useMemo(
-    () => filterByCategory(filterByQuery(badHabits), badCategoryFilter),
-    [badHabits, badCategoryFilter, filterByCategory, filterByQuery]
+    () => filterByMenuSelection(filterByQuery(badHabits), badCategoryFilter),
+    [badHabits, badCategoryFilter, filterByMenuSelection, filterByQuery]
   )
 
   // Résultats surlignés lorsque l'utilisateur tape dans la barre de recherche.
@@ -139,73 +180,115 @@ export default function HabitSectionsClient({
     setToastMessage({ message, variant })
   }, [])
 
+  // Synchronise la bannière coach côté client uniquement pour éviter les soucis SSR (window inexistant serveur).
+  useEffect(() => {
+    if (!coachMessage) {
+      setCoachVisible(false)
+      setCoachBanner(null)
+      if (coachHideTimerRef.current) window.clearTimeout(coachHideTimerRef.current)
+      if (coachCleanupTimerRef.current) window.clearTimeout(coachCleanupTimerRef.current)
+      return
+    }
+    setCoachBanner(coachMessage)
+    setCoachVisible(true)
+    if (coachHideTimerRef.current) window.clearTimeout(coachHideTimerRef.current)
+    if (coachCleanupTimerRef.current) window.clearTimeout(coachCleanupTimerRef.current)
+    coachHideTimerRef.current = window.setTimeout(() => {
+      setCoachVisible(false)
+      coachCleanupTimerRef.current = window.setTimeout(() => setCoachBanner(null), 400)
+    }, 6500)
+    return () => {
+      if (coachHideTimerRef.current) window.clearTimeout(coachHideTimerRef.current)
+      if (coachCleanupTimerRef.current) window.clearTimeout(coachCleanupTimerRef.current)
+    }
+  }, [coachMessage])
+
   const hasSearch = Boolean(searchQuery.trim())
+
+  // Prépare la zone de feedback : accompagne la bulle coach (auto-hide) et le toast premium.
+  const feedbackSection = toastMessage || coachBanner ? (
+    <div id="habit-feedback-area" className="mx-auto w-full max-w-6xl">
+      {coachBanner && (
+        <div
+          className={`overflow-hidden transition-[max-height,opacity,margin] duration-500 ease-in-out ${
+            coachVisible ? 'max-h-96 opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0'
+          }`}
+        >
+          <AICoachMessage
+            // Variante roast pour conserver le ton sarcastique tout en gardant le design premium partagé.
+            message={coachBanner}
+            variant='roast'
+          />
+        </div>
+      )}
+      {toastMessage && (
+        <HabitToast
+          message={toastMessage.message}
+          variant={toastMessage.variant}
+          onComplete={() => setToastMessage(null)}
+        />
+      )}
+    </div>
+  ) : null
+
+  // Barre de recherche plein écran pour aligner les contrôles avec la grille principale.
+  const searchBarSection = (
+    <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] px-2 py-3 sm:px-4 sm:py-4">
+      <div className="mx-auto w-full max-w-6xl space-y-3 rounded-3xl border border-white/10 bg-black/40 px-4 py-4 shadow-inner shadow-black/30 backdrop-blur">
+        <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
+        <div className="flex w-full flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={event => handleSearchChange(event.target.value)}
+              placeholder="Rechercher une habitude…"
+              className="w-full rounded-2xl border border-white/15 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
+              aria-label="Rechercher une habitude"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => searchInputRef.current?.focus()}
+            className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+          >
+            Rechercher
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Résultats dynamiques centrés pour conserver la même largeur que les sections principales.
+  const searchResultsSection = hasSearch ? (
+    <div id="searchResults" className="mx-auto w-full max-w-6xl space-y-3 rounded-3xl border border-white/10 bg-black/30 px-4 py-4 shadow-inner shadow-black/40">
+      {searchResults.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-center text-sm text-white/70">
+          Aucun résultat pour « {searchQuery} »
+        </div>
+      ) : (
+        searchResults.map(habit => (
+          <HabitRowCard
+            key={habit.id}
+            habit={habit}
+            type={habit.type as 'good' | 'bad'}
+            todayCount={todayCountsMap.get(habit.id) ?? 0}
+            onHabitValidated={handleHabitValidated}
+            showDescriptions={showHabitDescriptions}
+          />
+        ))
+      )}
+    </div>
+  ) : null
 
   // Rend la zone principale: recherche sticky, sections filtrées et gestion des catégories.
   return (
     <section className="relative z-0 space-y-6">
-      {/* Regroupe la zone de feedback (toast premium + coach) pour garantir la bonne position dans le flux. */}
-      <div id="habit-feedback-area" className="space-y-3">
-        {toastMessage && (
-          <HabitToast
-            message={toastMessage.message}
-            variant={toastMessage.variant}
-            onComplete={() => setToastMessage(null)}
-          />
-        )}
-        {coachMessage &&
-          (isMobile ? (
-            <CoachRoastBubble message={coachMessage} variant="toast" />
-          ) : (
-            <CoachRoastBubble message={coachMessage} variant="inline" />
-          ))}
-      </div>
-
-      <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] px-2 py-3 sm:px-4 sm:py-4">
-        <div className="space-y-3 rounded-3xl border border-white/10 bg-black/30 px-3 py-4 sm:px-4 shadow-inner shadow-black/30">
-          <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={event => handleSearchChange(event.target.value)}
-                placeholder="Rechercher une habitude…"
-                className="w-full rounded-2xl border border-white/10 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-[#FF4D4D]/60 focus:outline-none focus:ring-2 focus:ring-[#FF4D4D]/20"
-                aria-label="Rechercher une habitude"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => searchInputRef.current?.focus()}
-              className="rounded-2xl border border-white/15 bg-[#0d1326]/80 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
-            >
-              Rechercher
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {hasSearch && (
-        <div id="searchResults" className="space-y-3 rounded-3xl border border-white/10 bg-black/30 px-3 py-4 sm:px-4">
-          {searchResults.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-center text-sm text-white/70">
-              Aucun résultat pour « {searchQuery} »
-            </div>
-          ) : (
-            searchResults.map(habit => (
-              <HabitRowCard
-                key={habit.id}
-                habit={habit}
-                type={habit.type as 'good' | 'bad'}
-                todayCount={todayCountsMap.get(habit.id) ?? 0}
-              />
-            ))
-          )}
-        </div>
-      )}
+      {feedbackSection}
+      {searchBarSection}
+      {searchResultsSection}
 
       <div
         id="mainScrollArea"
@@ -227,6 +310,7 @@ export default function HabitSectionsClient({
               todayCountsMap={todayCountsMap}
               containerId="goodHabitsList"
               onHabitValidated={handleHabitValidated}
+              showDescriptions={showHabitDescriptions}
             />
           </section>
         )}
@@ -247,6 +331,7 @@ export default function HabitSectionsClient({
               todayCountsMap={todayCountsMap}
               containerId="badHabitsList"
               onHabitValidated={handleHabitValidated}
+              showDescriptions={showHabitDescriptions}
             />
           </section>
         )}
@@ -285,21 +370,24 @@ type HabitSectionHeaderProps = {
 
 // Entête de section qui expose le sélecteur de catégorie et le nombre d'éléments.
 function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories }: HabitSectionHeaderProps) {
+  // Layout responsive: le filtre passe en colonne sous le titre sur mobile et reste aligné à droite sur desktop.
   return (
-    <>
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <h3 className="text-2xl font-semibold text-white">
         {title} <span className="text-white/50">({count})</span>
       </h3>
-      <div className="w-full sm:w-64">
-        <label htmlFor={filterId} className="mb-1 block text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+      <div className="flex w-full flex-col gap-1 md:w-auto md:max-w-sm">
+        <label htmlFor={filterId} className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
           Filtre par catégorie
         </label>
         <select
           id={filterId}
           value={filterValue}
           onChange={event => onFilterChange(event.target.value as CategoryFilterValue)}
-          className="mobile-ios-filter w-full rounded-2xl border border-white/15 bg-[#0d1326]/80 px-4 py-3 text-sm font-medium text-white shadow-inner shadow-black/30 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
+          className="mobile-ios-filter w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/90 shadow-inner shadow-black/30 backdrop-blur focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
         >
+          <option value="pending">Habitudes à valider</option>
+          <option value="completed">Habitudes totalement validées</option>
           <option value="all">Toutes les catégories</option>
           {categories.map(category => (
             <option key={category.id} value={category.id}>
@@ -309,7 +397,7 @@ function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChang
           <option value="uncategorized">Sans catégorie</option>
         </select>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -319,10 +407,11 @@ type HabitListProps = {
   todayCountsMap: Map<string, number>
   containerId: string
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
+  showDescriptions: boolean
 }
 
-// Affiche toutes les cartes d'une section, ou un message vide si aucune correspondance.
-function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated }: HabitListProps) {
+// Affiche toutes les cartes d'une section en conservant une grille full-width, ou un message vide si aucune correspondance.
+function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated, showDescriptions }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -332,16 +421,19 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
   }
 
   return (
-    <div className="flex flex-col gap-4" id={containerId}>
-      {habits.map(habit => (
-        <HabitRowCard
-          key={habit.id}
-          habit={habit}
-          type={type}
-          todayCount={todayCountsMap.get(habit.id) ?? 0}
-          onHabitValidated={onHabitValidated}
-        />
-      ))}
+    <div className="w-full" id={containerId}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+        {habits.map(habit => (
+          <HabitRowCard
+            key={habit.id}
+            habit={habit}
+            type={type}
+            todayCount={todayCountsMap.get(habit.id) ?? 0}
+            onHabitValidated={onHabitValidated}
+            showDescriptions={showDescriptions}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -351,12 +443,17 @@ type HabitRowCardProps = {
   type: 'good' | 'bad'
   todayCount: number
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
+  showDescriptions: boolean
 }
 
-// Carte principale d'une habitude avec un lien vers le détail et les actions rapides.
-function HabitRowCard({ habit, type, todayCount, onHabitValidated }: HabitRowCardProps) {
+// Carte principale d'une habitude avec un lien vers le détail et les actions rapides en style glassmorphism premium.
+function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions }: HabitRowCardProps) {
+  // Calcule l'état courant pour afficher le badge restant sans attendre un refresh serveur.
+  const counterState = buildCounterState(habit, todayCount)
+  const showCounterBadge = counterState.required > 1
+
   return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-black/20 px-3 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+    <div className="group flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between">
       <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
         <div
           className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"
@@ -364,8 +461,31 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated }: HabitRowCar
         >
           {habit.icon || (type === 'bad' ? '🔥' : '✨')}
         </div>
-        <div>
+        <div className="space-y-1">
           <p className="text-base font-semibold text-white sm:text-lg">{habit.name}</p>
+          {showDescriptions && habit.description && (
+            <p
+              className="text-sm text-white/60"
+              // Limite la description à deux lignes pour éviter les débordements dans la carte.
+              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            >
+              {habit.description}
+            </p>
+          )}
+          {showCounterBadge && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
+                }`}
+              >
+                {counterState.isCompleted ? 'Validée ✓' : `${counterState.remaining} restant${counterState.remaining > 1 ? 's' : ''}`}
+              </span>
+              <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white/70">
+                {counterState.current}/{counterState.required}
+              </span>
+            </div>
+          )}
         </div>
       </Link>
       <div className="w-full sm:w-auto">
@@ -374,6 +494,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated }: HabitRowCar
           habitType={type}
           trackingMode={habit.tracking_mode as 'binary' | 'counter'}
           initialCount={todayCount}
+          counterRequired={counterState.required}
           habitName={habit.name}
           streak={habit.current_streak ?? 0}
           totalLogs={habit.total_logs ?? undefined}
