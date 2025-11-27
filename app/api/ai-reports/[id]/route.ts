@@ -1,3 +1,4 @@
+// Supprime un rapport IA spécifique appartenant à l'utilisateur connecté.
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
@@ -15,6 +16,7 @@ export async function DELETE(
     )
   }
 
+  // Supprime uniquement si l'ID appartient à l'utilisateur courant pour éviter les fuites.
   const { error } = await supabase
     .from("ai_reports")
     .delete()
@@ -30,4 +32,3 @@ export async function DELETE(
 
   return NextResponse.json({ success: true })
 }
-

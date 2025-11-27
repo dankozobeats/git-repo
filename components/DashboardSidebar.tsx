@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { MouseEvent } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -49,9 +50,20 @@ type DashboardSidebarProps = {
 export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avatarInitial }: DashboardSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [navSearch, setNavSearch] = useState('')
+  const [sidebarHidden, setSidebarHidden] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const token = window.localStorage.getItem('auth_token')
+      setSidebarHidden(!token)
+    } catch {
+      setSidebarHidden(true)
+    }
+  }, [])
 
   return (
-    <>
+    <div id="sidebar" className={sidebarHidden ? 'hidden' : 'contents'}>
       <MobileHamburgerMenu onOpen={() => setMobileOpen(true)} isMenuOpen={mobileOpen} />
 
       <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] md:flex z-[9999]">
@@ -103,7 +115,7 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -180,6 +192,20 @@ function NavLinks({
     return <p className="mt-2 text-xs text-white/40">Aucune entrée ne correspond à la recherche.</p>
   }
 
+  const handleGuardedNavigate = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (typeof window === 'undefined') return
+      const token = window.localStorage.getItem('auth_token')
+      if (!token) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
+      onNavigate?.()
+    },
+    [onNavigate]
+  )
+
   return (
     <nav className="mt-4 space-y-1">
       {filteredItems.map(item => {
@@ -193,7 +219,7 @@ function NavLinks({
               isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
             }`}
             aria-current={isActive ? 'page' : undefined}
-            onClick={onNavigate}
+            onClick={handleGuardedNavigate}
           >
             <span
               className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition ${

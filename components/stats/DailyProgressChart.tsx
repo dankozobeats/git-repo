@@ -1,5 +1,7 @@
 'use client'
 
+// Carte client qui affiche la courbe de progression quotidienne sur 30 jours via Recharts.
+
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 export type DailyProgressPoint = {
@@ -12,10 +14,12 @@ type DailyProgressChartProps = {
 }
 
 export default function DailyProgressChart({ data }: DailyProgressChartProps) {
+  // Classe partagée pour harmoniser le style vitré des cartes.
   const cardClass =
     'glass-card min-h-[320px] w-full p-4 sm:p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
   const axisColor = '#C5C8D0'
 
+  // Rend le titre puis le composant LineChart responsive.
   return (
     <div className={cardClass}>
       <div className="flex flex-col gap-1 text-white">

@@ -1,10 +1,13 @@
 'use client'
 
+// Tableau de bord client qui gère recherche, filtres et affichage des habitudes.
+
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import CategoryManager from '@/components/CategoryManager'
 import CoachRoastBubble from '@/components/CoachRoastBubble'
+import HabitToast from '@/components/HabitToast'
 import { Search as SearchIcon, ChevronDown } from 'lucide-react'
 import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
 import type { Database } from '@/types/database'
@@ -47,17 +50,22 @@ export default function HabitSectionsClient({
   showGoodHabits = true,
   coachMessage,
 }: HabitSectionsClientProps) {
+  // États locaux pour piloter recherche, filtres et UI responsive.
   const [searchQuery, setSearchQuery] = useState('')
   const [goodCategoryFilter, setGoodCategoryFilter] = useState<CategoryFilterValue>('all')
   const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('all')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  // Stocke le message du toast premium pour le diffuser dans la zone feedback.
+  const [toastMessage, setToastMessage] = useState<{ message: string; variant: 'success' | 'error' } | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const categoriesList = categories ?? []
   const todayCountsMap = useMemo(
+    // Convertit l'objet provenant du serveur en Map pour des lookups rapides.
     () => new Map<string, number>(Object.entries(todayCounts).map(([id, value]) => [id, value])),
     [todayCounts]
   )
+  // Filtre insensible à la casse basé sur le champ name.
   const filterByQuery = useCallback(
     (habitList: HabitRow[]) => {
       const normalized = searchQuery.trim().toLowerCase()
@@ -75,26 +83,31 @@ export default function HabitSectionsClient({
     return habitList.filter(habit => habit.category_id === filterValue)
   }, [])
 
+  // Liste filtrée affichée dans la section "bonnes habitudes".
   const filteredGoodHabits = useMemo(
     () => filterByCategory(filterByQuery(goodHabits), goodCategoryFilter),
     [filterByCategory, filterByQuery, goodHabits, goodCategoryFilter]
   )
 
+  // Liste filtrée affichée dans la section "mauvaises habitudes".
   const filteredBadHabits = useMemo(
     () => filterByCategory(filterByQuery(badHabits), badCategoryFilter),
     [badHabits, badCategoryFilter, filterByCategory, filterByQuery]
   )
 
+  // Résultats surlignés lorsque l'utilisateur tape dans la barre de recherche.
   const searchResults = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase()
     if (!normalized) return []
     return [...goodHabits, ...badHabits].filter(habit => habit.name.toLowerCase().includes(normalized))
   }, [goodHabits, badHabits, searchQuery])
 
+  // Callback partagée entre input et bouton, simplifie les tests.
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value)
   }, [])
 
+  // Active la recherche depuis FloatingQuickActions en scrollant/focus l'input.
   useEffect(() => {
     const handleSearchOpen = () => {
       scrollToSearchSection()
@@ -109,6 +122,7 @@ export default function HabitSectionsClient({
     }
   }, [])
 
+  // Détecte les breakpoints pour ajuster l'affichage des bulles coach.
   useEffect(() => {
     const update = () => {
       setIsMobile(window.innerWidth < 768)
@@ -120,11 +134,32 @@ export default function HabitSectionsClient({
     }
   }, [])
 
+  // Handler centralisé pour afficher le toast lorsqu'une habitude est validée (succès ou erreur).
+  const handleHabitValidated = useCallback((message: string, variant: 'success' | 'error' = 'success') => {
+    setToastMessage({ message, variant })
+  }, [])
+
   const hasSearch = Boolean(searchQuery.trim())
 
+  // Rend la zone principale: recherche sticky, sections filtrées et gestion des catégories.
   return (
     <section className="relative z-0 space-y-6">
-      {coachMessage && (isMobile ? <CoachRoastBubble message={coachMessage} variant="toast" /> : <CoachRoastBubble message={coachMessage} variant="inline" />)}
+      {/* Regroupe la zone de feedback (toast premium + coach) pour garantir la bonne position dans le flux. */}
+      <div id="habit-feedback-area" className="space-y-3">
+        {toastMessage && (
+          <HabitToast
+            message={toastMessage.message}
+            variant={toastMessage.variant}
+            onComplete={() => setToastMessage(null)}
+          />
+        )}
+        {coachMessage &&
+          (isMobile ? (
+            <CoachRoastBubble message={coachMessage} variant="toast" />
+          ) : (
+            <CoachRoastBubble message={coachMessage} variant="inline" />
+          ))}
+      </div>
 
       <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] px-2 py-3 sm:px-4 sm:py-4">
         <div className="space-y-3 rounded-3xl border border-white/10 bg-black/30 px-3 py-4 sm:px-4 shadow-inner shadow-black/30">
@@ -191,6 +226,7 @@ export default function HabitSectionsClient({
               type="good"
               todayCountsMap={todayCountsMap}
               containerId="goodHabitsList"
+              onHabitValidated={handleHabitValidated}
             />
           </section>
         )}
@@ -210,6 +246,7 @@ export default function HabitSectionsClient({
               type="bad"
               todayCountsMap={todayCountsMap}
               containerId="badHabitsList"
+              onHabitValidated={handleHabitValidated}
             />
           </section>
         )}
@@ -246,6 +283,7 @@ type HabitSectionHeaderProps = {
   categories: CategoryRow[]
 }
 
+// Entête de section qui expose le sélecteur de catégorie et le nombre d'éléments.
 function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories }: HabitSectionHeaderProps) {
   return (
     <>
@@ -280,9 +318,11 @@ type HabitListProps = {
   type: 'good' | 'bad'
   todayCountsMap: Map<string, number>
   containerId: string
+  onHabitValidated: (message: string, variant?: 'success' | 'error') => void
 }
 
-function HabitList({ habits, type, todayCountsMap, containerId }: HabitListProps) {
+// Affiche toutes les cartes d'une section, ou un message vide si aucune correspondance.
+function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -299,6 +339,7 @@ function HabitList({ habits, type, todayCountsMap, containerId }: HabitListProps
           habit={habit}
           type={type}
           todayCount={todayCountsMap.get(habit.id) ?? 0}
+          onHabitValidated={onHabitValidated}
         />
       ))}
     </div>
@@ -309,9 +350,11 @@ type HabitRowCardProps = {
   habit: HabitRow
   type: 'good' | 'bad'
   todayCount: number
+  onHabitValidated: (message: string, variant?: 'success' | 'error') => void
 }
 
-function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
+// Carte principale d'une habitude avec un lien vers le détail et les actions rapides.
+function HabitRowCard({ habit, type, todayCount, onHabitValidated }: HabitRowCardProps) {
   return (
     <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-black/20 px-3 py-4 shadow-lg shadow-black/20 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
@@ -335,6 +378,7 @@ function HabitRowCard({ habit, type, todayCount }: HabitRowCardProps) {
           streak={habit.current_streak ?? 0}
           totalLogs={habit.total_logs ?? undefined}
           totalCraquages={habit.total_craquages ?? undefined}
+          onHabitValidated={onHabitValidated}
         />
       </div>
     </div>

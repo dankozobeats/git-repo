@@ -1,5 +1,7 @@
 'use client'
 
+// Graphique Chart.js montrant les rapports générés et leur score moyen par jour.
+
 import {
   Chart as ChartJS,
   LineElement,
@@ -21,6 +23,7 @@ type GraphAIStatsProps = {
 export default function GraphAIStats({ reports }: GraphAIStatsProps) {
   if (!reports || reports.length === 0) return null
 
+  // Regroupe les rapports par jour pour calculer le volume et la moyenne des scores.
   const grouped = new Map<
     string,
     {
@@ -55,6 +58,7 @@ export default function GraphAIStats({ reports }: GraphAIStatsProps) {
     return Math.round(disciplineSum / disciplineCount)
   })
 
+  // Jeu de données Chart.js avec deux axes Y (nombre vs score).
   const data = {
     labels,
     datasets: [
@@ -116,6 +120,7 @@ export default function GraphAIStats({ reports }: GraphAIStatsProps) {
     },
   }
 
+  // Carte stylisée contenant le graphique responsive.
   return (
     <div className="rounded-3xl border border-white/5 bg-[#0F0F13] p-6 shadow-xl shadow-black/30">
       <h2 className="text-xl font-bold mb-4 text-white">Activité IA glissante</h2>

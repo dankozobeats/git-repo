@@ -1,8 +1,11 @@
+// Route API qui génère un rapport détaillé en interrogeant Gemini.
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Traite une demande de génération de rapport IA sur une période donnée.
 export async function POST(request: NextRequest) {
   try {
+    // Client Supabase pour vérifier l'authentification server-side.
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -10,6 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Récupère la période demandée (7/30/90 jours par défaut).
     const { period = '30j' } = await request.json()
 
     const daysMap: Record<string, number> = { '7j': 7, '30j': 30, '90j': 90 }
@@ -19,6 +23,7 @@ export async function POST(request: NextRequest) {
     const startDateStr = startDate.toISOString().split('T')[0]
 
     // ---- Fetch data ----
+    // Récupère toutes les habitudes actives pour distinguer bonnes/mauvaises.
     const { data: habits } = await supabase
       .from('habits')
       .select('*')
@@ -28,6 +33,7 @@ export async function POST(request: NextRequest) {
     const goodHabits = habits?.filter(h => h.type === 'good') || []
     const badHabits = habits?.filter(h => h.type === 'bad') || []
 
+    // Logs "good" issus de la table principale.
     const { data: logs } = await supabase
       .from('logs')
       .select('*')
@@ -35,6 +41,7 @@ export async function POST(request: NextRequest) {
       .gte('completed_date', startDateStr)
       .order('completed_date', { ascending: true })
 
+    // Évènements "bad" qui peuvent contenir plusieurs occurrences par jour.
     const { data: events } = await supabase
       .from('habit_events')
       .select('*')
@@ -46,6 +53,7 @@ export async function POST(request: NextRequest) {
     const badLogs = (events || []).filter(e => badHabits.find(h => h.id === e.habit_id))
 
     // ---- Prompt Gemini ----
+    // Prompt textuel envoyé à Gemini qui inclut toutes les statistiques agrégées.
     const prompt = `Tu es un coach en discipline personnelle. Analyse ces données et génère un rapport factuel, direct, sans flatterie.
 
 Période : ${period} (${days} jours)
@@ -80,6 +88,7 @@ Génère un rapport en Markdown avec :
 ## 7. Conclusion`
 
     // ---- Appel Gemini corrigé ----
+    // Appel direct à l'API Gemini (restreint par la clé côté serveur).
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,    
       {
@@ -107,6 +116,7 @@ Génère un rapport en Markdown avec :
 
     const report = data.candidates?.[0]?.content?.parts?.[0]?.text || '(Pas de rapport généré)'
 
+// Persiste le rapport généré pour pouvoir lister l'historique côté UI.
 await supabase.from('ai_reports').insert({
   user_id: user.id,
   period,

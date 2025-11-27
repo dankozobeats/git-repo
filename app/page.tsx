@@ -1,3 +1,4 @@
+// Page Dashboard principale : agrège les habitudes et statistiques quotidiennes via Supabase.
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
@@ -21,6 +22,7 @@ type CategoryStat = {
   count: number
 }
 export default async function Home() {
+  // Client Supabase serveur requis pour récupérer les données avant rendu.
   const supabase = await createClient()
 
   const {
@@ -31,6 +33,7 @@ export default async function Home() {
     redirect('/login')
   }
 
+  // Charge les habitudes "bad" actives de l'utilisateur connecté.
   const { data: badHabits } = await supabase
     .from('habits')
     .select('*')
@@ -39,6 +42,7 @@ export default async function Home() {
     .eq('type', 'bad')
     .order('created_at', { ascending: false })
 
+  // Charge également les habitudes "good" encore actives.
   const { data: goodHabits } = await supabase
     .from('habits')
     .select('*')
@@ -47,6 +51,7 @@ export default async function Home() {
     .eq('type', 'good')
     .order('created_at', { ascending: false })
 
+  // Catégories de classement nécessaires pour les stats combinées.
   const { data: categories } = await supabase
     .from('categories')
     .select('*')
@@ -54,12 +59,14 @@ export default async function Home() {
     .order('name', { ascending: true })
 
   const today = getTodayDateISO()
+  // Récupère les logs de la journée (mode classique).
   const { data: todayLogs } = await supabase
     .from('logs')
     .select('habit_id')
     .eq('user_id', user.id)
     .eq('completed_date', today)
 
+  // Récupère les événements du mode compteur (multi-incréments).
   const { data: todayEvents } = await supabase
     .from('habit_events')
     .select('habit_id')
@@ -70,6 +77,7 @@ export default async function Home() {
   const safeBadHabits = badHabits ?? []
   const safeGoodHabits = goodHabits ?? []
 
+  // Map interne [habitId -> nombre d'actions aujourd'hui] fusionnant logs et events.
   const todayCounts = new Map<string, number>()
   ;(todayLogs || []).forEach(log => {
     todayCounts.set(log.habit_id, 1)
@@ -84,12 +92,14 @@ export default async function Home() {
     safeGoodHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
   const hasActivityToday = badHabitsLoggedToday + goodHabitsLoggedToday > 0
 
+  // Agrège toutes les habitudes actives pour construire les stats UI.
   const allActiveHabits = [...safeBadHabits, ...safeGoodHabits]
   const categoryStats = buildCategoryStats(categoriesList, allActiveHabits)
   const totalHabits = allActiveHabits.length
   const todayCountsRecord: Record<string, number> = Object.fromEntries(todayCounts)
   const randomRoastBanner = getRandomMessage()
 
+  // Génère un message contextuel selon l'activité du jour (utilisé dans la carte focus).
   const getSmartMessage = () => {
     const totalToday = badHabitsLoggedToday + goodHabitsLoggedToday
 
@@ -156,6 +166,7 @@ export default async function Home() {
     }
   }
 
+  // Prépare les textes dynamiques et préférences d'affichage stockées en cookies.
   const { message: displayMessage } = getSmartMessage()
   const heroSubtitle = hasActivityToday
     ? 'Les statistiques se mettent à jour immédiatement à chaque action.'
@@ -171,6 +182,7 @@ export default async function Home() {
     { label: 'Habitudes actives', value: totalHabits, accent: '#E0E0E0' },
   ]
 
+  // Rend la page dashboard côté serveur en passant les données nécessaires au client.
   return (
     <main className="min-h-screen overflow-visible bg-[#0c0f1a] text-[#E0E0E0]">
       <div className="mx-auto max-w-5xl space-y-8 px-2 py-6 sm:px-4 md:px-10 md:py-10">
@@ -237,9 +249,11 @@ export default async function Home() {
   )
 }
 
+// Combine les catégories et habitudes pour compter combien de routines par catégorie.
 function buildCategoryStats(categories: CategoryRow[], habits: HabitRow[]): CategoryStat[] {
   const baseStats = new Map<string, CategoryStat>()
 
+  // Pré-initialise chaque catégorie connue avec un compteur à 0.
   categories.forEach(category => {
     baseStats.set(category.id, {
       id: category.id,
@@ -249,6 +263,7 @@ function buildCategoryStats(categories: CategoryRow[], habits: HabitRow[]): Cate
     })
   })
 
+  // Incrémente les compteurs associés aux habitudes actives.
   habits.forEach(habit => {
     const categoryId = habit.category_id
     if (categoryId && baseStats.has(categoryId)) {

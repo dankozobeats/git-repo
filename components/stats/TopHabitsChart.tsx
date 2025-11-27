@@ -1,5 +1,7 @@
 'use client'
 
+// Bar chart vertical affichant les habitudes les plus complétées.
+
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 export type TopHabitPoint = {
@@ -12,10 +14,12 @@ type TopHabitsChartProps = {
 }
 
 export default function TopHabitsChart({ data }: TopHabitsChartProps) {
+  // Style cartouche aligné sur les autres widgets analytics.
   const cardClass =
     'glass-card min-h-[320px] w-full p-4 sm:p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
   const axisColor = '#C5C8D0'
 
+  // Conteneur complet abritant un bar chart horizontal.
   return (
     <div className={cardClass}>
       <div className="flex flex-col gap-1 text-white">

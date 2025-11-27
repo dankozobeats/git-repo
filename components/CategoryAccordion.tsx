@@ -1,5 +1,7 @@
 'use client'
 
+// Accordéon client contrôlé/auto pour regrouper les habitudes par catégorie avec animation douce.
+
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import animateAndCenterCategoryAccordion from '@/lib/ui/scroll'
@@ -33,6 +35,7 @@ export default function CategoryAccordion({
   contentClassName = '',
   onToggleOpen,
 }: CategoryAccordionProps) {
+  // Permet de fonctionner en mode contrôlé ou non selon les props.
   const isControlled = typeof openCategoryKey !== 'undefined' && typeof setOpenCategoryKey === 'function'
   const [internalValue, setInternalValue] = useState(defaultOpen ? id : '')
   const accordionValue = isControlled ? openCategoryKey ?? '' : internalValue
@@ -40,8 +43,10 @@ export default function CategoryAccordion({
   const [opening, setOpening] = useState(false)
   const previousOpenRef = useRef<boolean>(defaultOpen)
 
+  // Détermine la couleur d'accent utilisée dans l'entête.
   const accentColor = useMemo(() => color || '#6b7280', [color])
 
+  // Synchronise l'état du composant avec Radix en fonction du mode contrôlé.
   const handleChange = (nextValue: string) => {
     if (isControlled && setOpenCategoryKey) {
       setOpenCategoryKey(nextValue === id ? id : null)
@@ -52,10 +57,12 @@ export default function CategoryAccordion({
 
   const isOpen = accordionValue === id
 
+  // Informe le parent quand l'accordéon passe ouvert/fermé.
   useEffect(() => {
     onToggleOpen?.(isOpen, id)
   }, [isOpen, onToggleOpen, id])
 
+  // Gère la classe "opening" pour déclencher l'animation de centrage.
   useEffect(() => {
     let timer: number | null = null
     if (isOpen && !previousOpenRef.current) {
@@ -80,6 +87,7 @@ export default function CategoryAccordion({
 
   const animationClass = isOpen || opening ? 'opacity-100 scale-100' : 'opacity-80 scale-95'
 
+  // Rend l'accordéon Radix avec un trigger stylisé et le contenu enfant.
   return (
     <div ref={wrapperRef} className={`transition-all duration-300 ease-out ${animationClass}`}>
       <Accordion.Root

@@ -1,5 +1,7 @@
 'use client'
 
+// Heatmap mensuelle style GitHub pour visualiser la complétion quotidienne.
+
 export type CalendarPoint = {
   date: string
   completion: number
@@ -21,6 +23,7 @@ function getColor(value: number) {
 
 export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
   const monthFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' })
+  // Regroupe les points par mois (clé localisée) pour un rendu vertical.
   const byMonth = data.reduce<Record<string, CalendarPoint[]>>((acc, point) => {
     const month = monthFormatter.format(new Date(point.date))
     acc[month] = acc[month] || []
@@ -32,6 +35,7 @@ export default function CalendarHeatmap({ data }: CalendarHeatmapProps) {
   const cardClass =
     'glass-card min-h-[320px] w-full p-4 sm:p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
 
+  // Conteneur principal avec en-tête, grille mensuelle et légende d'intensité.
   return (
     <div className={cardClass}>
       <div className="flex flex-col gap-1 text-white">

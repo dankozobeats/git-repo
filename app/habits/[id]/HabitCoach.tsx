@@ -1,5 +1,7 @@
 'use client'
 
+// Interface client affichant un coach IA personnalisé autour d'une habitude donnée.
+
 import { useState, type ReactNode } from 'react'
 import { Brain, MessageSquare, Loader2, RotateCcw, Wand2 } from 'lucide-react'
 import type {
@@ -14,6 +16,7 @@ type HabitCoachProps = {
   stats: CoachStatsPayload
 }
 
+// Liste des tonalités proposées à l'utilisateur pour guider la réponse IA.
 const toneOptions: Array<{
   id: CoachTone
   label: string
@@ -24,6 +27,7 @@ const toneOptions: Array<{
   { id: 'direct', label: 'Cash', description: 'Direct' },
 ]
 
+// Variantes de focus (mindset, stratégie, célébration) exposées dans l'UI.
 const focusOptions: Array<{
   id: CoachFocus
   label: string
@@ -34,6 +38,7 @@ const focusOptions: Array<{
   { id: 'celebration', label: 'Celebration', description: 'Wins' },
 ]
 
+// Forme attendue des réponses du endpoint /api/coach.
 type CoachApiResponse = {
   result?: CoachResult
   timestamp?: string
@@ -41,19 +46,24 @@ type CoachApiResponse = {
 }
 
 export default function HabitCoach({ habitId, stats }: HabitCoachProps) {
+  // Contrôle le ton et le focus demandé à l'API coach.
   const [tone, setTone] = useState<CoachTone>('balanced')
   const [focus, setFocus] = useState<CoachFocus>('mindset')
+  // Stocke la dernière réponse AI et ses métadonnées.
   const [coachData, setCoachData] = useState<CoachResult | null>(null)
+  // Indicateurs d'état pour afficher les spinners et erreurs utilisateur.
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
+  // Appelle l'API interne /api/coach et gère le parsing/rendu côté client.
   async function fetchCoachMessage() {
     if (!habitId || habitId.trim().length === 0) {
       setError("ID d'habitude invalide")
       return
     }
 
+    // Réinitialise l'état visuel avant de lancer la requête réseau.
     setIsLoading(true)
     setError(null)
 
@@ -76,6 +86,7 @@ export default function HabitCoach({ habitId, stats }: HabitCoachProps) {
         throw new Error('Reponse IA incomplete')
       }
 
+      // Met à jour le rendu principal avec la réponse et horodate de génération.
       setCoachData(payload.result)
       setLastUpdated(payload.timestamp || new Date().toISOString())
     } catch (err) {
@@ -87,9 +98,11 @@ export default function HabitCoach({ habitId, stats }: HabitCoachProps) {
     }
   }
 
+  // Transforme le score [0-1] en pourcentage pour piloter la jauge de risque.
   const riskPercent = Math.round((coachData?.risk_score ?? 0) * 100)
   const { riskTextClass, riskBarClass } = getRiskClasses(riskPercent)
 
+  // Rend une carte interactive contenant les contrôles IA et la dernière réponse reçue.
   return (
     <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#0F111D] to-[#07080D] p-6 space-y-5 shadow-2xl shadow-black/40">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -155,6 +168,7 @@ export default function HabitCoach({ habitId, stats }: HabitCoachProps) {
   )
 }
 
+// Sous-composant chargé d'afficher les sections du brief IA ainsi que la jauge de risque.
 function CoachOutput({
   coachData,
   riskPercent,
@@ -197,6 +211,7 @@ function CoachOutput({
   )
 }
 
+// Cadre réutilisable pour afficher du texte structuré avec un en-tête.
 function CoachCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-sm text-white/80">
@@ -206,6 +221,7 @@ function CoachCard({ title, children }: { title: string; children: ReactNode }) 
   )
 }
 
+// Traduit un pourcentage en classes Tailwind pour colorer texte et barre.
 function getRiskClasses(value: number) {
   if (value >= 66) {
     return { riskTextClass: 'text-red-400', riskBarClass: 'bg-red-500' }

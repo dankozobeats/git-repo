@@ -1,5 +1,7 @@
 'use client'
 
+// Modale de sélection rapide permettant de parcourir les rapports IA d'une journée.
+
 import { Fragment } from 'react'
 import { X } from 'lucide-react'
 
@@ -15,8 +17,10 @@ export type ReportModalProps = {
 export default function ReportModal({ open, date, reports, selectedReportId, onSelectReport, onClose }: ReportModalProps) {
   if (!open) return null
 
+  // Choisit le rapport actif (sélectionné ou premier de la liste).
   const activeReport = reports.find(r => r.id === selectedReportId) || reports[0]
 
+  // Structure principale : liste des rapports à gauche, aperçu texte à droite.
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div

@@ -1,12 +1,13 @@
 'use client'
 
+// Raccourcis d'action pour cocher/supprimer une habitude directement depuis les listes.
+
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { useToast } from './Toast'
-import { toastRoastCraquage, toastRoastCorrection, toastRoastSuccess } from '@/lib/coach/coach'
+import { toastRoastCraquage, toastRoastSuccess } from '@/lib/coach/coach'
 
 type HabitQuickActionsProps = {
   habitId: string
@@ -17,6 +18,7 @@ type HabitQuickActionsProps = {
   streak?: number
   totalLogs?: number
   totalCraquages?: number
+  onHabitValidated?: (message: string, variant?: 'success' | 'error') => void
 }
 
 export default function HabitQuickActions({
@@ -28,22 +30,25 @@ export default function HabitQuickActions({
   streak = 0,
   totalLogs = 0,
   totalCraquages = 0,
+  onHabitValidated,
 }: HabitQuickActionsProps) {
   const router = useRouter()
   const [count, setCount] = useState(initialCount)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const { showToast, ToastComponent } = useToast()
 
+  // Déduit les états d'UI en fonction de la configuration de suivi.
   const isCounterMode = trackingMode === 'counter'
   const hasValue = count > 0
   const disablePrimary = isSubmitting || isPending || (!isCounterMode && hasValue)
 
+  // Valeurs sécurisées utilisées pour calculer les punchlines.
   const safeStreak = Math.max(0, streak)
   const safeLogs = Math.max(0, totalLogs)
   const safeCraquages = Math.max(0, totalCraquages)
 
+  // Effectue un check-in rapide et déclenche les toasts sarcastiques.
   const handleAction = async () => {
     if (disablePrimary) return
     setIsSubmitting(true)
@@ -57,18 +62,19 @@ export default function HabitQuickActions({
 
       const payloadStreak = habitType === 'good' ? safeStreak + 1 : safeStreak
       if (habitType === 'bad') {
-        showToast(toastRoastCraquage(habitName, payloadStreak, safeCraquages + newCount), 'error')
+        onHabitValidated?.(toastRoastCraquage(habitName, payloadStreak, safeCraquages + newCount), 'success')
       } else {
-        showToast(toastRoastSuccess(habitName, payloadStreak, safeLogs + newCount), 'success')
+        onHabitValidated?.(toastRoastSuccess(habitName, payloadStreak, safeLogs + newCount), 'success')
       }
     } catch (error) {
       console.error(error)
-      showToast('Impossible de mettre à jour', 'error')
+      onHabitValidated?.('Impossible de mettre à jour', 'error')
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  // Supprime une habitude depuis le menu contextuel après confirmation.
   const handleDelete = async () => {
     if (!confirm('Supprimer cette habitude ?')) return
     setIsDeleting(true)
@@ -78,12 +84,13 @@ export default function HabitQuickActions({
       startTransition(() => router.refresh())
     } catch (error) {
       console.error(error)
-      showToast('Suppression impossible', 'error')
+      onHabitValidated?.('Suppression impossible', 'error')
     } finally {
       setIsDeleting(false)
     }
   }
 
+  // Palette de couleurs selon le type d'habitude pour maintenir un feedback visuel.
   const softPrimary =
     habitType === 'bad'
       ? 'bg-red-500/80 text-white/90 shadow-inner shadow-red-500/20 hover:bg-red-500'
@@ -91,6 +98,7 @@ export default function HabitQuickActions({
 
   const primaryClasses = disablePrimary ? 'cursor-not-allowed bg-gray-800 text-gray-500' : softPrimary
 
+  // Texte du bouton principal selon type/mode de suivi.
   const primaryLabel = () => {
     if (habitType === 'bad') {
       if (hasValue && !isCounterMode) return 'Craquée'
@@ -100,9 +108,9 @@ export default function HabitQuickActions({
     return 'Valider'
   }
 
+  // Rend le bouton principal (check-in) et un menu Radix pour les actions secondaires.
   return (
     <>
-      {ToastComponent}
       <div data-prevent-toggle="true" className="flex w-full items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -154,6 +162,7 @@ export default function HabitQuickActions({
   )
 }
 
+// Wrapper simplifié pour les entrées de menu de navigation Radix.
 function MenuLink({ href, label }: { href: string; label: string }) {
   return (
     <DropdownMenu.Item asChild>

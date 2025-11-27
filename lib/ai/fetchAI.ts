@@ -1,3 +1,4 @@
+// Variables d'environnement pour choisir le fournisseur IA actif côté serveur.
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const GEMINI_LANGUAGE = process.env.GEMINI_LANGUAGE || 'fr'
@@ -5,8 +6,10 @@ const GEMINI_LANGUAGE = process.env.GEMINI_LANGUAGE || 'fr'
 const OLLAMA_URL = process.env.OLLAMA_URL
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'phi3:mini'
 
+// Flag interne pour éviter de réchauffer Ollama à chaque requête.
 let ollamaModelLoaded = false
 
+// Route d'accès unique : choisit Gemini si la clé existe sinon bascule sur Ollama.
 export async function fetchAI(prompt: string) {
   if (GEMINI_API_KEY) {
     return fetchGemini(prompt)
@@ -19,16 +22,19 @@ export async function fetchAI(prompt: string) {
   return fetchOllama(prompt)
 }
 
+// Enveloppe l'appel REST à Gemini en gérant la langue et les erreurs HTTP.
 async function fetchGemini(prompt: string) {
   const instruction =
     GEMINI_LANGUAGE === 'fr'
       ? 'Réponds uniquement en français, avec un ton naturel et professionnel adapté à un coach personnel.'
       : ''
 
+  // Préfixe optionnel pour forcer la langue avant de passer l'invite réelle.
   const finalPrompt = instruction ? `${instruction}\n\n${prompt}` : prompt
 
   const url = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
 
+  // Requête JSON standard attendue par l'API Google Generative Language.
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -48,6 +54,7 @@ async function fetchGemini(prompt: string) {
   }
 
   const data = await res.json()
+  // Certaines réponses peuvent arriver segmentées : concatène chaque partie textuelle.
   const text =
     data.candidates?.[0]?.content?.parts
       ?.map((part: { text?: string }) => part.text || '')
@@ -62,6 +69,7 @@ async function fetchGemini(prompt: string) {
   return text
 }
 
+// Appelle l'API Ollama locale/distante avec options de génération et gestion du timeout.
 async function fetchOllama(prompt: string) {
   if (!OLLAMA_URL) {
     throw new Error('OLLAMA_URL non configuré')
@@ -71,6 +79,7 @@ async function fetchOllama(prompt: string) {
     // Ignorer silencieusement le warm-up
   })
 
+  // AbortController utilisé pour empêcher les requêtes bloquées (>90s).
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 90_000)
 
@@ -131,6 +140,7 @@ async function fetchOllama(prompt: string) {
   }
 }
 
+// Vérifie que le modèle Ollama est prêt et tente un warm-up si nécessaire.
 async function ensureOllamaModelLoaded(): Promise<void> {
   if (ollamaModelLoaded || !OLLAMA_URL) return
 
@@ -138,6 +148,7 @@ async function ensureOllamaModelLoaded(): Promise<void> {
     const checkController = new AbortController()
     const checkTimeout = setTimeout(() => checkController.abort(), 5000)
 
+    // Vérifie via /api/show si le modèle est déjà chargé côté Ollama.
     const checkRes = await fetch(`${OLLAMA_URL}/api/show`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,6 +170,7 @@ async function ensureOllamaModelLoaded(): Promise<void> {
     const warmupController = new AbortController()
     const warmupTimeout = setTimeout(() => warmupController.abort(), 10_000)
 
+    // Sinon, joue une courte génération "OK" pour forcer le chargement en mémoire.
     const warmupRes = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

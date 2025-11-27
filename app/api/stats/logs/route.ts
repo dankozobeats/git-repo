@@ -1,8 +1,11 @@
+// API utilitaire pour alimenter les graphiques stats avec les logs bruts Supabase.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Retourne les habitudes actives et leurs logs associés pour l'utilisateur connecté.
 export async function GET(request: NextRequest) {
   try {
+    // Client Supabase côté serveur pour récupérer la session et les données.
     const supabase = await createClient()
     const {
       data: { user },
@@ -13,6 +16,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
+    // Liste des habitudes actives pour contextualiser les logs côté client.
     const { data: habits, error: habitsError } = await supabase
       .from('habits')
       .select('id, user_id, name, icon, type')
@@ -23,6 +27,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: habitsError.message }, { status: 500 })
     }
 
+    // Récupère tous les logs (triés récents -> anciens) pour alimenter les graphiques.
     const { data: logs, error: logsError } = await supabase
       .from('logs')
       .select('id, user_id, habit_id, value, occurred_at, created_at')

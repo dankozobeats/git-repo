@@ -1,5 +1,7 @@
 'use client'
 
+// Vue calendrier hebdomadaire interactive pour naviguer dans les logs d'une habitude.
+
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getTodayDateISO, isFutureDate } from '@/lib/date-utils'
@@ -17,11 +19,13 @@ export function WeeklyCalendar({
   trackingMode,
   onDayClick,
 }: WeeklyCalendarProps) {
+  // Décale les lots de 4 semaines affichés dans la vue.
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
   const todayIso = getTodayDateISO()
 
   const weeks = generateWeeks(4, currentWeekOffset)
 
+  // Construit un tableau de semaines (chaque semaine contient 7 jours formattés).
   function generateWeeks(numWeeks: number, offset: number = 0) {
     const weeks = []
     const today = new Date()
@@ -54,12 +58,14 @@ export function WeeklyCalendar({
     return weeks
   }
 
+  // Approximation du numéro de semaine utilisé uniquement pour l'UI.
   function getWeekNumber(date: Date) {
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1)
     const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000
     return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)
   }
 
+  // Retourne les classes/couleurs d'une case selon le mode de suivi.
   function getCellStyle(dateStr: string, count: number, isToday: boolean) {
     const selectedClasses = isToday ? 'border-2 border-[#4DA6FF]' : 'border border-white/5'
 
@@ -85,6 +91,7 @@ export function WeeklyCalendar({
     return `text-white ${selectedClasses}`
   }
 
+  // Section principale : contrôles de navigation + grille hebdomadaire + légende.
   return (
     <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#0B0D19] via-[#090911] to-[#050609] p-6 shadow-2xl shadow-black/40">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -159,6 +166,7 @@ export function WeeklyCalendar({
   )
 }
 
+// Indicateur de couleur utilisé dans le footer du calendrier.
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-2">

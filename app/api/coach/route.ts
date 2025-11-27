@@ -1,3 +1,4 @@
+// Route API Next.js qui génère une réponse coach IA pour une habitude donnée.
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { fetchAI } from "@/lib/ai/fetchAI"
@@ -5,6 +6,7 @@ import type { CoachFocus, CoachResult, CoachStatsPayload, CoachTone } from "@/ty
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/database"
 
+// Paramètres utilisés pour limiter l'horizon de logs et le volume envoyé à l'IA.
 const LOOKBACK_DAYS = 30
 const MAX_ACTIVITY_ENTRIES = 14
 
@@ -35,6 +37,7 @@ type ActivityEntry = {
 // ============== ROUTE API PRINCIPALE ===========
 // ===============================================
 
+// Traite les requêtes POST entrantes pour générer une analyse coach d'une habitude.
 export async function POST(request: NextRequest) {
   try {
     // Auth
@@ -45,6 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
+    // Parse le corps JSON pour extraire habitId et préférences IA.
     let payload: CoachRequestBody
     try {
       payload = await request.json()
@@ -80,6 +84,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Impossible de récupérer les logs" }, { status: 500 })
     }
 
+    // Normalise les statistiques fournies afin de garantir des nombres cohérents.
     const stats = normalizeStats(incomingStats)
 
     // 3. Construire prompt
@@ -134,6 +139,7 @@ export async function POST(request: NextRequest) {
 // =============================================================
 //
 
+// Nettoie une réponse texte de l'IA et extrait les champs attendus.
 function parseAI(raw: string): CoachResult {
   const clean = raw
     .replace(/```json/gi, "")
@@ -168,6 +174,7 @@ function parseAI(raw: string): CoachResult {
 // =============================================================
 //
 
+// Récupère les logs utilisateurs sur une fenêtre glissante pour alimenter l'analyse.
 async function fetchRecentActivity({
   supabase,
   habitId,
@@ -180,6 +187,7 @@ async function fetchRecentActivity({
   trackingMode: "binary" | "counter" | null
 }): Promise<ActivityEntry[]> {
   
+  // Calcule la date limite de récupération (N jours en arrière).
   const since = new Date()
   since.setDate(since.getDate() - LOOKBACK_DAYS)
   const sinceDate = since.toISOString().split("T")[0]
@@ -209,6 +217,7 @@ async function fetchRecentActivity({
   return aggregateLogRows(data || [])
 }
 
+// Agrège les événements "counter" en regroupant par date et en comptant les occurrences.
 function aggregateCounterEvents(
   rows: Array<{ event_date: string | null }>
 ): ActivityEntry[] {
@@ -222,6 +231,7 @@ function aggregateCounterEvents(
   return [...map.values()].sort((a, b) => (a.date < b.date ? 1 : -1))
 }
 
+// Agrège les logs classiques en sommant les valeurs et en conservant jusqu'à 3 notes par jour.
 function aggregateLogRows(
   rows: Array<{ completed_date: string | null; value: number | null; notes: string | null }>
 ): ActivityEntry[] {
@@ -242,6 +252,7 @@ function aggregateLogRows(
   return [...map.values()].sort((a, b) => (a.date < b.date ? 1 : -1))
 }
 
+// Convertit les statistiques partiellement fournies en nombres sûrs avec défaut à 0.
 function normalizeStats(stats?: Partial<CoachStatsPayload>): CoachStatsPayload {
   return {
     totalCount: Number(stats?.totalCount) || 0,
@@ -258,6 +269,7 @@ function normalizeStats(stats?: Partial<CoachStatsPayload>): CoachStatsPayload {
 // =============================================================
 //
 
+// Construit un prompt textuel minimaliste que fetchAI enverra au modèle choisi.
 function buildCoachPrompt({
   habit,
   tone,
@@ -272,6 +284,7 @@ function buildCoachPrompt({
   activity: ActivityEntry[]
 }) {
   const limited = activity.slice(0, 5)
+  // Réduit la liste d'activité en format compact "jour:valeur" pour limiter le prompt.
   const compact = limited.length
     ? limited.map(a => `${a.date.split("-")[2]}:${a.count}`).join(",")
     : "aucune"
@@ -295,4 +308,3 @@ Activity: ${compact}
 RÉGLE : Pas de markdown. Pas de JSON complet. Seulement les champs ci-dessus.
 `.trim()
 }
-

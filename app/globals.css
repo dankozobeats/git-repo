@@ -82,3 +82,46 @@ html.no-snap #mainScrollArea {
   pointer-events: auto !important;
   touch-action: manipulation !important;
 }
+
+/* Animation slide/fade premium pour HabitToast (inline, non overlay). */
+.habit-toast-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .habit-toast-wrapper {
+    justify-content: flex-start;
+  }
+}
+
+.habit-toast-enter {
+  animation: habit-toast-slide-fade-in 320ms ease forwards;
+}
+
+.habit-toast-exit {
+  animation: habit-toast-slide-fade-out 320ms ease forwards;
+}
+
+@keyframes habit-toast-slide-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes habit-toast-slide-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}

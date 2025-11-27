@@ -1,15 +1,19 @@
 'use client'
 
+// Interface client pour déclencher et afficher un rapport IA généré via l'API interne.
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { BarChart3, Loader2, ArrowLeft } from 'lucide-react'
 
 export default function ReportPage() {
+  // États principaux : période sélectionnée, statut de chargement et données retournées.
   const [period, setPeriod] = useState<'7j' | '30j' | '90j'>('30j')
   const [isLoading, setIsLoading] = useState(false)
   const [report, setReport] = useState<string | null>(null)
   const [stats, setStats] = useState<any>(null)
 
+  // Appelle l'API report et hydrate les sections UI avec la réponse.
   async function generateReport() {
     setIsLoading(true)
     setReport(null)
@@ -33,6 +37,7 @@ export default function ReportPage() {
     }
   }
 
+  // Mise en page : entête, sélecteur de période et état du rapport (chargement/résultat/placeholder).
   return (
     <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
       <header className="border-b border-white/5 bg-gradient-to-r from-[#1E1E1E] via-[#0F0F0F] to-[#1A1A1A]">

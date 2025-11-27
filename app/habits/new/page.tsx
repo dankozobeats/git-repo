@@ -1,10 +1,13 @@
 'use client'
 
+// Page client de création d'habitude : gère formulaires, presets et insertion Supabase.
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+// Suggestions pour accélérer la création d'une habitude négative.
 const BAD_PRESETS = [
   { name: 'Fast-food', icon: '🍔', color: '#ef4444' },
   { name: 'Scroll social media', icon: '📱', color: '#f97316' },
@@ -14,6 +17,7 @@ const BAD_PRESETS = [
   { name: 'Alcool', icon: '🍺', color: '#f59e0b' },
 ]
 
+// Suggestions pour les routines positives les plus fréquentes.
 const GOOD_PRESETS = [
   { name: 'Sport', icon: '💪', color: '#10b981' },
   { name: 'Lecture', icon: '📚', color: '#3b82f6' },
@@ -31,6 +35,7 @@ type Category = {
 
 export default function NewHabitPage() {
   const router = useRouter()
+  // États contrôlant la configuration de la nouvelle habitude.
   const [habitType, setHabitType] = useState<'bad' | 'good'>('bad')
   const [trackingMode, setTrackingMode] = useState<'binary' | 'counter'>('binary')
   const [dailyGoalValue, setDailyGoalValue] = useState(3)
@@ -42,9 +47,11 @@ export default function NewHabitPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [categoryId, setCategoryId] = useState('')
 
+  // Variables dérivées utilisées pour afficher et stocker les paramètres.
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
 
+  // Charge la liste des catégories légères depuis l'API route.
   useEffect(() => {
     const fetchCategories = async () => {
       const res = await fetch('/api/categories')
@@ -55,6 +62,7 @@ export default function NewHabitPage() {
     fetchCategories()
   }, [])
 
+  // Insère la nouvelle habitude dans Supabase après validation formulaire.
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
@@ -94,12 +102,14 @@ export default function NewHabitPage() {
     }
   }
 
+  // Applique rapidement une suggestion (nom/emoji/couleur).
   function selectPreset(preset: typeof BAD_PRESETS[0]) {
     setName(preset.name)
     setIcon(preset.icon)
     setColor(preset.color)
   }
 
+  // Construit l'interface immersive : sections explicatives et formulaire multi-étapes.
   return (
     <main className="min-h-screen bg-gray-950 text-gray-100 font-sans">
       <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">

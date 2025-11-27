@@ -1,5 +1,7 @@
 'use client'
 
+// Graphique barres Recharts montrant la performance moyenne par jour de la semaine.
+
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 export type WeekdayPoint = {
@@ -12,10 +14,12 @@ type WeekdayChartProps = {
 }
 
 export default function WeekdayChart({ data }: WeekdayChartProps) {
+  // Style commun aux différentes cartes stats.
   const cardClass =
     'glass-card min-h-[320px] w-full p-4 sm:p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_0_25px_rgba(255,255,255,0.08)]'
   const axisColor = '#C5C8D0'
 
+  // Section incluant l'entête et le BarChart responsive.
   return (
     <div className={cardClass}>
       <div className="flex flex-col gap-1 text-white">

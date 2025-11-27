@@ -1,5 +1,7 @@
 'use client'
 
+// Hook client qui agrège les données Supabase pour alimenter les vues statistiques globales.
+
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
@@ -55,8 +57,10 @@ type UseHabitStatsState = {
   refresh: () => void
 }
 
+// Utilitaire pour convertir une Date en chaîne AAAA-MM-JJ.
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
+// S'assure qu'une entrée log/event possède bien une date exploitable.
 const normalizeDate = (date?: string | null, fallback?: string | null) => {
   if (date) return date
   if (fallback) return fallback.split('T')[0]
@@ -70,6 +74,7 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Charge habits/logs/events depuis Supabase puis construit la structure Stats.
   const fetchStats = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -121,6 +126,7 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
     }
   }, [period])
 
+  // Relance le calcul chaque fois que la période change.
   useEffect(() => {
     fetchStats()
   }, [fetchStats])
@@ -133,6 +139,7 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
   }
 }
 
+// Transforme les lignes Supabase en séries temporelles utilisables par les composants UI.
 function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], period: HabitStatsPeriod): HabitStatsPayload {
   const today = new Date()
   const habitMap = new Map(habits.map(habit => [habit.id, habit]))
@@ -152,6 +159,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
   const logDatesByHabit = new Map<string, Set<string>>()
   const eventDatesByHabit = new Map<string, Set<string>>()
 
+  // Agrège les logs "good" par date et par habitude.
   logs.forEach(log => {
     const habit = habitMap.get(log.habit_id)
     if (!habit) return
@@ -180,6 +188,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
     habitTotals.set(log.habit_id, entry)
   })
 
+  // Agrège les events "bad" de la même manière.
   events.forEach(event => {
     const habit = habitMap.get(event.habit_id)
     if (!habit) return
@@ -218,6 +227,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
   let maxGood = 0
   let maxBad = 0
 
+  // Construit les séries journalières et cumulatives entre startDate et aujourd'hui.
   while (cursor <= end) {
     const key = formatDate(cursor)
     const good = logsByDay.get(key) ?? 0
@@ -232,6 +242,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
     cursor.setDate(cursor.getDate() + 1)
   }
 
+  // Calcule les intensités (0-4) nécessaires au rendu heatmap.
   const heatmap: HeatmapPoint[] = daily.map(point => ({
     ...point,
     intensityGood: maxGood ? Math.min(4, Math.ceil((point.good / maxGood) * 4)) : 0,
@@ -255,6 +266,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
   return { daily, cumulative, topHabits, heatmap }
 }
 
+// Détermine la date de début selon la période demandée ou la première activité connue.
 function determineStartDate(period: HabitStatsPeriod, dates: Set<string>, today: Date) {
   if (period !== 'all') {
     const start = new Date(today)
@@ -272,6 +284,7 @@ function determineStartDate(period: HabitStatsPeriod, dates: Set<string>, today:
   return new Date(`${earliest}T00:00:00`)
 }
 
+// Calcule la série de jours consécutifs pour les habitudes positives.
 function computeGoodHabitStreak(dateSet: Set<string>, today: Date) {
   if (dateSet.size === 0) return { current: 0, max: 0 }
   const sortedDates = Array.from(dateSet).sort()
@@ -305,6 +318,7 @@ function computeGoodHabitStreak(dateSet: Set<string>, today: Date) {
   return { current, max: longest }
 }
 
+// Calcule les jours sans craquage depuis la création pour une habitude négative.
 function computeBadHabitStreak(dateSet: Set<string>, createdAt: string | null, today: Date) {
   const sortedDates = Array.from(dateSet).sort()
   const creationDate = createdAt ? new Date(createdAt) : null

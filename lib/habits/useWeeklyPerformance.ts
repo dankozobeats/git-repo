@@ -1,5 +1,7 @@
 'use client'
 
+// Hook client qui calcule la performance par jour de semaine selon les logs Supabase.
+
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { HabitStatsPeriod } from './useHabitStats'
@@ -22,6 +24,7 @@ type HookState = {
   refresh: () => void
 }
 
+// Référence locale pour associer index JS et libellés français.
 const WEEKDAYS = [
   { label: 'Lun', full: 'Lundi', index: 1 },
   { label: 'Mar', full: 'Mardi', index: 2 },
@@ -45,6 +48,7 @@ export function useWeeklyPerformance(period: HabitStatsPeriod): HookState {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Charge tous les logs/events puis calcule le total par jour de semaine.
   const fetchStats = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -87,6 +91,7 @@ export function useWeeklyPerformance(period: HabitStatsPeriod): HookState {
     }
   }, [period])
 
+  // Recalcule systématiquement lorsque la période change.
   useEffect(() => {
     fetchStats()
   }, [fetchStats])
@@ -99,6 +104,7 @@ export function useWeeklyPerformance(period: HabitStatsPeriod): HookState {
   }
 }
 
+// Transforme les logs/events en totaux par jour de la semaine.
 function buildWeeklyPerformance(logs: LogRow[], events: EventRow[], period: HabitStatsPeriod): WeeklyPerformancePoint[] {
   const today = new Date()
   const startDate =
@@ -143,6 +149,7 @@ function buildWeeklyPerformance(logs: LogRow[], events: EventRow[], period: Habi
   })
 }
 
+// Trouve la première date disponible lorsque l'utilisateur demande la période "all".
 function determineEarliestDate(logs: LogRow[], events: EventRow[], today: Date) {
   const dates: string[] = []
   logs.forEach(log => {

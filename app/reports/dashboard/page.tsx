@@ -1,5 +1,7 @@
 'use client'
 
+// Dashboard IA regroupant plusieurs widgets analytiques basés sur les rapports archivés.
+
 import Link from "next/link"
 import { ArrowLeft, BarChart3, Home, LibraryBig } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -12,16 +14,19 @@ import GraphAIStats from "@/components/GraphAIStats"
 export default function DashboardPage() {
   const [reports, setReports] = useState<any[]>([])
 
+  // Charge tous les rapports pour alimenter chaque widget.
   async function loadReports() {
     const res = await fetch("/api/ai-reports")
     const data = await res.json()
     setReports(data.reports || [])
   }
 
+  // Récupère la liste dès que la page se monte.
   useEffect(() => {
     loadReports()
   }, [])
 
+  // Mise en page : entête minimal et empilement des composants analytiques.
   return (
     <main className="min-h-screen bg-gray-950 text-white">
 

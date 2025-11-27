@@ -1,3 +1,4 @@
+// Marque un rapport IA comme archivé au lieu de le supprimer.
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
@@ -12,6 +13,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Ajoute un timestamp archived_at sur la ligne ciblée.
   const { error } = await supabase
     .from("ai_reports")
     .update({ archived_at: new Date().toISOString() })

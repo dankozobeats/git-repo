@@ -1,5 +1,7 @@
 'use client'
 
+// Page analytics des habitudes : exploite les hooks Supabase pour afficher graphiques et résumés.
+
 import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, RefreshCcw } from 'lucide-react'
@@ -22,6 +24,7 @@ type SelectedHabit = {
 
 export default function HabitStatsPage() {
   const [period, setPeriod] = useState<HabitStatsPeriod>(30)
+  // Récupère les statistiques cumulées/daily sur la période choisie.
   const { data, loading, error, refresh } = useHabitStats(period)
   const {
     data: weeklyData,
@@ -30,6 +33,7 @@ export default function HabitStatsPage() {
     refresh: refreshWeekly,
   } = useWeeklyPerformance(period)
 
+  // Calcule un résumé global (nombre de bonnes vs mauvaises actions).
   const summary = useMemo(() => {
     if (!data) {
       return {
@@ -51,6 +55,7 @@ export default function HabitStatsPage() {
 
   const topHabits = data?.topHabits ?? []
   const [selectedHabit, setSelectedHabit] = useState<SelectedHabit | null>(null)
+  // Détermine les meilleurs/pire jours via les données hebdomadaires.
   const weekdaySummary = useMemo(() => {
     if (!weeklyData?.length) {
       return {
@@ -66,6 +71,7 @@ export default function HabitStatsPage() {
     }
   }, [weeklyData])
 
+  // Construit l'ensemble de la page stats : header, états d'erreur/chargement, graphiques et modale.
   return (
     <main className="min-h-screen bg-gray-950 text-gray-100 font-sans">
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
@@ -266,6 +272,7 @@ type StatsCardProps = {
   children: ReactNode
 }
 
+// Boîte utilitaire homogène pour les sous-sections de graphiques/statistiques.
 function StatsCard({ title, subtitle, children }: StatsCardProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-gray-900/40 p-6 shadow-lg shadow-black/30">

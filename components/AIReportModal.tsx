@@ -1,5 +1,7 @@
 'use client'
 
+// Modale riche pour afficher un rapport IA en Markdown avec sommaire interactif.
+
 import { useMemo, useState } from 'react'
 import { X, Maximize2, Minimize2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -16,10 +18,12 @@ type AIReportModalProps = {
 export default function AIReportModal({ open, report, title, onClose }: AIReportModalProps) {
   const [fullScreen, setFullScreen] = useState(false)
 
+  // Génère dynamiquement la table des matières en scannant le markdown.
   const toc = useMemo<TOCEntry[]>(() => (report ? extractTOC(report) : []), [report])
 
   if (!open || !report) return null
 
+  // Permet d'ajouter des IDs prévisibles aux titres rendus par ReactMarkdown.
   function headingRenderer(level: number) {
     const Tag = `h${level}` as keyof JSX.IntrinsicElements
     const sizeClass = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
@@ -38,6 +42,7 @@ export default function AIReportModal({ open, report, title, onClose }: AIReport
     }
   }
 
+  // Structure modale avec barre d'action, toc et contenu scrollable.
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
       <div

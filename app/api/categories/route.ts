@@ -1,6 +1,8 @@
+// API route pour lister/créer des catégories personnalisées.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Retourne toutes les catégories appartenant à l'utilisateur connecté.
 export async function GET() {
   const supabase = await createClient()
   const {
@@ -24,6 +26,7 @@ export async function GET() {
   return NextResponse.json({ success: true, categories: data || [] })
 }
 
+// Crée une nouvelle catégorie avec un nom/couleur optionnelle.
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const {
@@ -34,6 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
   }
 
+  // Valide le payload JSON minimal attendu depuis le client.
   let payload: { name?: string; color?: string | null }
   try {
     payload = await request.json()

@@ -1,3 +1,4 @@
+// Page serveur de détail d'une habitude : récupère les logs et statistiques associés.
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -12,6 +13,7 @@ interface PageProps {
 
 export default async function HabitDetailPage({ params }: PageProps) {
   const { id } = await params
+  // Client Supabase serveur requis pour sécuriser l'accès et hydrater les props.
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -27,6 +29,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
     .single()
 
   if (!habit) {
+    // Fallback statique si l'ID ne correspond à aucune habitude de l'utilisateur.
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
         <div className="text-center">
@@ -53,6 +56,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
   let todayCount = 0
 
   if (habit.tracking_mode === 'counter') {
+    // Mode compteur : s'appuie sur habit_events pour compter plusieurs enregistrements par jour.
     const { data: events } = await supabase
       .from('habit_events')
       .select('*')
@@ -70,6 +74,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
     todayCount = (events || []).filter(e => e.event_date === todayStr).length
 
   } else {
+    // Mode binaire : un log par jour suffit à marquer la case dans le calendrier.
     const { data: logs } = await supabase
       .from('logs')
       .select('*')
@@ -111,6 +116,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
     }
   }
 
+  // Liste complète des habitudes actives utilisée par HabitDetailHeader pour la navigation.
   const { data: userHabits } = await supabase
     .from('habits')
     .select('*')
@@ -120,6 +126,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
 
   const isBadHabit = habit.type === 'bad'
 
+  // Rend la page détail avec header statique et composant client pour visualisations.
   return (
     <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
       <section className="border-b border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#151515] to-[#0f0f0f]">

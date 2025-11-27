@@ -1,5 +1,7 @@
 'use client'
 
+// Page client regroupant les rapports IA enregistrés et leurs visualisations secondaires.
+
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -19,6 +21,7 @@ import ReportModal from '@/components/ReportModal'
 import AIReportModal from '@/components/AIReportModal'
 
 export default function HistoryPage() {
+  // États d'affichage (liste, filtres, modales et sélection courante).
   const [reports, setReports] = useState<any[]>([])
   const [filter, setFilter] = useState('all')
   const [sortAsc, setSortAsc] = useState(false)
@@ -29,6 +32,7 @@ export default function HistoryPage() {
   const [selectedReportContent, setSelectedReportContent] = useState<string | null>(null)
   const [selectedReportTitle, setSelectedReportTitle] = useState<string>('')
 
+  // Récupère les rapports IA via API puis applique filtrage/tri côté client.
   async function loadReports() {
     const res = await fetch('/api/ai-reports')
     const data = await res.json()
@@ -51,21 +55,25 @@ export default function HistoryPage() {
     setReports(items)
   }
 
+  // Rafraîchit la liste dès que le filtre ou l'ordre changent.
   useEffect(() => {
     loadReports()
   }, [filter, sortAsc])
 
+  // Supprime définitivement un rapport depuis l'historique.
   async function deleteReport(id: string) {
     if (!confirm('Supprimer ce rapport ?')) return
     await fetch(`/api/ai-reports/${id}`, { method: 'DELETE' })
     loadReports()
   }
 
+  // Marque un rapport comme archivé côté serveur.
   async function archiveReport(id: string) {
     await fetch(`/api/ai-reports/${id}/archive`, { method: 'PATCH' })
     loadReports()
   }
 
+  // Groupes de rapports par date (clé ISO) utilisés par le calendrier.
   const reportsByDate = useMemo(() => {
     const map: Record<string, any[]> = {}
     reports.forEach(report => {
@@ -78,6 +86,7 @@ export default function HistoryPage() {
 
   const reportsForSelectedDate = selectedDate ? reportsByDate[selectedDate] ?? [] : []
 
+  // Synchronise les modales lorsqu'un jour est sélectionné sur la vue calendrier.
   function handleDayClick(date: string) {
     setSelectedDate(date)
     const dayReports = reportsByDate[date] ?? []
@@ -85,6 +94,7 @@ export default function HistoryPage() {
     setModalOpen(dayReports.length > 0)
   }
 
+  // Compose l'interface complète : entête, widgets analytiques, liste et modales.
   return (
     <main className="min-h-screen bg-[#121212] text-[#E0E0E0]">
       <header className="border-b border-white/5 bg-gradient-to-r from-[#1E1E1E] via-[#0F0F0F] to-[#1A1A1A]">
@@ -215,6 +225,7 @@ export default function HistoryPage() {
   )
 }
 
+// Normalise une date en clé YYYY-MM-DD pour indexer les rapports.
 function formatDateKey(date: string | Date) {
   const d = date instanceof Date ? date : new Date(date)
   return d.toISOString().split('T')[0]

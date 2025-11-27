@@ -1,8 +1,11 @@
 'use client'
 
+// Heatmap façon GitHub basée sur les validations cumulées par rapport IA.
+
 import { useMemo } from "react"
 
 export default function AIHeatmap({ reports }: { reports: any[] }) {
+  // Transforme les rapports en map date -> volume de bonnes actions pour un rendu rapide.
   const activity = useMemo(() => {
     const map: Record<string, number> = {}
     reports.forEach(r => {
@@ -14,6 +17,7 @@ export default function AIHeatmap({ reports }: { reports: any[] }) {
   }, [reports])
 
   const today = new Date()
+  // Génère 180 jours glissants pour que la grille soit toujours remplie.
   const days = [...Array(180)].map((_, i) => {
     const d = new Date()
     d.setDate(today.getDate() - i)
@@ -32,6 +36,7 @@ export default function AIHeatmap({ reports }: { reports: any[] }) {
     return "bg-green-300"
   }
 
+  // Carte simple contenant le titre et la grille.
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
       <h2 className="text-xl font-bold mb-4">Heatmap (type GitHub)</h2>
@@ -48,4 +53,3 @@ export default function AIHeatmap({ reports }: { reports: any[] }) {
     </div>
   )
 }
-
