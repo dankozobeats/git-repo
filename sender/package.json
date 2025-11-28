@@ -1,0 +1,15 @@
+{
+  "name": "badhabit-reminder-sender",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "generate:vapid": "node vapid.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "web-push": "^3.6.7",
+    "dotenv": "^16.4.5"
+  }
+}
