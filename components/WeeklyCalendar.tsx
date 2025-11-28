@@ -84,11 +84,9 @@ export function WeeklyCalendar({
       return `bg-[#181b29] text-white/50 ${selectedClasses}`
     }
 
-    const intensity = Math.min(count / 3, 1)
-    // Calculate palette based on habit type and intensity (not currently used in return, but kept for future styling)
-    const _palette = habitType === 'good' ? ['#133022', '#1c5b32', '#25a249'] : ['#33210b', '#6e3412', '#bf1b1b']
-    void _palette
-    void intensity
+    // TODO: Implement intensity-based color styling using calculated palette
+    // const intensity = Math.min(count / 3, 1)
+    // const palette = habitType === 'good' ? ['#133022', '#1c5b32', '#25a249'] : ['#33210b', '#6e3412', '#bf1b1b']
 
     return `text-white ${selectedClasses}`
   }

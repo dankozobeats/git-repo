@@ -29,8 +29,8 @@ export default function DashboardPage() {
   const loadReports = useCallback(async () => {
     const res = await fetch("/api/ai-reports")
     const data = await res.json()
-    // setState inside timeout to avoid synchronous setState in effect
-    setTimeout(() => setReports(data.reports || []), 0)
+    // Use queueMicrotask to avoid synchronous setState in effect
+    queueMicrotask(() => setReports(data.reports || []))
   }, [])
 
   // Récupère la liste dès que la page se monte.
