@@ -98,7 +98,7 @@ export default function HabitStatsPage() {
         <section className="rounded-[36px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_30px_100px_rgba(2,6,23,0.65)] backdrop-blur-2xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/60">Fenêtre d'analyse</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-white/60">Fenêtre d&apos;analyse</p>
               <h2 className="mt-2 text-2xl font-semibold">Sélectionne la période à analyser</h2>
               <p className="mt-2 text-sm text-white/60">
                 Ajuste l&apos;horizon pour recalculer toutes les métriques à la volée.

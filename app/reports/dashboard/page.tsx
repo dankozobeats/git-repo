@@ -3,28 +3,40 @@
 // Dashboard IA regroupant plusieurs widgets analytiques basés sur les rapports archivés.
 
 import Link from "next/link"
-import { ArrowLeft, BarChart3, Home, LibraryBig } from "lucide-react"
-import { useEffect, useState } from "react"
+import { ArrowLeft, BarChart3, LibraryBig } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
 
 import AIDisciplineScore from "@/components/AIScoreCard"
 import AIHeatmap from "@/components/AIHeatmap"
 import AICalendarView from "@/components/AICalendarView"
 import GraphAIStats from "@/components/GraphAIStats"
 
+interface AIReport {
+  created_at: string
+  stats?: {
+    goodLogs?: number
+    badLogs?: number
+    currentStreak?: number
+    discipline_score?: number
+  }
+  [key: string]: unknown
+}
+
 export default function DashboardPage() {
-  const [reports, setReports] = useState<any[]>([])
+  const [reports, setReports] = useState<AIReport[]>([])
 
   // Charge tous les rapports pour alimenter chaque widget.
-  async function loadReports() {
+  const loadReports = useCallback(async () => {
     const res = await fetch("/api/ai-reports")
     const data = await res.json()
-    setReports(data.reports || [])
-  }
+    // setState inside timeout to avoid synchronous setState in effect
+    setTimeout(() => setReports(data.reports || []), 0)
+  }, [])
 
   // Récupère la liste dès que la page se monte.
   useEffect(() => {
     loadReports()
-  }, [])
+  }, [loadReports])
 
   // Mise en page : entête minimal et empilement des composants analytiques.
   return (

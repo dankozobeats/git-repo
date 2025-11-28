@@ -35,8 +35,6 @@ const WEEKDAYS = [
   { label: 'Dim', full: 'Dimanche', index: 0 },
 ] as const
 
-const formatDate = (date: Date) => date.toISOString().split('T')[0]
-
 const normalizeDate = (date?: string | null, fallback?: string | null) => {
   if (date) return date
   if (fallback) return fallback.split('T')[0]
@@ -84,8 +82,9 @@ export function useWeeklyPerformance(period: HabitStatsPeriod): HookState {
       const weeklyData = buildWeeklyPerformance(logs, events, period)
       setData(weeklyData)
       setLoading(false)
-    } catch (err: any) {
-      const message = err?.message === 'AUTH' ? 'AUTH' : err?.message || 'UNKNOWN'
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'UNKNOWN'
+      const message = errorMessage === 'AUTH' ? 'AUTH' : errorMessage
       setError(message)
       setLoading(false)
     }

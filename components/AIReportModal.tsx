@@ -27,7 +27,7 @@ export default function AIReportModal({ open, report, title, onClose }: AIReport
   function headingRenderer(level: number) {
     const Tag = `h${level}` as keyof JSX.IntrinsicElements
     const sizeClass = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
-    return ({ children }: { children: React.ReactNode }) => {
+    function HeadingComponent({ children }: { children: React.ReactNode }) {
       const plain = Array.isArray(children)
         ? children.map(child => (typeof child === 'string' ? child : '')).join(' ')
         : typeof children === 'string'
@@ -40,6 +40,7 @@ export default function AIReportModal({ open, report, title, onClose }: AIReport
         </Tag>
       )
     }
+    return HeadingComponent
   }
 
   // Structure modale avec barre d'action, toc et contenu scrollable.

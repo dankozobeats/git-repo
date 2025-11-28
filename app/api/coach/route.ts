@@ -100,11 +100,12 @@ export async function POST(request: NextRequest) {
     let aiResponse: string
     try {
       aiResponse = await fetchAI(prompt)
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'unknown'
       return NextResponse.json(
         {
           error: "Erreur IA",
-          details: error?.message || "unknown",
+          details: errorMessage,
         },
         { status: 503 }
       )
@@ -122,11 +123,12 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'unknown'
     return NextResponse.json(
       {
         error: "Erreur interne API Coach",
-        details: error?.message || "unknown",
+        details: errorMessage,
       },
       { status: 500 }
     )

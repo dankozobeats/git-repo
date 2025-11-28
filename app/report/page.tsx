@@ -107,9 +107,9 @@ export default function ReportPage() {
         <section className="rounded-[40px] border border-white/5 bg-white/[0.04] p-6 md:p-10 shadow-[0_30px_90px_rgba(2,7,18,0.7)] backdrop-blur-2xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/50">Période d'analyse</p>
+              <p className="text-xs uppercase tracking-[0.4em] text-white/50">Période d&apos;analyse</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">{selectedLabel}</h2>
-              <p className="mt-2 text-sm text-white/60">Choisis l'horizon qui fait sens puis lance Gemini.</p>
+              <p className="mt-2 text-sm text-white/60">Choisis l&apos;horizon qui fait sens puis lance Gemini.</p>
             </div>
             <button
               type="button"
