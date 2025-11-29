@@ -130,6 +130,27 @@ export default function HistoryPage() {
   const showEmptyState = useMemo(() => !loading && reports.length === 0, [loading, reports.length])
   const heroStatus = loading ? 'Synchronisation en cours…' : 'Historique actualisé'
 
+  // 🔥 NORMALISATION (Correction TS)
+
+  // 🔥 Normalisation robuste – compatible tous cas Supabase
+  const reportsNormalized = useMemo(
+    () =>
+      reports.map(r => {
+        const stats = (r.stats as any) || {};
+
+        return {
+          created_at: r.created_at,
+          stats: {
+            goodLogs: typeof stats.goodLogs === 'number' ? stats.goodLogs : 0,
+            discipline_score: typeof stats.discipline_score === 'number' ? stats.discipline_score : 0,
+            currentStreak: typeof stats.currentStreak === 'number' ? stats.currentStreak : 0,
+          },
+        };
+      }),
+    [reports]
+  );
+
+
   return (
     <main
       ref={pageRef}
@@ -178,6 +199,7 @@ export default function HistoryPage() {
           )}
         </header>
 
+        {/* ----- INSIGHTS ----- */}
         <section className="rounded-[36px] border border-white/8 bg-white/5 p-6 shadow-[0_25px_80px_rgba(1,4,12,0.4)] backdrop-blur-2xl">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -186,33 +208,44 @@ export default function HistoryPage() {
             </div>
             {loading && <span className="text-sm text-white/60">Chargement des métriques…</span>}
           </div>
+
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
             <div className="space-y-6">
+
+              {/* SCORE */}
               <Suspense fallback={<ScoreSkeleton />}>
-                <AIDisciplineScore reports={reports} />
+                <AIDisciplineScore reports={reportsNormalized} />
               </Suspense>
+
+              {/* HEATMAP */}
               <Suspense fallback={<HeatmapSkeleton />}>
-                <AIHeatmap reports={reports} />
+                <AIHeatmap reports={reportsNormalized} />
               </Suspense>
+
             </div>
+
+            {/* CALENDRIER */}
             <div className="rounded-[30px] border border-white/8 bg-black/20 p-4">
               <Suspense fallback={<CalendarSkeleton />}>
-                <AICalendarView reports={reports} onDayClick={handleDayClick} />
+                <AICalendarView reports={reportsNormalized} onDayClick={handleDayClick} />
               </Suspense>
             </div>
           </div>
         </section>
 
+        {/* ----- GRAPH ----- */}
         <section className="space-y-6">
           <AIReportFilters filter={filter} onFilterChange={setFilter} sortAsc={sortAsc} onToggleSort={toggleSort} total={reports.length} />
           <div className="rounded-[32px] border border-white/8 bg-white/5 p-6 shadow-[0_20px_70px_rgba(1,3,10,0.45)] backdrop-blur-2xl">
             <Suspense fallback={<GraphSkeleton />}>
-              <GraphAIStats reports={reports} />
+              <GraphAIStats reports={reportsNormalized} />
             </Suspense>
           </div>
         </section>
 
+        {/* ----- LISTE DES RAPPORTS ----- */}
         <section className="space-y-4">
+
           {showEmptyState && (
             <div className="rounded-[32px] border border-dashed border-white/15 bg-white/5 px-6 py-10 text-center text-white/65">
               Aucun rapport ne correspond à ce filtre pour le moment.
@@ -233,6 +266,7 @@ export default function HistoryPage() {
             ))}
         </section>
 
+        {/* ----- FAQ ----- */}
         <section
           id="faq"
           className="rounded-[40px] border border-white/10 bg-gradient-to-br from-white/5 via-white/3 to-transparent px-6 py-10 shadow-[0_25px_90px_rgba(2,5,18,0.55)] backdrop-blur-2xl"

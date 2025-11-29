@@ -1,0 +1,32 @@
+
+> badhabit-new@0.1.0 build
+> next build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ⚠ `experimental.instrumentationHook` is no longer needed, because `instrumentation.js` is available by default. You can remove it from next.config.js.
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Unrecognized key(s) in object: 'instrumentationHook' at "experimental"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   ▲ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ? instrumentationHook (invalid experimental key)
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ Compiled successfully in 1806.4ms
+   Running TypeScript ...
+Failed to compile.
+
+./components/HabitAccordionItem.tsx:134:15
+Type error: Type '{ habitId: string; habitType: "good" | "bad"; trackingMode: "binary" | "counter" | null; initialCount: number; counterRequired: number; habitName: string; streak: number; totalLogs: number | undefined; totalCraquages: number | undefined; }' is not assignable to type 'IntrinsicAttributes & HabitQuickActionsProps'.
+  Property 'habitName' does not exist on type 'IntrinsicAttributes & HabitQuickActionsProps'.
+
+[0m [90m 132 |[39m               initialCount[33m=[39m{todayCount}
+ [90m 133 |[39m               counterRequired[33m=[39m{counterRequired}
+[31m[1m>[22m[39m[90m 134 |[39m               habitName[33m=[39m{habit[33m.[39mname}
+ [90m     |[39m               [31m[1m^[22m[39m
+ [90m 135 |[39m               streak[33m=[39m{habit[33m.[39mcurrent_streak [33m?[39m[33m?[39m [35m0[39m}
+ [90m 136 |[39m               totalLogs[33m=[39m{habit[33m.[39mtotal_logs [33m?[39m[33m?[39m undefined}
+ [90m 137 |[39m               totalCraquages[33m=[39m{habit[33m.[39mtotal_craquages [33m?[39m[33m?[39m undefined}[0m
+Next.js build worker exited with code: 1 and signal: null

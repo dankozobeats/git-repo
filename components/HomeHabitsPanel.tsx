@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import HabitCard, { type HabitWithMeta } from '@/components/HabitCard'
-import CategoryAccordion, { type CategoryGroup } from '@/components/CategoryAccordion'
+import CategoryAccordionList from '@/components/CategoryAccordionList'
+import type { CategoryGroup } from '@/components/CategoryAccordion'
 
 type HomeHabitsPanelProps = {
   badGroups: CategoryGroup[]

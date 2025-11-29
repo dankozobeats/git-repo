@@ -426,8 +426,7 @@ function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChang
           <option value="all">Toutes les catégories</option>
           {categories.map(category => (
             <option key={category.id} value={category.id}>
-              {`${category.icon || '📂'} ${category.name}`}
-            </option>
+               {`📂 ${category.name}`}            </option>
           ))}
           <option value="uncategorized">Sans catégorie</option>
         </select>

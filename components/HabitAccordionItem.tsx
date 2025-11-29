@@ -131,7 +131,6 @@ export default function HabitAccordionItem({
               trackingMode={habit.tracking_mode}
               initialCount={todayCount}
               counterRequired={counterRequired}
-              habitName={habit.name}
               streak={habit.current_streak ?? 0}
               totalLogs={habit.total_logs ?? undefined}
               totalCraquages={habit.total_craquages ?? undefined}

@@ -1,6 +1,7 @@
 'use client'
 
 // Audit SMART client : fournit des scores en temps réel et des conseils IA locaux.
+import React from 'react'
 import { useMemo } from 'react'
 import { Brain, CheckCircle2, Clock4, Gauge, ListChecks, Target } from 'lucide-react'
 
@@ -19,7 +20,7 @@ type Criterion = {
   label: string
   description: string
   score: number
-  icon: JSX.Element
+  icon: React.ReactNode
   accent: string
 }
 
