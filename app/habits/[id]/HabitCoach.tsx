@@ -78,7 +78,7 @@ export default function HabitCoach({ habitId, stats }: HabitCoachProps) {
 
       if (!res.ok || !payload) {
         const errorMsg = payload?.error || `Erreur API (${res.status})`
-        const details = (payload as any)?.details
+        const details = (payload as { details?: string })?.details
         throw new Error(details ? `${errorMsg}: ${details}` : errorMsg)
       }
 

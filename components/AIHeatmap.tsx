@@ -4,7 +4,14 @@
 
 import { useMemo } from "react"
 
-export default function AIHeatmap({ reports }: { reports: any[] }) {
+interface AIReport {
+  created_at: string
+  stats?: {
+    goodLogs?: number
+  }
+}
+
+export default function AIHeatmap({ reports }: { reports: AIReport[] }) {
   // Transforme les rapports en map date -> volume de bonnes actions pour un rendu rapide.
   const activity = useMemo(() => {
     const map: Record<string, number> = {}

@@ -83,14 +83,25 @@ export function GoodBadCompare({ data }: Props) {
   )
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipPayloadItem {
+  dataKey: string
+  value: number
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: TooltipPayloadItem[]
+  label?: string
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null
-  const good = payload.find((p: any) => p.dataKey === 'good')
-  const bad = payload.find((p: any) => p.dataKey === 'bad')
+  const good = payload.find((p) => p.dataKey === 'good')
+  const bad = payload.find((p) => p.dataKey === 'bad')
 
   return (
     <div className="rounded-xl border border-white/10 bg-gray-950/90 px-3 py-2 text-sm shadow-lg shadow-black/30">
-      <p className="text-xs uppercase tracking-wide text-gray-400">{formatDate(label)}</p>
+      <p className="text-xs uppercase tracking-wide text-gray-400">{label ? formatDate(label) : ''}</p>
       <p className="text-emerald-400">Good: {good?.value ?? 0}</p>
       <p className="text-red-400">Bad: {bad?.value ?? 0}</p>
     </div>

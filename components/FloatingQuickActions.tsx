@@ -1,7 +1,7 @@
 'use client'
 
 // Composant client qui gère un menu flottant Next.js et ses interactions utilisateur.
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Sparkles, Search } from 'lucide-react'
 import { HABIT_SEARCH_EVENT } from '@/lib/ui/scroll'
@@ -21,9 +21,20 @@ export default function FloatingQuickActions() {
   // Stocke l'identifiant du timeout qui réaffiche le menu après une pause.
   const scrollTimeoutRef = useRef<number | null>(null)
 
+  // Force le passage en mode caché si aucune protection n'est active.
+  const hideFloatingMenu = useCallback(() => {
+    if (document.documentElement.classList.contains('no-hide-menu')) return
+    setTemporarilyHidden(true)
+  }, [])
+
+  // Réinitialise l'état pour réafficher les actions flottantes.
+  const showFloatingMenu = useCallback(() => {
+    setTemporarilyHidden(false)
+  }, [])
+
   // Vérifie la présence du token dans localStorage et attache les réactions au scroll.
   useEffect(() => {
-    setIsHydrated(true)
+    queueMicrotask(() => setIsHydrated(true))
     if (typeof window === 'undefined') return
     let hasToken = false
     // Try/catch nécessaire car l'accès au localStorage peut échouer selon l'environnement.
@@ -35,11 +46,11 @@ export default function FloatingQuickActions() {
 
     if (!hasToken) {
       document.getElementById('floatingMenu')?.classList.add('hidden')
-      setMenuLocked(true)
+      queueMicrotask(() => setMenuLocked(true))
       return
     }
 
-    setMenuLocked(false)
+    queueMicrotask(() => setMenuLocked(false))
     lastScrollYRef.current = window.scrollY
     // Gère le scroll : détecte les mouvements significatifs et masque ou affiche le menu.
     const handleScroll = () => {
@@ -64,7 +75,7 @@ export default function FloatingQuickActions() {
         window.clearTimeout(scrollTimeoutRef.current)
       }
     }
-  }, [])
+  }, [hideFloatingMenu, showFloatingMenu])
 
   // Empêche le masquage automatique pendant un clic pour éviter les disparitions brusques.
   const preventHideDuringClick = () => {
@@ -72,17 +83,6 @@ export default function FloatingQuickActions() {
     window.setTimeout(() => {
       document.documentElement.classList.remove('no-hide-menu')
     }, 300)
-  }
-
-  // Force le passage en mode caché si aucune protection n'est active.
-  const hideFloatingMenu = () => {
-    if (document.documentElement.classList.contains('no-hide-menu')) return
-    setTemporarilyHidden(true)
-  }
-
-  // Réinitialise l'état pour réafficher les actions flottantes.
-  const showFloatingMenu = () => {
-    setTemporarilyHidden(false)
   }
 
   // Classes utilitaires Next/Tailwind pour positionner le menu selon le viewport.

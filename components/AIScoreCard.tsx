@@ -2,7 +2,15 @@
 
 // Affiche un score synthétique calculé à partir des rapports IA enregistrés.
 
-export default function AIScoreCard({ reports }: { reports: any[] }) {
+interface AIReport {
+  stats?: {
+    goodLogs?: number
+    badLogs?: number
+    currentStreak?: number
+  }
+}
+
+export default function AIScoreCard({ reports }: { reports: AIReport[] }) {
   if (!reports || reports.length === 0) return null
 
   // Sommes cumulées de validations/craquages renvoyées par les rapports.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { X, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react'
 
 interface DayReport {
@@ -29,13 +29,7 @@ export function DayReportModal({ date, isOpen, onClose }: DayReportModalProps) {
   const [report, setReport] = useState<DayReport | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  useEffect(() => {
-    if (isOpen && date) {
-      fetchReport()
-    }
-  }, [isOpen, date])
-
-  async function fetchReport() {
+  const fetchReport = useCallback(async () => {
     setIsLoading(true)
     try {
       const res = await fetch(`/api/day/${date}`)
@@ -48,7 +42,13 @@ export function DayReportModal({ date, isOpen, onClose }: DayReportModalProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [date])
+
+  useEffect(() => {
+    if (isOpen && date) {
+      fetchReport()
+    }
+  }, [isOpen, date, fetchReport])
 
   if (!isOpen) return null
 

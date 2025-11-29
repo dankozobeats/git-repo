@@ -9,7 +9,7 @@ type ReportPayload = {
   id: string
   report: string
   created_at?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 type AnalysisPayload = {
@@ -77,9 +77,10 @@ export default function CompareContent() {
         if (!active) return
         setReport1(r1)
         setReport2(r2)
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!active) return
-        setReportsError(err?.message || 'Erreur inconnue.')
+        const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue.'
+        setReportsError(errorMessage)
         setReport1(null)
         setReport2(null)
       } finally {
@@ -110,9 +111,10 @@ export default function CompareContent() {
         const payload = await response.json()
         if (!active) return
         setAnalysis(payload)
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!active) return
-        setAnalysisError(err?.message || 'Erreur inconnue.')
+        const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue.'
+        setAnalysisError(errorMessage)
         setAnalysis(null)
       } finally {
         if (active) setAnalysisLoading(false)

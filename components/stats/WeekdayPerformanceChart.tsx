@@ -37,7 +37,20 @@ export function WeekdayPerformanceChart({ data }: Props) {
   )
 }
 
-function CustomTooltip({ active, payload }: any) {
+interface TooltipPayload {
+  payload?: {
+    fullDay: string
+    good: number
+    bad: number
+  }
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: TooltipPayload[]
+}
+
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload?.length) return null
   const point = payload[0]?.payload
   if (!point) return null

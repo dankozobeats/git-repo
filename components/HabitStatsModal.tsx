@@ -123,8 +123,9 @@ export default function HabitStatsModal({ habit, onClose }: HabitStatsModalProps
 
         setData(insight)
         setLoading(false)
-      } catch (err: any) {
-        setError(err?.message || 'Impossible de charger les détails.')
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Impossible de charger les détails.'
+        setError(errorMessage)
         setLoading(false)
       }
     }

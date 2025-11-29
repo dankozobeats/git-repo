@@ -4,8 +4,13 @@
 
 import { useState, useMemo } from "react"
 
+interface AIReport {
+  created_at: string
+  [key: string]: unknown
+}
+
 type AICalendarViewProps = {
-  reports: any[]
+  reports: AIReport[]
   onDayClick?: (date: string) => void
 }
 
@@ -15,7 +20,7 @@ export default function AICalendarView({ reports, onDayClick }: AICalendarViewPr
 
   // Regroupe les rapports par date ISO (AAAA-MM-JJ) pour compter rapidement les entrées quotidiennes.
   const byDate = useMemo(() => {
-    const map: Record<string, any[]> = {}
+    const map: Record<string, AIReport[]> = {}
     reports.forEach(r => {
       const key = r.created_at.split("T")[0]
       if (!map[key]) map[key] = []

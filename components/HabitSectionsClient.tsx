@@ -75,7 +75,6 @@ export default function HabitSectionsClient({
   const [goodCategoryFilter, setGoodCategoryFilter] = useState<CategoryFilterValue>('pending')
   const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('pending')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   // Stocke le message du toast premium pour le diffuser dans la zone feedback.
   const [toastMessage, setToastMessage] = useState<{ message: string; variant: 'success' | 'error' } | null>(null)
   // Contrôle la bulle coach roast locale pour répliquer la disparition progressive.
@@ -165,18 +164,6 @@ export default function HabitSectionsClient({
     }
   }, [])
 
-  // Détecte les breakpoints pour ajuster l'affichage des bulles coach.
-  useEffect(() => {
-    const update = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    update()
-    window.addEventListener('resize', update)
-    return () => {
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-
   // Handler centralisé pour afficher le toast lorsqu'une habitude est validée (succès ou erreur).
   const handleHabitValidated = useCallback((message: string, variant: 'success' | 'error' = 'success') => {
     setToastMessage({ message, variant })
@@ -202,12 +189,19 @@ export default function HabitSectionsClient({
   // Synchronise la bannière coach côté client uniquement pour éviter les soucis SSR (window inexistant serveur).
   useEffect(() => {
     if (!coachMessage) {
-      hideCoachBanner()
+      // Utilise un micro-task pour éviter l'appel synchrone de setState
+      queueMicrotask(() => {
+        clearCoachTimers()
+        setCoachVisible(false)
+        coachCleanupTimerRef.current = window.setTimeout(() => setCoachBanner(null), 200)
+      })
       return
     }
 
-    setCoachBanner(coachMessage)
-    setCoachVisible(true)
+    queueMicrotask(() => {
+      setCoachBanner(coachMessage)
+      setCoachVisible(true)
+    })
     clearCoachTimers()
     coachHideTimerRef.current = window.setTimeout(() => {
       hideCoachBanner()
@@ -536,10 +530,6 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
           trackingMode={habit.tracking_mode as 'binary' | 'counter'}
           initialCount={todayCount}
           counterRequired={counterState.required}
-          habitName={habit.name}
-          streak={habit.current_streak ?? 0}
-          totalLogs={habit.total_logs ?? undefined}
-          totalCraquages={habit.total_craquages ?? undefined}
           onHabitValidated={onHabitValidated}
         />
       </div>

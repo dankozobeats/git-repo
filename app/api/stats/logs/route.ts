@@ -1,9 +1,9 @@
 // API utilitaire pour alimenter les graphiques stats avec les logs bruts Supabase.
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 // Retourne les habitudes actives et leurs logs associés pour l'utilisateur connecté.
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Client Supabase côté serveur pour récupérer la session et les données.
     const supabase = await createClient()

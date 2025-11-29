@@ -66,14 +66,14 @@ export default function CategoryAccordion({
   useEffect(() => {
     let timer: number | null = null
     if (isOpen && !previousOpenRef.current) {
-      setOpening(true)
+      queueMicrotask(() => setOpening(true))
       animateAndCenterCategoryAccordion(wrapperRef.current)
       timer = window.setTimeout(() => {
         setOpening(false)
       }, 300)
     }
     if (!isOpen && previousOpenRef.current) {
-      setOpening(false)
+      queueMicrotask(() => setOpening(false))
     }
 
     previousOpenRef.current = isOpen

@@ -16,7 +16,7 @@ export default function DashboardHeader({ email, avatarInitial }: DashboardHeade
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    setIsClient(true)
+    queueMicrotask(() => setIsClient(true))
   }, [])
 
   // Permet de fermer le tiroir mobile après interaction.

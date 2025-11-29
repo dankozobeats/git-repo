@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore archived and backup files
+    "_archive/**",
+    "**/*.backup.ts",
   ]),
 ]);
 

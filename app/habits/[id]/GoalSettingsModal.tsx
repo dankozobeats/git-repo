@@ -104,7 +104,7 @@ export default function GoalSettingsModal({
       <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-auto">
         {/* Header */}
         <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Paramétrer l'objectif</h2>
+          <h2 className="text-xl font-bold text-white">Paramétrer l&apos;objectif</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
@@ -194,7 +194,7 @@ export default function GoalSettingsModal({
               </span>
             </p>
             {goalDescription && (
-              <p className="text-sm text-gray-400 mt-2 italic">"{goalDescription}"</p>
+              <p className="text-sm text-gray-400 mt-2 italic">&ldquo;{goalDescription}&rdquo;</p>
             )}
           </div>
 

@@ -411,7 +411,7 @@ export default function HabitCounter({
 
             <div className="text-sm text-red-300 mt-4">
               {count === 0 ? (
-                <p>Pas de craquage aujourd'hui. Tiens bon !</p>
+                <p>Pas de craquage aujourd&apos;hui. Tiens bon !</p>
               ) : (
                 <p>{count} craquage{count > 1 ? 's' : ''}. Tu peux toujours corriger et repartir à zéro.</p>
               )}
