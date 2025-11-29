@@ -5,6 +5,8 @@ import { notFound, redirect } from 'next/navigation'
 import HabitDetailClient from './HabitDetailClient'
 import DeleteButton from './DeleteButton'
 import HabitDetailHeader from '@/components/HabitDetailHeader'
+import PushEnableButton from '@/components/PushEnableButton'
+import CreateReminderButton from '@/components/CreateReminderButton'
 import { createClient } from '@/lib/supabase/server'
 import { getTodayDateISO } from '@/lib/date-utils'
 import { getHabitById } from '@/lib/habits/getHabitById'
@@ -80,6 +82,13 @@ export default async function HabitDetailPage({ params }: PageProps) {
 
         <HabitDetailHeader habit={habit} allHabits={navigationHabits} />
 
+        import PushEnableButton from '@/components/PushEnableButton'
+        import CreateReminderButton from '@/components/CreateReminderButton'
+
+        // ... existing imports ...
+
+        // Inside the component return, before HabitDetailClient:
+
         <section className="rounded-[32px] border border-white/8 bg-white/[0.02] p-6 shadow-[0_25px_80px_rgba(0,0,0,0.4)] backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-1 items-start gap-4">
@@ -121,6 +130,16 @@ export default async function HabitDetailPage({ params }: PageProps) {
               </Link>
               <DeleteButton habitId={habit.id} habitName={habit.name} />
             </div>
+          </div>
+        </section>
+
+        {/* Section Rappels */}
+        <section className="rounded-3xl border border-white/5 bg-white/[0.02] p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">🔔 Rappels & Notifications</h2>
+          <div className="flex flex-wrap items-center gap-4">
+            <PushEnableButton userId={user.id} />
+            <div className="h-8 w-px bg-white/10 mx-2 hidden sm:block"></div>
+            <CreateReminderButton habitId={habit.id} userId={user.id} />
           </div>
         </section>
 

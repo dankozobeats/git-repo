@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { urlBase64ToUint8Array } from '@/utils/webpush';
 
-export default function PushEnableButton() {
+interface PushEnableButtonProps {
+    userId?: string; // Optional for now, to match requested signature
+}
+
+export default function PushEnableButton({ userId }: PushEnableButtonProps) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [msg, setMsg] = useState('');
 
@@ -31,7 +35,7 @@ export default function PushEnableButton() {
             const res = await fetch('/api/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(subscription)
+                body: JSON.stringify({ ...subscription, userId }) // Pass userId if needed by API (though API gets it from session)
             });
 
             if (!res.ok) throw new Error('Erreur API subscribe');
@@ -53,9 +57,9 @@ export default function PushEnableButton() {
             <button
                 onClick={handleSubscribe}
                 disabled={status === 'loading'}
-                className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+                className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
             >
-                {status === 'loading' ? 'Activation...' : 'Activer les notifications'}
+                {status === 'loading' ? 'Activation...' : '🔔 Activer les notifications'}
             </button>
             {status === 'error' && <span className="text-red-500 text-sm">{msg}</span>}
         </div>
