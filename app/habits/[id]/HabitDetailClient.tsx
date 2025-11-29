@@ -1,6 +1,5 @@
 'use client'
 
-// Client component orchestrating all interactive widgets for a single habit view.
 import { useState } from 'react'
 import HabitCounter from './HabitCounter'
 import ReminderSettingsModal from './ReminderSettingsModal'
@@ -37,6 +36,9 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [count, setCount] = useState(stats.todayCount)
   const [showReminder, setShowReminder] = useState(false)
+
+  // ✔ Correction : fallback propre
+  const trackingMode: 'binary' | 'counter' = habit.tracking_mode ?? 'binary'
 
   const isBadHabit = habit.type === 'bad'
   const statColor = isBadHabit ? 'text-[#FF6B6B]' : 'text-[#5EEAD4]'
@@ -77,7 +79,7 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full border border-white/15 px-4 py-1 text-xs font-semibold text-white/70">
-                {habit.tracking_mode === 'counter' ? 'Mode compteur' : 'Mode simple'}
+                {trackingMode === 'counter' ? 'Mode compteur' : 'Mode simple'}
               </span>
               <button
                 type="button"
@@ -90,11 +92,10 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
           </div>
 
           <div
-            className={`flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:px-7 sm:py-6 ${
-              isBadHabit
-                ? 'border-[#FF6B6B]/40 bg-[#1A0E11]'
-                : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
-            }`}
+            className={`flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:px-7 sm:py-6 ${isBadHabit
+              ? 'border-[#FF6B6B]/40 bg-[#1A0E11]'
+              : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
+              }`}
           >
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -105,8 +106,8 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
                       ? `${count} craquage${count > 1 ? 's' : ''}`
                       : 'Aucun craquage'
                     : count > 0
-                    ? 'Habitude validée'
-                    : 'En attente'}
+                      ? 'Habitude validée'
+                      : 'En attente'}
                 </p>
                 <p className="mt-2 text-sm text-white/70">
                   {isBadHabit
@@ -114,22 +115,22 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
                       ? 'Note rapidement le contexte pour identifier tes leviers de contrôle.'
                       : 'Status clean pour le moment, garde cette vigilance.'
                     : count > 0
-                    ? 'Momentum enclenché, verrouille ta progression par une répétition bonus.'
-                    : 'Une micro-action suffit pour basculer dans le camp des disciplinés.'}
+                      ? 'Momentum enclenché, verrouille ta progression par une répétition bonus.'
+                      : 'Une micro-action suffit pour basculer dans le camp des disciplinés.'}
                 </p>
               </div>
               <span
-                className={`inline-flex items-center justify-center rounded-full border px-4 py-1 text-xs font-semibold ${
-                  count > 0
-                    ? isBadHabit
-                      ? 'border-[#FF6B6B] text-[#FF6B6B]'
-                      : 'border-[#5EEAD4] text-[#5EEAD4]'
-                    : 'border-white/20 text-white/60'
-                }`}
+                className={`inline-flex items-center justify-center rounded-full border px-4 py-1 text-xs font-semibold ${count > 0
+                  ? isBadHabit
+                    ? 'border-[#FF6B6B] text-[#FF6B6B]'
+                    : 'border-[#5EEAD4] text-[#5EEAD4]'
+                  : 'border-white/20 text-white/60'
+                  }`}
               >
                 {count > 0 ? (isBadHabit ? 'Craquage détecté' : 'Validée') : 'À lancer'}
               </span>
             </div>
+
             <div className="grid gap-3 text-sm text-white/70 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40">Streak</p>
@@ -149,7 +150,7 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
           <HabitCounter
             habitId={habit.id}
             habitType={habit.type}
-            trackingMode={habit.tracking_mode || 'binary'}
+            trackingMode={trackingMode}
             goalValue={habit.goal_value}
             goalType={habit.goal_type}
             todayCount={count}
@@ -162,7 +163,10 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
         </section>
 
         <div className="flex justify-end">
-          <button className="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2" onClick={() => setShowReminder(true)}>
+          <button
+            className="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2"
+            onClick={() => setShowReminder(true)}
+          >
             Configurer un rappel
           </button>
         </div>
@@ -213,15 +217,15 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
             habitId={habit.id}
             habitType={habit.type}
             calendarData={calendarData}
-            trackingMode={habit.tracking_mode}
+            // tracking mode fallback applied
+            trackingMode={trackingMode}
             onDayClick={date => setSelectedDate(date)}
           />
         </section>
 
         <section
-          className={`rounded-[28px] border p-6 text-center shadow-lg ${
-            isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
-          }`}
+          className={`rounded-[28px] border p-6 text-center shadow-lg ${isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
+            }`}
         >
           <p className="text-base text-white/90">&ldquo;{getContextualMessage()}&rdquo;</p>
         </section>
@@ -238,7 +242,11 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
         onClose={() => setIsGoalModalOpen(false)}
       />
 
-      <DayReportModal date={selectedDate || ''} isOpen={!!selectedDate} onClose={() => setSelectedDate(null)} />
+      <DayReportModal
+        date={selectedDate || ''}
+        isOpen={!!selectedDate}
+        onClose={() => setSelectedDate(null)}
+      />
     </>
   )
 }
