@@ -1,14 +1,17 @@
 'use client'
 
+'use client'
+
 import { useState } from 'react'
 import HabitCounter from './HabitCounter'
 import ReminderSettingsModal from './ReminderSettingsModal'
-import { WeeklyCalendar } from '@/components/WeeklyCalendar'
+import WeeklyCalendar from '@/components/WeeklyCalendar'
 import { DayReportModal } from '@/components/DayReportModal'
 import GoalSettingsModal from './GoalSettingsModal'
 import GamificationPanel from './GamificationPanel'
 import HabitCoach from './HabitCoach'
 import type { HabitCalendarMap, HabitStats } from '@/lib/habits/computeHabitStats'
+
 
 type Habit = {
   id: string
@@ -214,10 +217,8 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
 
         <section className={sectionCard}>
           <WeeklyCalendar
-            habitId={habit.id}
             habitType={habit.type}
             calendarData={calendarData}
-            // tracking mode fallback applied
             trackingMode={trackingMode}
             onDayClick={date => setSelectedDate(date)}
           />

@@ -1,5 +1,4 @@
 // Page serveur de détail d'une habitude : récupère les logs et statistiques associés.
-// Server component powering the habit detail page with streamlined data access.
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import HabitDetailClient from './HabitDetailClient'
@@ -16,9 +15,15 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+// 🔒 Normalisation stricte pour éviter l'erreur TS
+function normalizeHabitType(t: string): "good" | "bad" {
+  return t === "good" ? "good" : "bad"
+}
+
 export default async function HabitDetailPage({ params }: PageProps) {
   const { id } = await params
   const supabase = await createClient()
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -32,6 +37,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
     habitId: id,
     userId: user.id,
   })
+
   const navigationHabitsPromise = getUserHabits({
     client: supabase,
     userId: user.id,
@@ -60,12 +66,20 @@ export default async function HabitDetailPage({ params }: PageProps) {
 
   const userHabits = await navigationHabitsPromise
   const navigationHabits =
-    userHabits.find(existingHabit => existingHabit.id === habit.id) !== undefined
+    userHabits.find(h => h.id === habit.id) !== undefined
       ? userHabits
       : [habit, ...userHabits]
 
-  const isBadHabit = habit.type === 'bad'
-  const badgeColor = isBadHabit ? 'text-[#FF5F5F] border-[#FF5F5F]/50' : 'text-[#4DD0FB] border-[#4DD0FB]/50'
+  // 🎯 Correction principale : normalisation du type
+  const normalizedHabit = {
+    ...habit,
+    type: normalizeHabitType(habit.type),
+  }
+
+  const isBadHabit = normalizedHabit.type === 'bad'
+  const badgeColor = isBadHabit
+    ? 'text-[#FF5F5F] border-[#FF5F5F]/50'
+    : 'text-[#4DD0FB] border-[#4DD0FB]/50'
 
   return (
     <main className="min-h-screen bg-[#050505] text-[#F8FAFC]">
@@ -74,39 +88,48 @@ export default async function HabitDetailPage({ params }: PageProps) {
           href="/"
           className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-white/40 hover:text-white"
         >
-          <span aria-hidden>←</span>
-          Retour au dashboard
+          ← Retour au dashboard
         </Link>
 
-        <HabitDetailHeader habit={habit} allHabits={navigationHabits} />
+        <HabitDetailHeader habit={normalizedHabit} allHabits={navigationHabits} />
 
         <section className="rounded-[32px] border border-white/8 bg-white/[0.02] p-6 shadow-[0_25px_80px_rgba(0,0,0,0.4)] backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-1 items-start gap-4">
               <div
                 className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/10 text-3xl shadow-inner shadow-black/30 sm:h-20 sm:w-20 sm:text-4xl"
-                style={{ backgroundColor: `${habit.color || '#1F2937'}1a` }}
+                style={{ backgroundColor: `${normalizedHabit.color || '#1F2937'}1a` }}
               >
-                {habit.icon || (isBadHabit ? '🔥' : '✨')}
+                {normalizedHabit.icon || (isBadHabit ? '🔥' : '✨')}
               </div>
+
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/60">
                     Habitude
                   </span>
+
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeColor}`}>
                     {isBadHabit ? 'Mauvaise habitude' : 'Bonne habitude'}
                   </span>
-                  {habit.tracking_mode === 'counter' && (
+
+                  {normalizedHabit.tracking_mode === 'counter' && (
                     <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/80">
-                      Compteur · {habit.daily_goal_type === 'minimum' ? 'Min' : 'Max'} {habit.daily_goal_value ?? 0}
+                      Compteur · {normalizedHabit.daily_goal_type === 'minimum' ? 'Min' : 'Max'}{' '}
+                      {normalizedHabit.daily_goal_value ?? 0}
                     </span>
                   )}
                 </div>
+
                 <div>
-                  <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{habit.name}</h1>
-                  {habit.description && (
-                    <p className="mt-2 max-w-2xl text-sm text-white/70">{habit.description}</p>
+                  <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                    {normalizedHabit.name}
+                  </h1>
+
+                  {normalizedHabit.description && (
+                    <p className="mt-2 max-w-2xl text-sm text-white/70">
+                      {normalizedHabit.description}
+                    </p>
                   )}
                 </div>
               </div>
@@ -114,17 +137,22 @@ export default async function HabitDetailPage({ params }: PageProps) {
 
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
               <Link
-                href={`/habits/${habit.id}/edit`}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                href={`/habits/${normalizedHabit.id}/edit`}
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/[0.07]"
               >
                 ✏️ Modifier
               </Link>
-              <DeleteButton habitId={habit.id} habitName={habit.name} />
+
+              <DeleteButton habitId={normalizedHabit.id} habitName={normalizedHabit.name} />
             </div>
           </div>
         </section>
 
-        <HabitDetailClient habit={habit} calendarData={calendarData} stats={stats} />
+        <HabitDetailClient
+          habit={normalizedHabit}
+          calendarData={calendarData}
+          stats={stats}
+        />
       </div>
     </main>
   )
