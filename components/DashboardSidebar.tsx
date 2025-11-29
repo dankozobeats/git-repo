@@ -56,9 +56,9 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
     if (typeof window === 'undefined') return
     try {
       const token = window.localStorage.getItem('auth_token')
-      setSidebarHidden(!token)
+      queueMicrotask(() => setSidebarHidden(!token))
     } catch {
-      setSidebarHidden(true)
+      queueMicrotask(() => setSidebarHidden(true))
     }
   }, [])
 
@@ -173,6 +173,20 @@ function NavLinks({
     ? items.filter(item => item.label.toLowerCase().includes(normalizedQuery))
     : items
 
+  const handleGuardedNavigate = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (typeof window === 'undefined') return
+      const token = window.localStorage.getItem('auth_token')
+      if (!token) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
+      onNavigate?.()
+    },
+    [onNavigate]
+  )
+
   const isLinkActive = (href: string, provided?: boolean) => {
     if (typeof provided !== 'undefined') return provided
 
@@ -191,20 +205,6 @@ function NavLinks({
   if (filteredItems.length === 0) {
     return <p className="mt-2 text-xs text-white/40">Aucune entrée ne correspond à la recherche.</p>
   }
-
-  const handleGuardedNavigate = useCallback(
-    (event: MouseEvent<HTMLAnchorElement>) => {
-      if (typeof window === 'undefined') return
-      const token = window.localStorage.getItem('auth_token')
-      if (!token) {
-        event.preventDefault()
-        event.stopPropagation()
-        return
-      }
-      onNavigate?.()
-    },
-    [onNavigate]
-  )
 
   return (
     <nav className="mt-4 space-y-1">

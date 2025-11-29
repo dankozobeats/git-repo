@@ -1,4 +1,8 @@
 // Variables d'environnement pour choisir le fournisseur IA actif côté serveur.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5'
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
+const OPENAI_ENABLE = String(process.env.OPENAI_ENABLE || '').toLowerCase() === 'true'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const GEMINI_LANGUAGE = process.env.GEMINI_LANGUAGE || 'fr'
@@ -11,6 +15,10 @@ let ollamaModelLoaded = false
 
 // Route d'accès unique : choisit Gemini si la clé existe sinon bascule sur Ollama.
 export async function fetchAI(prompt: string) {
+  // Priorité: OpenAI (GPT-5) → Gemini → Ollama, mais OpenAI activé uniquement si OPENAI_ENABLE=true
+  if (OPENAI_ENABLE && OPENAI_API_KEY) {
+    return fetchOpenAI(prompt)
+  }
   if (GEMINI_API_KEY) {
     return fetchGemini(prompt)
   }
@@ -20,6 +28,43 @@ export async function fetchAI(prompt: string) {
   }
 
   return fetchOllama(prompt)
+}
+
+// Enveloppe l'appel REST à OpenAI (GPT-5) avec gestion d'erreurs.
+async function fetchOpenAI(prompt: string) {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY non configuré')
+  }
+
+  const url = `${OPENAI_BASE_URL}/chat/completions`
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      messages: [
+        { role: 'system', content: 'Tu es un coach IA francophone, concis et utile.' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.8,
+    }),
+  })
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => 'Erreur inconnue')
+    throw new Error(`OpenAI error ${res.status}: ${errorText}`)
+  }
+
+  const data = await res.json()
+  const text = data.choices?.[0]?.message?.content?.trim()
+  if (!text) {
+    throw new Error("Réponse OpenAI invalide: pas de texte retourné")
+  }
+  return text
 }
 
 // Enveloppe l'appel REST à Gemini en gérant la langue et les erreurs HTTP.

@@ -30,7 +30,8 @@ export default function StatsTabs({ daily, weekday, weekly, topHabits, calendar 
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    // Utilise un micro-task pour éviter l'appel synchrone de setState
+    queueMicrotask(() => setMounted(true))
   }, [])
 
   return (

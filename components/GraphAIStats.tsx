@@ -16,8 +16,15 @@ import { Line } from 'react-chartjs-2'
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
 
+interface AIReport {
+  created_at: string
+  stats?: {
+    discipline_score?: number
+  }
+}
+
 type GraphAIStatsProps = {
-  reports: any[]
+  reports: AIReport[]
 }
 
 export default function GraphAIStats({ reports }: GraphAIStatsProps) {

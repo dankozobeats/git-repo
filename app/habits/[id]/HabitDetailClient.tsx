@@ -3,6 +3,7 @@
 // Client component orchestrating all interactive widgets for a single habit view.
 import { useState } from 'react'
 import HabitCounter from './HabitCounter'
+import ReminderSettingsModal from './ReminderSettingsModal'
 import { WeeklyCalendar } from '@/components/WeeklyCalendar'
 import { DayReportModal } from '@/components/DayReportModal'
 import GoalSettingsModal from './GoalSettingsModal'
@@ -35,6 +36,7 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [count, setCount] = useState(stats.todayCount)
+  const [showReminder, setShowReminder] = useState(false)
 
   const isBadHabit = habit.type === 'bad'
   const statColor = isBadHabit ? 'text-[#FF6B6B]' : 'text-[#5EEAD4]'
@@ -158,6 +160,15 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
             totalCraquages={isBadHabit ? stats.totalCount : 0}
           />
         </section>
+
+        <div className="flex justify-end">
+          <button className="text-sm bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2" onClick={() => setShowReminder(true)}>
+            Configurer un rappel
+          </button>
+        </div>
+        {showReminder && (
+          <ReminderSettingsModal habitId={habit.id} onClose={() => setShowReminder(false)} />
+        )}
 
         <section className={sectionCard}>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
