@@ -1,9 +1,9 @@
-// Layout racine App Router : gère l'auth Supabase, les scripts de garde et la navigation globale.
+// Layout racine App Router : gère l'auth Supabase et la navigation globale.
 import type { Metadata } from 'next'
-import Script from 'next/script'
 import './globals.css'
 import DashboardSidebar, { type SidebarNavItem } from '@/components/DashboardSidebar'
 import FloatingQuickActions from '@/components/FloatingQuickActions'
+import AuthSync from '@/components/AuthSync'
 import { createClient } from '@/lib/supabase/server'
 
 // Métadonnées exposées à la plateforme Next (SEO/icônes).
@@ -33,7 +33,7 @@ const mainNav: SidebarNavItem[] = [
 const utilityNav: SidebarNavItem[] = [
   { href: '/habits/new', label: 'Nouvelle habitude', icon: 'target' },
   { href: '/settings', label: 'Paramètres', icon: 'settings' },
-  { href: '/reports/history#faq', label: 'Aide & support', icon: 'help' },
+  { href: '/aide', label: 'Aide & support', icon: 'help' },
 ]
 
 export default async function RootLayout({
@@ -55,100 +55,9 @@ export default async function RootLayout({
   return (
     <html lang="fr">
       <body className="antialiased bg-[#0c0f1a] text-[#E0E0E0] overflow-visible">
-        {/* Script inline qui synchronise localStorage/token avant hydratation. */}
-        <Script id="auth-guard" strategy="beforeInteractive">
-          {`// ==========================================
-// 🔐 AUTH GUARD — Blocage si non connecté
-// ==========================================
-(function authGuard() {
-  const hasServerSession = ${isAuthenticated ? 'true' : 'false'}
-  const PUBLIC_ROUTES = ['/login', '/auth/sign-in', '/auth/callback', '/auth/reset', '/auth/update-password']
-  const isPublicRoute = PUBLIC_ROUTES.some(route => window.location.pathname.startsWith(route))
-  const hideProtectedUi = () => {
-    document.getElementById('sidebar')?.classList.add('hidden')
-    document.getElementById('floatingMenu')?.classList.add('hidden')
-  }
+        {/* Composant AuthSync : gère la synchronisation auth serveur/client */}
+        <AuthSync isAuthenticated={isAuthenticated} />
 
-  const showProtectedUi = () => {
-    document.getElementById('sidebar')?.classList.remove('hidden')
-    document.getElementById('floatingMenu')?.classList.remove('hidden')
-  }
-
-  let token = null
-  try {
-    token = window.localStorage.getItem('auth_token')
-  } catch (_) {}
-
-  if (isPublicRoute) {
-    hideProtectedUi()
-    try {
-      window.localStorage.removeItem('auth_token')
-    } catch (_) {}
-    return
-  }
-
-  if (hasServerSession && !token) {
-    try {
-      window.localStorage.setItem('auth_token', 'active')
-      token = window.localStorage.getItem('auth_token')
-    } catch (_) {}
-  }
-
-  if (!hasServerSession || !token) {
-    console.warn('⛔ Accès interdit — utilisateur non connecté')
-    hideProtectedUi()
-    try {
-      window.localStorage.removeItem('auth_token')
-    } catch (_) {}
-    if (!isPublicRoute) {
-      window.location.href = '/login'
-    }
-    return
-  }
-
-  showProtectedUi()
-
-  window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-      const newToken = window.localStorage.getItem('auth_token')
-      if (!newToken) {
-        hideProtectedUi()
-        try {
-          window.localStorage.removeItem('auth_token')
-        } catch (_) {}
-        if (!isPublicRoute) {
-          window.location.href = '/login'
-        }
-      } else {
-        showProtectedUi()
-      }
-    }
-  })
-
-  history.pushState(null, '', location.href)
-  window.onpopstate = function () {
-    history.pushState(null, '', location.href)
-  }
-})()`}
-        </Script>
-        {/* Synchronise le token local en fonction de l'état serveur détecté. */}
-        {isAuthenticated ? (
-          <Script id="auth-token-sync" strategy="afterInteractive">
-            {`try {
-  window.localStorage.setItem('auth_token', 'active')
-  document.getElementById('sidebar')?.classList.remove('hidden')
-  document.getElementById('floatingMenu')?.classList.remove('hidden')
-} catch (_) {}`}
-          </Script>
-        ) : (
-          <Script id="auth-token-clear" strategy="afterInteractive">
-            {`try {
-  window.localStorage.removeItem('auth_token')
-  document.getElementById('sidebar')?.classList.add('hidden')
-  document.getElementById('floatingMenu')?.classList.add('hidden')
-} catch (_) {}`}
-          </Script>
-        )}
         <div className="min-h-screen overflow-visible">
           {isAuthenticated && (
             // Barre latérale uniquement visible lorsque l'utilisateur dispose d'une session active.

@@ -243,7 +243,7 @@ export default function HabitSectionsClient({
     <div
       id="habit-feedback-area"
       ref={feedbackRef}
-      className="mx-auto w-full max-w-7xl space-y-3 px-2 sm:px-0"
+      className="mx-auto w-full max-w-full space-y-3 px-0 sm:px-0 md:max-w-5xl"
     >
       {coachBanner && (
         <div
@@ -276,7 +276,7 @@ export default function HabitSectionsClient({
 
   // Résultats dynamiques centrés pour conserver la même largeur que les sections principales.
   const searchResultsSection = hasSearch ? (
-    <div id="searchResults" className="mx-auto w-full max-w-7xl space-y-3 rounded-3xl border border-white/10 bg-black/30 px-4 py-4 shadow-inner shadow-black/40">
+    <div id="searchResults" className="mx-auto w-full max-w-full space-y-2 rounded-none border-x-0 border-white/10 bg-black/30 px-4 py-4 shadow-inner shadow-black/40 sm:space-y-3 sm:rounded-3xl sm:border-x md:max-w-5xl md:px-4">
       <div className="flex items-center justify-between px-2 pb-2">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-white/60">Résultats de recherche</h3>
         <button
@@ -323,7 +323,7 @@ export default function HabitSectionsClient({
 
       <div
         id="mainScrollArea"
-        className={`snap-y snap-mandatory px-2 ${hasSearch ? 'hidden' : ''} md:h-screen md:overflow-y-auto sm:px-4`}
+        className={`snap-y snap-mandatory px-0 ${hasSearch ? 'hidden' : ''} md:h-screen md:overflow-y-auto sm:px-4`}
       >
         {showGoodHabits && (
           <section id="goodHabitsSection" className="scroll-section snap-start space-y-4">
@@ -374,7 +374,7 @@ export default function HabitSectionsClient({
         )}
       </div>
 
-      <div className="relative z-0 space-y-4 rounded-3xl border border-white/10 bg-black/20 px-3 py-4 sm:px-4">
+      <div className="relative z-0 space-y-4 rounded-none border-x-0 border-white/10 bg-black/20 px-3 py-4 sm:rounded-3xl sm:border-x sm:px-4">
         <button
           type="button"
           onClick={() => setCategoriesOpen(prev => !prev)}
@@ -490,7 +490,7 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
 
   return (
     <div className="w-full" id={containerId}>
-      <div className={`mx-auto w-full max-w-7xl ${viewMode === 'list' ? 'space-y-2' : 'flex flex-col gap-4'}`}>
+      <div className={`mx-auto w-full max-w-full ${viewMode === 'list' ? 'space-y-2' : 'flex flex-col gap-2 sm:gap-4'} md:max-w-5xl`}>
         {habits.map(habit => (
           <HabitRowCard
             key={habit.id}
@@ -525,7 +525,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
   // Vue liste compacte
   if (viewMode === 'list') {
     return (
-      <div className="group flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-white transition hover:bg-white/[0.04]">
+      <div className="group flex items-center justify-between rounded-none border-x-0 border-white/5 bg-white/[0.02] px-4 py-2.5 text-white transition hover:bg-white/[0.04] sm:rounded-xl sm:border-x sm:px-4">
         <Link href={`/habits/${habit.id}`} className="flex flex-1 items-center gap-3 min-w-0">
           <div
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-lg"
@@ -563,7 +563,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
 
   // Vue carte (par défaut)
   return (
-    <div className="group flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between">
+    <div className="group flex w-full flex-col gap-3 rounded-none border-x-0 border-white/10 bg-white/5 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-2xl sm:border-x sm:px-4 sm:py-4">
       <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
         <div
           className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"

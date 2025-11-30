@@ -204,9 +204,9 @@ export default async function Home() {
   // Rend la page dashboard côté serveur en passant les données nécessaires au client.
   return (
     <main className="min-h-screen overflow-visible bg-[#0c0f1a] text-[#E0E0E0]">
-      <div className="mx-auto max-w-7xl space-y-8 px-2 py-6 sm:px-4 md:px-10 md:py-10">
+      <div className="mx-auto max-w-full space-y-6 px-0 py-6 sm:space-y-8 sm:px-6 md:max-w-6xl md:px-10 md:py-10">
         {showFocusCard && (
-          <section className="section-snap rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 md:py-10 md:px-8" aria-live="polite">
+          <section className="section-snap rounded-none border-x-0 border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 sm:rounded-3xl sm:border-x md:py-10 md:px-8" aria-live="polite">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="flex-1">
                 <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Focus du jour</p>
