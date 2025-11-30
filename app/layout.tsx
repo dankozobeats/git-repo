@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
 
   // Base URL pour les chemins relatifs
-  metadataBase: new URL('https://badhabit.automationpro.cloud'),
+  metadataBase: new URL('https://my-badhabit-tracker.vercel.app'),
 
   // Favicons (déjà configurés dans <head>)
   icons: {
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: 'https://badhabit.automationpro.cloud',
+    url: 'https://my-badhabit-tracker.vercel.app',
     siteName: 'BadHabit Tracker',
     title: 'BadHabit Tracker - Track, Improve, Evolve',
     description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
     images: [
       {
-        url: 'https://badhabit.automationpro.cloud/og-default.jpg',
+        url: 'https://my-badhabit-tracker.vercel.app/og-default.jpg',
         width: 1200,
         height: 630,
         alt: 'BadHabit Tracker - Track, Improve, Evolve',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     creator: '@badhabit',
     title: 'BadHabit Tracker - Track, Improve, Evolve',
     description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
-    images: ['https://badhabit.automationpro.cloud/og-default.jpg'],
+    images: ['https://my-badhabit-tracker.vercel.app/og-default.jpg'],
   },
 
   // URL canonique
