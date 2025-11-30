@@ -136,11 +136,15 @@ export async function POST(req: Request) {
         // 6) Envoi des notifications
         let sentCount = 0;
         const remindersToDisable: string[] = [];
+        const debugLogs: string[] = [];
 
         await Promise.all(
             remindersToSend.map(async (reminder) => {
                 const userSubs = subsByUser.get(reminder.user_id);
-                if (!userSubs || userSubs.length === 0) return;
+                if (!userSubs || userSubs.length === 0) {
+                    debugLogs.push(`User ${reminder.user_id} has no subscriptions`);
+                    return;
+                }
 
                 const payload = JSON.stringify({
                     title: 'Rappel d’habitude',
@@ -162,7 +166,9 @@ export async function POST(req: Request) {
                         );
                         sentCount += 1;
                     } catch (err: any) {
-                        console.error('WebPush error for subscription', sub.id, err?.message || err);
+                        const msg = `WebPush error for sub ${sub.id.slice(0, 5)}...: ${err?.message || err}`;
+                        console.error(msg);
+                        debugLogs.push(msg);
                         if (err.statusCode === 410) {
                             // Subscription invalide, on pourrait la supprimer ici
                         }
@@ -194,6 +200,7 @@ export async function POST(req: Request) {
             sent: sentCount,
             processed: remindersToSend.length,
             message: `Processed ${remindersToSend.length} due reminders, sent ${sentCount} notifications`,
+            debug: debugLogs // Info précieuse pour le debug
         });
     } catch (err: any) {
         console.error('Unexpected error in /api/process-reminders:', err);
