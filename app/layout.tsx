@@ -7,10 +7,16 @@ import AuthSync from '@/components/AuthSync'
 import PWARegister from '@/components/PWARegister'
 import { createClient } from '@/lib/supabase/server'
 
-// Métadonnées exposées à la plateforme Next (SEO/icônes).
+// Métadonnées exposées à la plateforme Next (SEO/OpenGraph/Twitter).
 export const metadata: Metadata = {
-  title: 'BadHabit Tracker 🔥',
+  // Base metadata
+  title: 'BadHabit Tracker',
   description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
+
+  // Base URL pour les chemins relatifs
+  metadataBase: new URL('https://badhabit.automationpro.cloud'),
+
+  // Favicons (déjà configurés dans <head>)
   icons: {
     icon: [
       {
@@ -18,6 +24,40 @@ export const metadata: Metadata = {
         type: 'image/svg+xml',
       },
     ],
+  },
+
+  // OpenGraph - Partage sur réseaux sociaux
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    url: 'https://badhabit.automationpro.cloud',
+    siteName: 'BadHabit Tracker',
+    title: 'BadHabit Tracker - Track, Improve, Evolve',
+    description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
+    images: [
+      {
+        url: 'https://badhabit.automationpro.cloud/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'BadHabit Tracker - Track, Improve, Evolve',
+        type: 'image/png',
+      },
+    ],
+  },
+
+  // Twitter Card - Aperçu sur Twitter/X
+  twitter: {
+    card: 'summary_large_image',
+    site: '@badhabit',
+    creator: '@badhabit',
+    title: 'BadHabit Tracker - Track, Improve, Evolve',
+    description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
+    images: ['https://badhabit.automationpro.cloud/og-default.png'],
+  },
+
+  // URL canonique
+  alternates: {
+    canonical: '/',
   },
 }
 
