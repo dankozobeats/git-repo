@@ -12,9 +12,17 @@ export async function POST(request: Request) {
 
         const supabase = await createClient();
 
-        // Rappel test → exécution dans 1 minute
-        const schedule = 'once';
-        const time_local = new Date(Date.now() + 60000).toISOString();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || user.id !== user_id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // 🔥 Force un rappel "immédiat"
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes() + 1).padStart(2, '0'); // +1 min pour test
+
+        const localTime = `${hours}:${minutes}`;
 
         const { data, error } = await supabase
             .from('reminders')
@@ -22,9 +30,9 @@ export async function POST(request: Request) {
                 user_id,
                 habit_id,
                 channel: 'push',
-                schedule,
-                time_local,
+                schedule: 'once',
                 weekday: null,
+                time_local: localTime,
                 active: true,
             })
             .select()
@@ -35,9 +43,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, reminder: data }, { status: 200 });
+        return NextResponse.json({ success: true, reminder: data });
     } catch (err: any) {
-        console.error('Route /reminders/create failed:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
