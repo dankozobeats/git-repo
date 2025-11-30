@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
         // Extraction des paramètres avec valeurs par défaut
         const title = searchParams.get('title') || 'BadHabit Tracker'
-        const subtitle = searchParams.get('subtitle') || 'Track, Improve, Evolve'
+        const subtitle = searchParams.get('subtitle') || 'Track • Improve • Evolve'
 
         // Génération de l'image avec ImageResponse (Vercel OG)
         return new ImageResponse(
