@@ -36,11 +36,11 @@ export const metadata: Metadata = {
     description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
     images: [
       {
-        url: 'https://badhabit.automationpro.cloud/og-default.png',
+        url: 'https://badhabit.automationpro.cloud/og-default.jpg',
         width: 1200,
         height: 630,
         alt: 'BadHabit Tracker - Track, Improve, Evolve',
-        type: 'image/png',
+        type: 'image/jpeg',
       },
     ],
   },
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     creator: '@badhabit',
     title: 'BadHabit Tracker - Track, Improve, Evolve',
     description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
-    images: ['https://badhabit.automationpro.cloud/og-default.png'],
+    images: ['https://badhabit.automationpro.cloud/og-default.jpg'],
   },
 
   // URL canonique
