@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@/lib/supabase/server';
+import { DateTime } from 'luxon';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,8 @@ type ReminderRow = {
     habit_id: string | null;
     channel: string | null;
     schedule: string | null;
-    time_local: string; // timestamptz → string ISO
+    time_local: string; // timestamptz (UTC)
+    timezone: string | null;
     weekday: number | null;
     active: boolean;
 };
@@ -56,20 +58,15 @@ export async function POST(req: Request) {
             VAPID_PRIVATE_KEY
         );
 
-        // 3) Fenêtre de temps : rappels "due" dans les 2 dernières minutes
-        const now = new Date();
-        const nowIso = now.toISOString();
-        const windowStart = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
-
-        // 4) Récupération des rappels à traiter (PAS DE RELATION)
+        // 3) Récupération de TOUS les rappels actifs
+        // On ne filtre pas par date SQL ici car on veut faire une comparaison précise en local avec Luxon
+        // (Sauf si la table est énorme, auquel cas on filtrerait grossièrement +/- 24h)
         const { data: reminders, error: remindersError } = await supabase
             .from('reminders')
             .select('*')
             .eq('active', true)
             .eq('channel', 'push')
-            .in('schedule', ['once', 'daily']) // tu peux adapter ici
-            .gte('time_local', windowStart)
-            .lte('time_local', nowIso);
+            .in('schedule', ['once', 'daily']);
 
         if (remindersError) {
             console.error('Supabase reminders error:', remindersError);
@@ -80,13 +77,39 @@ export async function POST(req: Request) {
         }
 
         if (!reminders || reminders.length === 0) {
-            return NextResponse.json({ sent: 0, message: 'No reminders due' });
+            return NextResponse.json({ sent: 0, message: 'No active reminders' });
         }
 
         const typedReminders = reminders as ReminderRow[];
+        const remindersToSend: ReminderRow[] = [];
 
-        // 5) Récupérer toutes les subscriptions des users concernés (toujours SANS relation)
-        const userIds = Array.from(new Set(typedReminders.map((r) => r.user_id)));
+        // 4) Filtrage précis avec Luxon
+        for (const r of typedReminders) {
+            const tz = r.timezone || 'Europe/Paris'; // Fallback
+
+            // L'heure cible (stockée en UTC, mais on la remet dans son contexte timezone)
+            // time_local est un ISO UTC (ex: 2025-11-30T03:00:00Z)
+            // On le convertit en DateTime Luxon
+            const reminderTime = DateTime.fromISO(r.time_local).setZone(tz);
+
+            // L'heure actuelle dans la timezone de l'utilisateur
+            const nowLocal = DateTime.now().setZone(tz);
+
+            // On vérifie si l'heure est passée (avec une tolérance de 2 minutes pour ne pas spammer les vieux trucs)
+            // Condition : reminderTime <= nowLocal && reminderTime > nowLocal - 2 minutes
+            const diffInMinutes = nowLocal.diff(reminderTime, 'minutes').minutes;
+
+            if (diffInMinutes >= 0 && diffInMinutes < 2) {
+                remindersToSend.push(r);
+            }
+        }
+
+        if (remindersToSend.length === 0) {
+            return NextResponse.json({ sent: 0, message: 'No reminders due now' });
+        }
+
+        // 5) Récupérer les subscriptions
+        const userIds = Array.from(new Set(remindersToSend.map((r) => r.user_id)));
 
         const { data: subs, error: subsError } = await supabase
             .from('push_subscriptions')
@@ -101,14 +124,7 @@ export async function POST(req: Request) {
             );
         }
 
-        if (!subs || subs.length === 0) {
-            return NextResponse.json({
-                sent: 0,
-                message: 'No push subscriptions for due reminders',
-            });
-        }
-
-        const typedSubs = subs as PushSubscriptionRow[];
+        const typedSubs = (subs || []) as PushSubscriptionRow[];
 
         // Map user_id → liste de subscriptions
         const subsByUser = new Map<string, PushSubscriptionRow[]>();
@@ -122,13 +138,13 @@ export async function POST(req: Request) {
         const remindersToDisable: string[] = [];
 
         await Promise.all(
-            typedReminders.map(async (reminder) => {
+            remindersToSend.map(async (reminder) => {
                 const userSubs = subsByUser.get(reminder.user_id);
                 if (!userSubs || userSubs.length === 0) return;
 
                 const payload = JSON.stringify({
                     title: 'Rappel d’habitude',
-                    body: 'Tu as un rappel pour une habitude.',
+                    body: 'C’est l’heure de votre habitude !',
                     habitId: reminder.habit_id,
                 });
 
@@ -147,6 +163,9 @@ export async function POST(req: Request) {
                         sentCount += 1;
                     } catch (err: any) {
                         console.error('WebPush error for subscription', sub.id, err?.message || err);
+                        if (err.statusCode === 410) {
+                            // Subscription invalide, on pourrait la supprimer ici
+                        }
                     }
                 });
 
@@ -173,11 +192,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             sent: sentCount,
-            processed: typedReminders.length,
-            message:
-                sentCount > 0
-                    ? `Sent ${sentCount} notifications`
-                    : 'Reminders due but no valid subscriptions',
+            processed: remindersToSend.length,
+            message: `Processed ${remindersToSend.length} due reminders, sent ${sentCount} notifications`,
         });
     } catch (err: any) {
         console.error('Unexpected error in /api/process-reminders:', err);

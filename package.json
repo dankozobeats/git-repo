@@ -16,6 +16,7 @@
     "chart.js": "^4.5.1",
     "diff": "^8.0.2",
     "lucide-react": "^0.553.0",
+    "luxon": "^3.7.2",
     "next": "16.0.3",
     "react": "19.2.0",
     "react-chartjs-2": "^5.3.1",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/luxon": "^3.7.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

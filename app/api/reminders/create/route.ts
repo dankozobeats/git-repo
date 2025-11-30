@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { DateTime } from 'luxon';
 
 export async function POST(request: Request) {
     try {
@@ -27,12 +28,15 @@ export async function POST(request: Request) {
             }
         }
 
-        // 🕒 Conversion heure locale → UTC ISO
-        // time_local et timezone viennent du front ou du script (ex: "2025-11-30T03:05:00" et "Europe/Paris")
-        const localDate = new Date(time_local);
-        const utcISO = new Date(
-            localDate.toLocaleString('en-US', { timeZone: timezone })
-        ).toISOString();
+        // 🕒 Conversion heure locale → UTC ISO via Luxon
+        // time_local est attendu au format "yyyy-MM-dd HH:mm"
+        const localTime = DateTime.fromFormat(time_local, "yyyy-MM-dd HH:mm", { zone: timezone });
+
+        if (!localTime.isValid) {
+            return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+        }
+
+        const utcISO = localTime.toUTC().toISO();
 
         const { data, error } = await supabase
             .from('reminders')
@@ -42,6 +46,7 @@ export async function POST(request: Request) {
                 channel: 'push',
                 schedule: 'once',
                 time_local: utcISO,
+                timezone,
                 active: true,
             })
             .select()

@@ -13,13 +13,20 @@ export default function CreateReminderButton({ habitId, userId }: CreateReminder
     const handleCreateReminder = async () => {
         setStatus('loading');
         try {
-            // Calculate time for "in 1 minute" for testing
+            // 🕒 Rappel dans 1 minute
             const now = new Date();
             now.setMinutes(now.getMinutes() + 1);
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const timeLocal = `${hours}:${minutes}`;
-            const weekday = now.getDay();
+
+            // Extraction manuelle des composants locaux
+            // On veut "YYYY-MM-DD HH:mm"
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+
+            const timeLocal = `${year}-${month}-${day} ${hours}:${minutes}`;
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
             const res = await fetch('/api/reminders/create', {
                 method: 'POST',
@@ -27,16 +34,14 @@ export default function CreateReminderButton({ habitId, userId }: CreateReminder
                 body: JSON.stringify({
                     user_id: userId,
                     habit_id: habitId,
-                    weekday,
-                    time_local: timeLocal,
+                    time_local: timeLocal,   // → ex "2025-11-30 04:12"
+                    timezone,                // → ex "Europe/Paris"
                 }),
             });
 
             if (!res.ok) throw new Error('Erreur création rappel');
 
             setStatus('success');
-
-            // Reset status after 3 seconds
             setTimeout(() => setStatus('idle'), 3000);
 
         } catch (err) {
@@ -51,16 +56,16 @@ export default function CreateReminderButton({ habitId, userId }: CreateReminder
             onClick={handleCreateReminder}
             disabled={status === 'loading' || status === 'success'}
             className={`
-        px-4 py-2 rounded-xl text-sm font-semibold transition-all border
-        ${status === 'success'
+                px-4 py-2 rounded-xl text-sm font-semibold transition-all border
+                ${status === 'success'
                     ? 'bg-green-500/10 border-green-500/20 text-green-400'
                     : 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'}
-        ${status === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : ''}
-        disabled:opacity-50 disabled:cursor-not-allowed
-      `}
+                ${status === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : ''}
+                disabled:opacity-50 disabled:cursor-not-allowed
+            `}
         >
             {status === 'loading' && 'Création...'}
-            {status === 'success' && '✓ Rappel créé (test 1min)'}
+            {status === 'success' && '✓ Rappel créé (test 1 min)'}
             {status === 'error' && 'Erreur !'}
             {status === 'idle' && '⏰ Créer un rappel test'}
         </button>
