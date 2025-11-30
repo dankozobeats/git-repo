@@ -1,0 +1,58 @@
+{
+    "name": "BadHabit Tracker",
+    "short_name": "BadHabit",
+    "description": "Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "theme_color": "#0c0f1a",
+    "background_color": "#0c0f1a",
+    "icons": [
+        {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "lifestyle",
+        "productivity",
+        "health"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Nouvelle habitude",
+            "short_name": "Nouvelle",
+            "description": "Créer une nouvelle habitude",
+            "url": "/habits/new",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Historique",
+            "short_name": "Historique",
+            "description": "Voir l'historique complet",
+            "url": "/reports/history",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "prefer_related_applications": false
+}
