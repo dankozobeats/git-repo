@@ -16,6 +16,7 @@ import {
   LogOut,
   Settings,
   Search as SearchIcon,
+  Bell,
 } from 'lucide-react'
 import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
 
@@ -29,6 +30,7 @@ const iconMap = {
   help: HelpCircle,
   settings: Settings,
   logout: LogOut,
+  reminders: Bell,
 }
 
 export type SidebarIcon = keyof typeof iconMap
@@ -63,7 +65,7 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
   }, [])
 
   return (
-    <div id="sidebar" className={sidebarHidden ? 'hidden' : 'contents'}>
+    <div id="sidebar" className={sidebarHidden ? 'hidden' : 'contents'} suppressHydrationWarning>
       <MobileHamburgerMenu onOpen={() => setMobileOpen(true)} isMenuOpen={mobileOpen} />
 
       <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] md:flex z-[9999]">
@@ -79,16 +81,14 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
       </aside>
 
       <div
-        className={`fixed inset-0 z-[9998] bg-black/70 transition-opacity duration-300 md:hidden ${
-          mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        }`}
+        className={`fixed inset-0 z-[9998] bg-black/70 transition-opacity duration-300 md:hidden ${mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+          }`}
         onClick={() => setMobileOpen(false)}
       />
 
       <div
-        className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] transition-transform duration-300 md:hidden ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="flex items-start justify-between">
           <MiniProfile userEmail={userEmail} avatarInitial={avatarInitial} />
@@ -215,16 +215,14 @@ function NavLinks({
           <Link
             key={item.label}
             href={item.href}
-            className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold transition ${
-              isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
-            }`}
+            className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold transition ${isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+              }`}
             aria-current={isActive ? 'page' : undefined}
             onClick={handleGuardedNavigate}
           >
             <span
-              className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition ${
-                isActive ? 'bg-[#4DA6FF]' : 'bg-transparent group-hover:bg-white/20'
-              }`}
+              className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition ${isActive ? 'bg-[#4DA6FF]' : 'bg-transparent group-hover:bg-white/20'
+                }`}
               aria-hidden="true"
             />
             <Icon className="h-4 w-4 flex-shrink-0" />

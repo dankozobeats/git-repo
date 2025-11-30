@@ -14,7 +14,15 @@ export default async function RemindersPage() {
 
     const { data: reminders } = await supabase
         .from('reminders')
-        .select('*')
+        .select(`
+            *,
+            habits (
+                name,
+                icon,
+                color,
+                description
+            )
+        `)
         .eq('user_id', user.id)
         .order('time_local', { ascending: true });
 

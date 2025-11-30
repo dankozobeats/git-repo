@@ -10,6 +10,7 @@ import HabitToast from '@/components/HabitToast'
 import AICoachMessage from '@/components/AICoachMessage' // Design unifié pour bulles IA tempo et toasts premium.
 import { Search as SearchIcon, ChevronDown } from 'lucide-react'
 import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
+import SearchOverlay from '@/components/SearchOverlay'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -150,13 +151,13 @@ export default function HabitSectionsClient({
     setSearchQuery(value)
   }, [])
 
-  // Active la recherche depuis FloatingQuickActions en scrollant/focus l'input.
+  // État pour l'overlay de recherche
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+  // Active la recherche depuis FloatingQuickActions
   useEffect(() => {
     const handleSearchOpen = () => {
-      scrollToSearchSection()
-      requestAnimationFrame(() => {
-        searchInputRef.current?.focus()
-      })
+      setIsSearchOpen(true)
     }
 
     window.addEventListener(HABIT_SEARCH_EVENT, handleSearchOpen)
@@ -245,9 +246,8 @@ export default function HabitSectionsClient({
       {coachBanner && (
         <div
           ref={coachContainerRef}
-          className={`transition-all duration-300 ease-out ${
-            coachVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
-          }`}
+          className={`transition-all duration-300 ease-out ${coachVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
+            }`}
         >
           <AICoachMessage
             // Variante roast pour conserver le ton sarcastique tout en gardant le design premium partagé.
@@ -272,39 +272,21 @@ export default function HabitSectionsClient({
     feedbackRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
   }, [toastMessage, coachBanner])
 
-  // Barre de recherche plein écran pour aligner les contrôles avec la grille principale.
-  const searchBarSection = (
-    <div id="searchBar" data-mobile-search className="sticky top-0 z-[200] bg-[#0c0f1a] px-2 py-3 sm:px-4 sm:py-4">
-      <div className="mx-auto w-full max-w-6xl space-y-3 rounded-3xl border border-white/10 bg-black/40 px-4 py-4 shadow-inner shadow-black/30 backdrop-blur">
-        <p className="text-xs uppercase tracking-[0.35em] text-white/40">Recherche</p>
-        <div className="flex w-full flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={event => handleSearchChange(event.target.value)}
-              placeholder="Rechercher une habitude…"
-              className="w-full rounded-2xl border border-white/15 bg-[#12121A]/80 px-12 py-4 text-base text-white placeholder:text-white/50 shadow-inner shadow-black/40 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
-              aria-label="Rechercher une habitude"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => searchInputRef.current?.focus()}
-            className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
-          >
-            Rechercher
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-
   // Résultats dynamiques centrés pour conserver la même largeur que les sections principales.
   const searchResultsSection = hasSearch ? (
     <div id="searchResults" className="mx-auto w-full max-w-6xl space-y-3 rounded-3xl border border-white/10 bg-black/30 px-4 py-4 shadow-inner shadow-black/40">
+      <div className="flex items-center justify-between px-2 pb-2">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-white/60">Résultats de recherche</h3>
+        <button
+          onClick={() => {
+            setSearchQuery('')
+            setIsSearchOpen(false)
+          }}
+          className="text-xs text-[#FF4D4D] hover:underline"
+        >
+          Effacer la recherche
+        </button>
+      </div>
       {searchResults.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-center text-sm text-white/70">
           Aucun résultat pour « {searchQuery} »
@@ -327,7 +309,13 @@ export default function HabitSectionsClient({
   // Rend la zone principale: recherche sticky, sections filtrées et gestion des catégories.
   return (
     <section className="relative z-0 space-y-6">
-      {searchBarSection}
+      <SearchOverlay
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
+
       {feedbackSection}
       {searchResultsSection}
 
@@ -516,9 +504,8 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
           {showCounterBadge && (
             <div className="flex flex-wrap gap-2 pt-1">
               <span
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                  counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
-                }`}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
+                  }`}
               >
                 {counterState.isCompleted ? 'Validée ✓' : `${counterState.remaining} restant${counterState.remaining > 1 ? 's' : ''}`}
               </span>
