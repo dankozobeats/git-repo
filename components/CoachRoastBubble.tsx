@@ -22,7 +22,7 @@ export default function CoachRoastBubble({ message, variant = 'overlay' }: Coach
       clearTimeout(leave)
       clearTimeout(cleanup)
     }
-  }, [])
+  }, [visibleDuration])
 
   if (!render) return null
 

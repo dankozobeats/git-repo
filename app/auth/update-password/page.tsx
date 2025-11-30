@@ -32,8 +32,9 @@ export default function UpdatePasswordPage() {
       if (error) throw error
       setStatus('success')
       setTimeout(() => router.push('/auth/sign-in'), 1200)
-    } catch (err: any) {
-      setError(err.message || 'Impossible de mettre à jour ton mot de passe.')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Impossible de mettre à jour ton mot de passe.'
+      setError(errorMessage)
       setStatus('idle')
     }
   }

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Plus, Minus, Clock } from 'lucide-react'
-import Link from 'next/link'
 import { useToast } from './Toast'
 
 interface HabitCardCounterProps {
@@ -18,7 +17,7 @@ interface HabitCardCounterProps {
     daily_goal_value: number
   }
   todayCount: number
-  todayEvents: any[]
+  todayEvents: Array<{ id: string; occurred_at: string }>
 }
 
 export function HabitCardCounter({ habit, todayCount, todayEvents: initialEvents }: HabitCardCounterProps) {
@@ -55,7 +54,7 @@ export function HabitCardCounter({ habit, todayCount, todayEvents: initialEvents
         setCount(count)
         showToast('Erreur lors de l\'enregistrement', 'error')
       }
-    } catch (error) {
+    } catch {
       setCount(count)
       showToast('Erreur réseau', 'error')
     } finally {
@@ -84,7 +83,7 @@ export function HabitCardCounter({ habit, todayCount, todayEvents: initialEvents
         setCount(count)
         showToast('Erreur lors de la suppression', 'error')
       }
-    } catch (error) {
+    } catch {
       setCount(count)
       showToast('Erreur réseau', 'error')
     } finally {
@@ -172,7 +171,7 @@ export function HabitCardCounter({ habit, todayCount, todayEvents: initialEvents
               className={`
                 w-10 h-10 rounded-full flex items-center justify-center
                 transition-all duration-200
-                ${getButtonColor(habit.type, progress.status)}
+                ${getButtonColor(habit.type)}
                 hover:scale-110 active:scale-95
                 disabled:opacity-50
               `}
@@ -279,7 +278,7 @@ function getCountColor(status: string): string {
   }
 }
 
-function getButtonColor(habitType: 'good' | 'bad', status: string): string {
+function getButtonColor(habitType: 'good' | 'bad'): string {
   if (habitType === 'good') {
     return 'bg-emerald-500/80 text-white/90 shadow-inner shadow-emerald-500/30 hover:bg-emerald-500'
   } else {

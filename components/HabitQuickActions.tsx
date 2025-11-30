@@ -13,7 +13,6 @@ type HabitQuickActionsProps = {
   trackingMode: 'binary' | 'counter' | null
   initialCount: number
   counterRequired?: number | null
-  habitName: string
   streak?: number
   totalLogs?: number
   totalCraquages?: number
@@ -26,10 +25,6 @@ export default function HabitQuickActions({
   trackingMode,
   initialCount,
   counterRequired,
-  habitName,
-  streak = 0,
-  totalLogs = 0,
-  totalCraquages = 0,
   onHabitValidated,
 }: HabitQuickActionsProps) {
   const router = useRouter()
@@ -50,12 +45,6 @@ export default function HabitQuickActions({
   const hasValue = count > 0
   const isFullyValidated = count >= requiredCount
   const disablePrimary = isSubmitting || isPending || isFullyValidated
-  const remaining = Number.isFinite(requiredCount) ? Math.max(0, requiredCount - count) : null
-
-  // Valeurs sécurisées utilisées pour calculer les punchlines.
-  const safeStreak = Math.max(0, streak)
-  const safeLogs = Math.max(0, totalLogs)
-  const safeCraquages = Math.max(0, totalCraquages)
 
   // Effectue un check-in rapide et rafraîchit les données locales/serveur.
   const handleAction = async () => {

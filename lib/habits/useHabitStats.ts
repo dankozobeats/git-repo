@@ -119,8 +119,9 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
       const stats = buildStats(habits, logs, events, period)
       setData(stats)
       setLoading(false)
-    } catch (err: any) {
-      const message = err?.message === 'AUTH' ? 'AUTH' : err?.message || 'UNKNOWN'
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'UNKNOWN'
+      const message = errorMessage === 'AUTH' ? 'AUTH' : errorMessage
       setError(message)
       setLoading(false)
     }
@@ -220,7 +221,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
   const daily: DailyPoint[] = []
   const cumulative: CumulativePoint[] = []
 
-  let cursor = new Date(startDate)
+  const cursor = new Date(startDate)
   const end = new Date(today)
   let runningGood = 0
   let runningBad = 0
