@@ -32,8 +32,8 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     url: 'https://my-badhabit-tracker.vercel.app',
     siteName: 'BadHabit Tracker',
-    title: 'BadHabit Tracker - Track • Improve • Evolve',
-    description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
+    title: 'BadHabit Tracker • Track, Improve, Evolve Your Habits',
+    description: 'Suivez vos mauvaises habitudes, transformez-les en bonnes pratiques et évoluez grâce à un suivi intelligent et motivant. Commencez dès maintenant !',
     images: [
       {
         url: 'https://my-badhabit-tracker.vercel.app/og-default.jpg',
@@ -50,8 +50,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@badhabit',
     creator: '@badhabit',
-    title: 'BadHabit Tracker - Track • Improve • Evolve',
-    description: 'Track tes mauvaises (et bonnes) habitudes avec un peu de sarcasme.',
+    title: 'BadHabit Tracker • Track, Improve, Evolve Your Habits',
+    description: 'Suivez vos mauvaises habitudes, transformez-les en bonnes pratiques et évoluez grâce à un suivi intelligent et motivant.',
     images: ['https://my-badhabit-tracker.vercel.app/og-default.jpg'],
   },
 
