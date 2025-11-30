@@ -5,7 +5,7 @@ import { DateTime } from 'luxon';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { user_id, habit_id, time_local, timezone } = body;
+        const { user_id, habit_id, time_local, timezone, schedule = 'once', days = null } = body;
 
         if (!user_id || !habit_id || !time_local || !timezone) {
             return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -44,10 +44,11 @@ export async function POST(request: Request) {
                 user_id,
                 habit_id,
                 channel: 'push',
-                schedule: 'once',
+                schedule, // 'once', 'daily', 'weekly'
                 time_local: utcISO,
                 timezone,
                 active: true,
+                // weekday: days // TODO: If schema supports array or specific day column
             })
             .select()
             .single();

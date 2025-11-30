@@ -6,7 +6,9 @@ import HabitDetailClient from './HabitDetailClient'
 import DeleteButton from './DeleteButton'
 import HabitDetailHeader from '@/components/HabitDetailHeader'
 import PushEnableButton from '@/components/PushEnableButton'
-import CreateReminderButton from '@/components/CreateReminderButton'
+import ReminderSettings from '@/components/reminders/ReminderSettings'
+import ReminderList from '@/components/reminders/ReminderList'
+import ReminderHistory from '@/components/reminders/ReminderHistory'
 import { createClient } from '@/lib/supabase/server'
 import { getTodayDateISO } from '@/lib/date-utils'
 import { getHabitById } from '@/lib/habits/getHabitById'
@@ -128,12 +130,31 @@ export default async function HabitDetailPage({ params }: PageProps) {
         </section>
 
         {/* Section Rappels */}
-        <section className="rounded-3xl border border-white/5 bg-white/[0.02] p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">🔔 Rappels & Notifications</h2>
-          <div className="flex flex-wrap items-center gap-4">
-            <PushEnableButton userId={user.id} />
-            <div className="h-8 w-px bg-white/10 mx-2 hidden sm:block"></div>
-            <CreateReminderButton habitId={habit.id} userId={user.id} />
+        <section className="grid gap-6 lg:grid-cols-2">
+          {/* Colonne Gauche : Paramètres & Création */}
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">🔔 Rappels</h2>
+                <PushEnableButton userId={user.id} />
+              </div>
+
+              <ReminderSettings habitId={habit.id} userId={user.id} />
+            </div>
+          </div>
+
+          {/* Colonne Droite : Liste & Historique */}
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6">
+              <h3 className="mb-4 text-sm font-semibold text-white/60">Rappels actifs</h3>
+              {/* Fetch reminders server-side for initial render */}
+              {/* Note: In a real app we'd pass these as props, but for now we'll fetch inside the component or here */}
+              {/* For simplicity in this step, I'll fetch them here if possible or let the client component fetch */}
+              {/* Let's fetch server side */}
+              <ReminderListWrapper habitId={habit.id} />
+            </div>
+
+            <ReminderHistory habitId={habit.id} />
           </div>
         </section>
 
@@ -141,4 +162,17 @@ export default async function HabitDetailPage({ params }: PageProps) {
       </div>
     </main>
   )
+}
+
+// Helper component to fetch reminders server-side
+async function ReminderListWrapper({ habitId }: { habitId: string }) {
+  const supabase = await createClient();
+  const { data: reminders } = await supabase
+    .from('reminders')
+    .select('*')
+    .eq('habit_id', habitId)
+    .eq('active', true)
+    .order('time_local', { ascending: true });
+
+  return <ReminderList reminders={reminders || []} />;
 }
