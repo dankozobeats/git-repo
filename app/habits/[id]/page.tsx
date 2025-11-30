@@ -82,12 +82,6 @@ export default async function HabitDetailPage({ params }: PageProps) {
 
         <HabitDetailHeader habit={habit} allHabits={navigationHabits} />
 
-        import PushEnableButton from '@/components/PushEnableButton'
-        import CreateReminderButton from '@/components/CreateReminderButton'
-
-        // ... existing imports ...
-
-        // Inside the component return, before HabitDetailClient:
 
         <section className="rounded-[32px] border border-white/8 bg-white/[0.02] p-6 shadow-[0_25px_80px_rgba(0,0,0,0.4)] backdrop-blur">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
