@@ -80,12 +80,12 @@ export default async function Home() {
 
   // Map interne [habitId -> nombre d'actions aujourd'hui] fusionnant logs et events.
   const todayCounts = new Map<string, number>()
-  ;(todayLogs || []).forEach(log => {
-    todayCounts.set(log.habit_id, 1)
-  })
-  ;(todayEvents || []).forEach(event => {
-    todayCounts.set(event.habit_id, (todayCounts.get(event.habit_id) || 0) + 1)
-  })
+    ; (todayLogs || []).forEach(log => {
+      todayCounts.set(log.habit_id, 1)
+    })
+    ; (todayEvents || []).forEach(event => {
+      todayCounts.set(event.habit_id, (todayCounts.get(event.habit_id) || 0) + 1)
+    })
 
   const badHabitsLoggedToday =
     safeBadHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
@@ -204,36 +204,36 @@ export default async function Home() {
   // Rend la page dashboard côté serveur en passant les données nécessaires au client.
   return (
     <main className="min-h-screen overflow-visible bg-[#0c0f1a] text-[#E0E0E0]">
-      <div className="mx-auto max-w-5xl space-y-8 px-2 py-6 sm:px-4 md:px-10 md:py-10">
+      <div className="mx-auto max-w-7xl space-y-8 px-2 py-6 sm:px-4 md:px-10 md:py-10">
         {showFocusCard && (
           <section className="section-snap rounded-3xl border border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 md:py-10 md:px-8" aria-live="polite">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex-1">
-              <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Focus du jour</p>
-              <AICoachMessage message={generatedCoachMessage} variant="default" showCTA />
-              <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
-            </div>
-            <div className="flex w-full flex-col gap-2 md:w-auto">
-              <Link
-                href="/habits/new"
-                className="rounded-2xl bg-[#FF4D4D] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e04343]"
-              >
-                + Ajouter une habitude
-              </Link>
-              <ViewHabitsButton />
-            </div>
-          </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            {heroStats.map(stat => (
-              <div key={stat.label} className="rounded-2xl border border-white/5 bg-black/20 px-4 py-4 text-center">
-                <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">{stat.label}</p>
-                <p className="mt-2 text-3xl font-semibold" style={{ color: stat.accent }}>
-                  {stat.value}
-                </p>
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">Focus du jour</p>
+                <AICoachMessage message={generatedCoachMessage} variant="default" showCTA />
+                <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
               </div>
-            ))}
-          </div>
-        </section>
+              <div className="flex w-full flex-col gap-2 md:w-auto">
+                <Link
+                  href="/habits/new"
+                  className="rounded-2xl bg-[#FF4D4D] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e04343]"
+                >
+                  + Ajouter une habitude
+                </Link>
+                <ViewHabitsButton />
+              </div>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              {heroStats.map(stat => (
+                <div key={stat.label} className="rounded-2xl border border-white/5 bg-black/20 px-4 py-4 text-center">
+                  <p className="text-xs uppercase tracking-[0.3em] text-[#A0A0A0]">{stat.label}</p>
+                  <p className="mt-2 text-3xl font-semibold" style={{ color: stat.accent }}>
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {habitDashboardSection}

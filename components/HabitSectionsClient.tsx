@@ -8,7 +8,7 @@ import HabitQuickActions from '@/components/HabitQuickActions'
 import CategoryManager from '@/components/CategoryManager'
 import HabitToast from '@/components/HabitToast'
 import AICoachMessage from '@/components/AICoachMessage' // Design unifié pour bulles IA tempo et toasts premium.
-import { Search as SearchIcon, ChevronDown } from 'lucide-react'
+import { Search as SearchIcon, ChevronDown, LayoutGrid, List } from 'lucide-react'
 import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
 import SearchOverlay from '@/components/SearchOverlay'
 import type { Database } from '@/types/database'
@@ -77,6 +77,8 @@ export default function HabitSectionsClient({
   const [badCategoryFilter, setBadCategoryFilter] = useState<CategoryFilterValue>('pending')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  // Mode d'affichage : 'card' (par défaut) ou 'list' (compact)
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
   // Stocke le message du toast premium pour le diffuser dans la zone feedback.
   const [toastMessage, setToastMessage] = useState<{ message: string; variant: 'success' | 'error' } | null>(null)
   // Contrôle la bulle coach roast locale pour répliquer la disparition progressive.
@@ -241,7 +243,7 @@ export default function HabitSectionsClient({
     <div
       id="habit-feedback-area"
       ref={feedbackRef}
-      className="mx-auto w-full max-w-6xl space-y-3 px-2 sm:px-0"
+      className="mx-auto w-full max-w-7xl space-y-3 px-2 sm:px-0"
     >
       {coachBanner && (
         <div
@@ -274,7 +276,7 @@ export default function HabitSectionsClient({
 
   // Résultats dynamiques centrés pour conserver la même largeur que les sections principales.
   const searchResultsSection = hasSearch ? (
-    <div id="searchResults" className="mx-auto w-full max-w-6xl space-y-3 rounded-3xl border border-white/10 bg-black/30 px-4 py-4 shadow-inner shadow-black/40">
+    <div id="searchResults" className="mx-auto w-full max-w-7xl space-y-3 rounded-3xl border border-white/10 bg-black/30 px-4 py-4 shadow-inner shadow-black/40">
       <div className="flex items-center justify-between px-2 pb-2">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-white/60">Résultats de recherche</h3>
         <button
@@ -332,6 +334,8 @@ export default function HabitSectionsClient({
               filterValue={goodCategoryFilter}
               onFilterChange={setGoodCategoryFilter}
               categories={categoriesList}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
             />
             <HabitList
               habits={filteredGoodHabits}
@@ -340,6 +344,7 @@ export default function HabitSectionsClient({
               containerId="goodHabitsList"
               onHabitValidated={handleHabitValidated}
               showDescriptions={showHabitDescriptions}
+              viewMode={viewMode}
             />
           </section>
         )}
@@ -353,6 +358,8 @@ export default function HabitSectionsClient({
               filterValue={badCategoryFilter}
               onFilterChange={setBadCategoryFilter}
               categories={categoriesList}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
             />
             <HabitList
               habits={filteredBadHabits}
@@ -361,6 +368,7 @@ export default function HabitSectionsClient({
               containerId="badHabitsList"
               onHabitValidated={handleHabitValidated}
               showDescriptions={showHabitDescriptions}
+              viewMode={viewMode}
             />
           </section>
         )}
@@ -395,36 +403,66 @@ type HabitSectionHeaderProps = {
   filterValue: CategoryFilterValue
   onFilterChange: (value: CategoryFilterValue) => void
   categories: CategoryRow[]
+  viewMode: 'card' | 'list'
+  onViewModeChange: (mode: 'card' | 'list') => void
 }
 
 // Entête de section qui expose le sélecteur de catégorie et le nombre d'éléments.
-function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories }: HabitSectionHeaderProps) {
+function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories, viewMode, onViewModeChange }: HabitSectionHeaderProps) {
   // Layout responsive: le filtre passe en colonne sous le titre sur mobile et reste aligné à droite sur desktop.
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <h3 className="text-2xl font-semibold text-white">
         {title} <span className="text-white/50">({count})</span>
       </h3>
-      <div className="flex w-full flex-col gap-1 md:w-auto md:max-w-sm">
-        <label htmlFor={filterId} className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
-          Filtre par catégorie
-        </label>
-        <select
-          id={filterId}
-          value={filterValue}
-          onChange={event => onFilterChange(event.target.value as CategoryFilterValue)}
-          className="mobile-ios-filter w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/90 shadow-inner shadow-black/30 backdrop-blur focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
-        >
-          <option value="pending">Habitudes à valider</option>
-          <option value="completed">Habitudes totalement validées</option>
-          <option value="all">Toutes les catégories</option>
-          {categories.map(category => (
-            <option key={category.id} value={category.id}>
-              {`${category.icon || '📂'} ${category.name}`}
-            </option>
-          ))}
-          <option value="uncategorized">Sans catégorie</option>
-        </select>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        {/* Toggle vue carte/liste */}
+        <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+          <button
+            onClick={() => onViewModeChange('card')}
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${viewMode === 'card'
+              ? 'bg-white/10 text-white'
+              : 'text-white/50 hover:text-white/70'
+              }`}
+            title="Vue en cartes"
+          >
+            <LayoutGrid className="h-4 w-4" />
+            <span className="hidden sm:inline">Cartes</span>
+          </button>
+          <button
+            onClick={() => onViewModeChange('list')}
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${viewMode === 'list'
+              ? 'bg-white/10 text-white'
+              : 'text-white/50 hover:text-white/70'
+              }`}
+            title="Vue en liste"
+          >
+            <List className="h-4 w-4" />
+            <span className="hidden sm:inline">Liste</span>
+          </button>
+        </div>
+
+        <div className="flex w-full flex-col gap-1 md:w-auto md:max-w-sm">
+          <label htmlFor={filterId} className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
+            Filtre par catégorie
+          </label>
+          <select
+            id={filterId}
+            value={filterValue}
+            onChange={event => onFilterChange(event.target.value as CategoryFilterValue)}
+            className="mobile-ios-filter w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/90 shadow-inner shadow-black/30 backdrop-blur focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
+          >
+            <option value="pending">Habitudes à valider</option>
+            <option value="completed">Habitudes totalement validées</option>
+            <option value="all">Toutes les catégories</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {`${category.icon || '📂'} ${category.name}`}
+              </option>
+            ))}
+            <option value="uncategorized">Sans catégorie</option>
+          </select>
+        </div>
       </div>
     </div>
   )
@@ -437,10 +475,11 @@ type HabitListProps = {
   containerId: string
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
   showDescriptions: boolean
+  viewMode: 'card' | 'list'
 }
 
 // Affiche toutes les cartes d'une section en conservant une grille full-width, ou un message vide si aucune correspondance.
-function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated, showDescriptions }: HabitListProps) {
+function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated, showDescriptions, viewMode }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -451,7 +490,7 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
 
   return (
     <div className="w-full" id={containerId}>
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <div className={`mx-auto w-full max-w-7xl ${viewMode === 'list' ? 'space-y-2' : 'flex flex-col gap-4'}`}>
         {habits.map(habit => (
           <HabitRowCard
             key={habit.id}
@@ -460,6 +499,7 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
             todayCount={todayCountsMap.get(habit.id) ?? 0}
             onHabitValidated={onHabitValidated}
             showDescriptions={showDescriptions}
+            viewMode={viewMode}
           />
         ))}
       </div>
@@ -473,14 +513,55 @@ type HabitRowCardProps = {
   todayCount: number
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
   showDescriptions: boolean
+  viewMode: 'card' | 'list'
 }
 
 // Carte principale d'une habitude avec un lien vers le détail et les actions rapides en style glassmorphism premium.
-function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions }: HabitRowCardProps) {
+function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions, viewMode }: HabitRowCardProps) {
   // Calcule l'état courant pour afficher le badge restant sans attendre un refresh serveur.
   const counterState = buildCounterState(habit, todayCount)
   const showCounterBadge = counterState.required > 1
 
+  // Vue liste compacte
+  if (viewMode === 'list') {
+    return (
+      <div className="group flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-white transition hover:bg-white/[0.04]">
+        <Link href={`/habits/${habit.id}`} className="flex flex-1 items-center gap-3 min-w-0">
+          <div
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-lg"
+            style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
+          >
+            {habit.icon || (type === 'bad' ? '🔥' : '✨')}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{habit.name}</p>
+          </div>
+          {showCounterBadge && (
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
+              }`}>
+              {counterState.current}/{counterState.required}
+            </span>
+          )}
+        </Link>
+        <div className="ml-3 flex-shrink-0">
+          <HabitQuickActions
+            habitId={habit.id}
+            habitType={type}
+            trackingMode={habit.tracking_mode as 'binary' | 'counter'}
+            initialCount={todayCount}
+            counterRequired={counterState.required}
+            habitName={habit.name}
+            streak={habit.current_streak ?? 0}
+            totalLogs={habit.total_logs ?? undefined}
+            totalCraquages={habit.total_craquages ?? undefined}
+            onHabitValidated={onHabitValidated}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Vue carte (par défaut)
   return (
     <div className="group flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between">
       <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
