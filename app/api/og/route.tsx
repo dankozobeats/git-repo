@@ -76,15 +76,15 @@ export async function GET(request: NextRequest) {
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            padding: '80px',
+                            padding: '60px 80px 80px 80px',
                             zIndex: 1,
                         }}
                     >
                         {/* Logo/Emoji */}
                         <div
                             style={{
-                                fontSize: '120px',
-                                marginBottom: '40px',
+                                fontSize: '100px',
+                                marginBottom: '30px',
                             }}
                         >
                             🔥
@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
                         {/* Titre principal */}
                         <div
                             style={{
-                                fontSize: title.length > 30 ? '56px' : '72px',
+                                fontSize: title.length > 30 ? '52px' : '64px',
                                 fontWeight: 'bold',
                                 color: '#ffffff',
                                 textAlign: 'center',
-                                marginBottom: '20px',
+                                marginBottom: '16px',
                                 maxWidth: '1000px',
                                 lineHeight: 1.2,
                                 textShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
                         {/* Sous-titre */}
                         <div
                             style={{
-                                fontSize: '36px',
+                                fontSize: '32px',
                                 color: '#4DD0FB',
                                 textAlign: 'center',
                                 fontWeight: '500',
@@ -122,20 +122,39 @@ export async function GET(request: NextRequest) {
                         {/* Badge branding */}
                         <div
                             style={{
-                                marginTop: '60px',
+                                marginTop: '35px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '12px',
-                                padding: '16px 32px',
+                                padding: '10px 24px',
                                 background: 'rgba(255, 255, 255, 0.05)',
                                 borderRadius: '100px',
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
                                 backdropFilter: 'blur(10px)',
                             }}
                         >
-                            <div style={{ fontSize: '24px', color: '#ffffff' }}>
+                            <div style={{ fontSize: '18px', color: '#ffffff' }}>
                                 BadHabit Tracker
                             </div>
+                        </div>
+
+                        {/* Call-to-Action Button */}
+                        <div
+                            style={{
+                                marginTop: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '12px 32px',
+                                background: 'linear-gradient(135deg, #4DD0FB 0%, #FF4D4D 100%)',
+                                borderRadius: '10px',
+                                fontSize: '20px',
+                                fontWeight: 'bold',
+                                color: '#ffffff',
+                                boxShadow: '0 6px 24px rgba(77, 208, 251, 0.3)',
+                            }}
+                        >
+                            Commencer Gratuitement →
                         </div>
                     </div>
                 </div>
