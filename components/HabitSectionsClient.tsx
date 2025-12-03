@@ -268,11 +268,12 @@ export default function HabitSectionsClient({
     </div>
   ) : null
 
-  // Défile automatiquement jusqu'au message important quand une action (coach ou toast) est déclenchée.
+  // Défile automatiquement uniquement quand un toast apparaît (ex: erreur), pas pour la bulle coach afin d'éviter
+  // de déplacer le focus loin de la carte validée.
   useEffect(() => {
-    if (!feedbackRef.current || (!toastMessage && !coachBanner)) return
+    if (!feedbackRef.current || !toastMessage) return
     feedbackRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
-  }, [toastMessage, coachBanner])
+  }, [toastMessage])
 
   // Résultats dynamiques centrés pour conserver la même largeur que les sections principales.
   const searchResultsSection = hasSearch ? (

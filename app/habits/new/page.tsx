@@ -2,7 +2,7 @@
 
 // Page client de création d'habitude : refonte premium avec validations SMART et audit IA local.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -51,6 +51,13 @@ export default function NewHabitPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [categoryId, setCategoryId] = useState('')
   const [errors, setErrors] = useState<Partial<Record<SmartErrorField, string>>>({})
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    typeMode: false,
+    category: false,
+    identity: false,
+    coach: false,
+    tips: false,
+  })
 
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
@@ -170,6 +177,7 @@ export default function NewHabitPage() {
 
   const heroTitle =
     habitType === 'bad' ? 'Optimise tes routines pour éviter les craquages.' : 'Consolide les habitudes positives.'
+  const toggleSection = (id: string) => setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#05070f] via-[#080b16] to-[#0f172a] text-white">
@@ -195,7 +203,12 @@ export default function NewHabitPage() {
           <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-8">
               {/* Section type & mode */}
-              <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+              <CollapsibleCard
+                title="Nature de l’habitude"
+                subtitle="Type & mode"
+                open={openSections.typeMode}
+                onToggle={() => toggleSection('typeMode')}
+              >
                 <div className="space-y-2">
                   <p className="text-xs uppercase tracking-[0.35em] text-white/60">Type</p>
                   <h2 className="text-xl font-semibold">Nature de l’habitude</h2>
@@ -277,15 +290,15 @@ export default function NewHabitPage() {
                     <FormMessage type="error" message={errors.dailyGoal} />
                   </div>
                 )}
-              </section>
+              </CollapsibleCard>
 
               {/* Section catégorie + suggestions */}
-              <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie & presets</p>
-                  <h2 className="text-xl font-semibold">Contexte et inspirations</h2>
-                  <p className="text-sm text-white/60">Associe cette habitude à une catégorie claire puis choisis un preset pour gagner du temps.</p>
-                </div>
+              <CollapsibleCard
+                title="Contexte et inspirations"
+                subtitle="Catégorie & presets"
+                open={openSections.category}
+                onToggle={() => toggleSection('category')}
+              >
                 <div>
                   <label className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie</label>
                   <select
@@ -322,15 +335,15 @@ export default function NewHabitPage() {
                     ))}
                   </div>
                 </div>
-              </section>
+              </CollapsibleCard>
 
               {/* Section identité */}
-              <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Identité</p>
-                  <h2 className="text-xl font-semibold">Nom, icône et description</h2>
-                  <p className="text-sm text-white/60">Décris précisément l’habitude pour qu’elle soit compréhensible dans le dashboard.</p>
-                </div>
+              <CollapsibleCard
+                title="Nom, icône et description"
+                subtitle="Identité"
+                open={openSections.identity}
+                onToggle={() => toggleSection('identity')}
+              >
                 <div>
                   <label htmlFor="name" className="text-xs uppercase tracking-[0.35em] text-white/60">
                     Nom précis *
@@ -398,7 +411,7 @@ export default function NewHabitPage() {
                   />
                   <FormMessage type="error" message={errors.description} />
                 </div>
-              </section>
+              </CollapsibleCard>
 
               {/* CTA final */}
               <section className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
@@ -422,20 +435,32 @@ export default function NewHabitPage() {
 
             {/* Colonne latérale avec l'audit IA SMART */}
             <div className="space-y-6">
-              <AICoachSmartAudit
-                name={name}
-                description={description}
-                trackingMode={trackingMode}
-                dailyGoalValue={dailyGoalValue}
-                onImprove={({ name: improvedName, description: improvedDescription }) => {
-                  setName(improvedName)
-                  setDescription(improvedDescription)
-                  clearError('name')
-                  clearError('description')
-                }}
-              />
+              <CollapsibleCard
+                title="Audit intelligent"
+                subtitle="Coaching IA"
+                open={openSections.coach}
+                onToggle={() => toggleSection('coach')}
+              >
+                <AICoachSmartAudit
+                  name={name}
+                  description={description}
+                  trackingMode={trackingMode}
+                  dailyGoalValue={dailyGoalValue}
+                  onImprove={({ name: improvedName, description: improvedDescription }) => {
+                    setName(improvedName)
+                    setDescription(improvedDescription)
+                    clearError('name')
+                    clearError('description')
+                  }}
+                />
+              </CollapsibleCard>
 
-              <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40 backdrop-blur">
+              <CollapsibleCard
+                title="Checklist express"
+                subtitle="Rappels SMART"
+                open={openSections.tips}
+                onToggle={() => toggleSection('tips')}
+              >
                 <div className="flex items-center gap-3">
                   <Sparkles className="h-5 w-5 text-[#C084FC]" />
                   <div>
@@ -450,11 +475,42 @@ export default function NewHabitPage() {
                   <li>• Pertinent : lie-la à une catégorie.</li>
                   <li>• Temporel : planifie un moment précis.</li>
                 </ul>
-              </section>
+              </CollapsibleCard>
             </div>
           </div>
         </form>
       </div>
     </main>
+  )
+}
+
+function CollapsibleCard({
+  title,
+  subtitle,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-2xl shadow-black/30 backdrop-blur">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-white/30"
+      >
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-white/50">{subtitle}</p>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        </div>
+        <span className="text-xl font-bold text-white/80">{open ? '−' : '+'}</span>
+      </button>
+      {open && <div className="space-y-4">{children}</div>}
+    </section>
   )
 }

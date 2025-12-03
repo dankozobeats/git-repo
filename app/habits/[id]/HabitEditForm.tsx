@@ -2,7 +2,7 @@
 
 // Formulaire d'édition premium : reprend la refonte SMART avec possibilité de suspendre l'habitude.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
@@ -54,6 +54,14 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<SmartErrorField, string>>>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    status: false,
+    typeMode: false,
+    category: false,
+    identity: false,
+    coach: false,
+    tips: false,
+  })
 
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
@@ -177,6 +185,8 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
     ? 'Cette habitude ne sera plus proposée dans le dashboard tant que tu ne la réactives pas.'
     : 'Habitude suivie normalement dans toutes les vues.'
 
+  const toggleSection = (id: string) => setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {formError && (
@@ -186,7 +196,12 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
       )}
 
       {/* Statut & suspension */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+      <CollapsibleCard
+        title="Statut"
+        subtitle={statusLabel}
+        open={openSections.status}
+        onToggle={() => toggleSection('status')}
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-white/60">Statut</p>
@@ -206,12 +221,17 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
             {isSuspended ? 'Réactiver' : 'Suspendre'}
           </button>
         </div>
-      </section>
+      </CollapsibleCard>
 
       <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-8">
           {/* Type & mode */}
-          <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
+          <CollapsibleCard
+            title="Paramètres principaux"
+            subtitle="Type et mode"
+            open={openSections.typeMode}
+            onToggle={() => toggleSection('typeMode')}
+          >
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-[0.35em] text-white/60">Type et mode</p>
               <h2 className="text-xl font-semibold text-white">Paramètres principaux</h2>
@@ -288,14 +308,15 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
                 <FormMessage message={errors.dailyGoal} />
               </div>
             )}
-          </section>
+          </CollapsibleCard>
 
           {/* Catégories + presets */}
-          <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie & inspiration</p>
-              <h2 className="text-xl font-semibold text-white">Repositionne l’habitude</h2>
-            </div>
+          <CollapsibleCard
+            title="Repositionne l’habitude"
+            subtitle="Catégorie & inspiration"
+            open={openSections.category}
+            onToggle={() => toggleSection('category')}
+          >
             <div>
               <label className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie</label>
               <select
@@ -332,14 +353,15 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
                 ))}
               </div>
             </div>
-          </section>
+          </CollapsibleCard>
 
           {/* Identité */}
-          <section className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.35em] text-white/60">Identité</p>
-              <h2 className="text-xl font-semibold text-white">Nom, icône et contexte</h2>
-            </div>
+          <CollapsibleCard
+            title="Nom, icône et contexte"
+            subtitle="Identité"
+            open={openSections.identity}
+            onToggle={() => toggleSection('identity')}
+          >
             <div>
               <label className="text-xs uppercase tracking-[0.35em] text-white/60">Nom précis *</label>
               <input
@@ -399,7 +421,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
               />
               <FormMessage message={errors.description} />
             </div>
-          </section>
+          </CollapsibleCard>
 
           {/* CTA */}
           <section className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
@@ -424,20 +446,32 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
 
         {/* Colonne latérale */}
         <div className="space-y-6">
-          <AICoachSmartAudit
-            name={name}
-            description={description}
-            trackingMode={trackingMode}
-            dailyGoalValue={dailyGoalValue}
-            onImprove={({ name: improvedName, description: improvedDescription }) => {
-              setName(improvedName)
-              setDescription(improvedDescription)
-              clearError('name')
-              clearError('description')
-            }}
-          />
+          <CollapsibleCard
+            title="Audit intelligent"
+            subtitle="Coaching IA"
+            open={openSections.coach}
+            onToggle={() => toggleSection('coach')}
+          >
+            <AICoachSmartAudit
+              name={name}
+              description={description}
+              trackingMode={trackingMode}
+              dailyGoalValue={dailyGoalValue}
+              onImprove={({ name: improvedName, description: improvedDescription }) => {
+                setName(improvedName)
+                setDescription(improvedDescription)
+                clearError('name')
+                clearError('description')
+              }}
+            />
+          </CollapsibleCard>
 
-          <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40 backdrop-blur">
+          <CollapsibleCard
+            title="Checklist d’édition"
+            subtitle="Astuces"
+            open={openSections.tips}
+            onToggle={() => toggleSection('tips')}
+          >
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-[#C084FC]" />
               <div>
@@ -450,9 +484,40 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
               <li>• Utilise les presets pour réécrire rapidement un nom ou une couleur.</li>
               <li>• Rappelle-toi que les objectifs counters restent entre 1 et 20.</li>
             </ul>
-          </section>
+          </CollapsibleCard>
         </div>
       </div>
     </form>
+  )
+}
+
+function CollapsibleCard({
+  title,
+  subtitle,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string
+  subtitle?: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-2xl shadow-black/30 backdrop-blur">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-white/30"
+      >
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-white/50">{subtitle}</p>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        </div>
+        <span className="text-xl font-bold text-white/80">{open ? '−' : '+'}</span>
+      </button>
+      {open && <div className="space-y-4">{children}</div>}
+    </section>
   )
 }

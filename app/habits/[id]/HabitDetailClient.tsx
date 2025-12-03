@@ -1,7 +1,7 @@
 'use client'
 
 // Client component orchestrating all interactive widgets for a single habit view.
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import HabitCounter from './HabitCounter'
 import { WeeklyCalendar } from '@/components/WeeklyCalendar'
 import { DayReportModal } from '@/components/DayReportModal'
@@ -35,6 +35,14 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [count, setCount] = useState(stats.todayCount)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    focus: false,
+    stats: false,
+    gamification: false,
+    coach: false,
+    calendar: false,
+    message: false,
+  })
 
   const isBadHabit = habit.type === 'bad'
   const statColor = isBadHabit ? 'text-[#FF6B6B]' : 'text-[#5EEAD4]'
@@ -64,10 +72,17 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
   const sectionCard =
     'rounded-[28px] border border-white/10 bg-white/[0.02] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur'
 
-  return (
-    <>
-      <div className="space-y-6">
-        <section className={`${sectionCard} space-y-6`}>
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const sections = [
+    {
+      id: 'focus',
+      title: 'Focus du jour',
+      subtitle: 'Action immédiate',
+      content: (
+        <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-white/50">Focus du jour</p>
@@ -89,9 +104,7 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
 
           <div
             className={`flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:px-7 sm:py-6 ${
-              isBadHabit
-                ? 'border-[#FF6B6B]/40 bg-[#1A0E11]'
-                : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
+              isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
             }`}
           >
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -157,36 +170,37 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
             totalLogs={stats.totalCount}
             totalCraquages={isBadHabit ? stats.totalCount : 0}
           />
-        </section>
-
-        <section className={sectionCard}>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Performance</p>
-              <h2 className="text-2xl font-semibold text-white">Statistiques clés</h2>
+        </div>
+      ),
+    },
+    {
+      id: 'stats',
+      title: 'Statistiques clés',
+      subtitle: `Performance · fenêtre ${stats.rangeInDays}j`,
+      content: (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            { label: 'Total période', value: stats.totalCount, accent: statColor },
+            { label: '7 derniers jours', value: stats.last7DaysCount, accent: labelColor },
+            { label: 'Streak actif', value: stats.currentStreak, accent: 'text-[#FDE68A]' },
+            { label: 'Focus jour', value: count, accent: 'text-[#C4B5FD]' },
+          ].map(stat => (
+            <div
+              key={stat.label}
+              className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 text-center shadow-inner shadow-black/40"
+            >
+              <p className={`text-3xl font-semibold ${stat.accent}`}>{stat.value}</p>
+              <p className="mt-2 text-xs tracking-wide text-white/60">{stat.label}</p>
             </div>
-            <span className="text-xs uppercase tracking-[0.3em] text-white/50">
-              Fenêtre {stats.rangeInDays}j
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[
-              { label: 'Total période', value: stats.totalCount, accent: statColor },
-              { label: '7 derniers jours', value: stats.last7DaysCount, accent: labelColor },
-              { label: 'Streak actif', value: stats.currentStreak, accent: 'text-[#FDE68A]' },
-              { label: 'Focus jour', value: count, accent: 'text-[#C4B5FD]' },
-            ].map(stat => (
-              <div
-                key={stat.label}
-                className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 text-center shadow-inner shadow-black/40"
-              >
-                <p className={`text-3xl font-semibold ${stat.accent}`}>{stat.value}</p>
-                <p className="mt-2 text-xs tracking-wide text-white/60">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'gamification',
+      title: 'Progression & badges',
+      subtitle: 'Gamification',
+      content: (
         <GamificationPanel
           habit={habit}
           calendarData={calendarData}
@@ -194,26 +208,59 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
           last7DaysCount={stats.last7DaysCount}
           currentStreak={stats.currentStreak}
         />
-
-        <HabitCoach habitId={habit.id} stats={dynamicCoachStats} />
-
-        <section className={sectionCard}>
-          <WeeklyCalendar
-            habitId={habit.id}
-            habitType={habit.type}
-            calendarData={calendarData}
-            trackingMode={habit.tracking_mode}
-            onDayClick={date => setSelectedDate(date)}
-          />
-        </section>
-
-        <section
-          className={`rounded-[28px] border p-6 text-center shadow-lg ${
+      ),
+    },
+    {
+      id: 'coach',
+      title: 'Coach personnalisé',
+      subtitle: 'Recommandations IA',
+      content: <HabitCoach habitId={habit.id} stats={dynamicCoachStats} />,
+    },
+    {
+      id: 'calendar',
+      title: 'Calendrier hebdomadaire',
+      subtitle: 'Semaine en un coup d’œil',
+      content: (
+        <WeeklyCalendar
+          habitId={habit.id}
+          habitType={habit.type}
+          calendarData={calendarData}
+          trackingMode={habit.tracking_mode}
+          onDayClick={date => setSelectedDate(date)}
+        />
+      ),
+    },
+    {
+      id: 'message',
+      title: 'Message du jour',
+      subtitle: 'Contexte rapide',
+      content: (
+        <div
+          className={`rounded-[24px] border p-6 text-center shadow-lg ${
             isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
           }`}
         >
           <p className="text-base text-white/90">&ldquo;{getContextualMessage()}&rdquo;</p>
-        </section>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <div className="space-y-6">
+        {sections.map(section => (
+          <CollapsibleCard
+            key={section.id}
+            title={section.title}
+            subtitle={section.subtitle}
+            open={openSections[section.id]}
+            onToggle={() => toggleSection(section.id)}
+            className={section.id === 'focus' || section.id === 'calendar' ? sectionCard : undefined}
+          >
+            {section.content}
+          </CollapsibleCard>
+        ))}
       </div>
 
       <GoalSettingsModal
@@ -229,5 +276,38 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
 
       <DayReportModal date={selectedDate || ''} isOpen={!!selectedDate} onClose={() => setSelectedDate(null)} />
     </>
+  )
+}
+
+function CollapsibleCard({
+  title,
+  subtitle,
+  open,
+  onToggle,
+  children,
+  className,
+}: {
+  title: string
+  subtitle?: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={`${className || ''} space-y-4 rounded-[24px] border border-white/10 bg-white/[0.02] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-white/30"
+      >
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-white/50">{subtitle}</p>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        </div>
+        <span className="text-xl font-bold text-white/80">{open ? '−' : '+'}</span>
+      </button>
+      {open && <div className="space-y-4">{children}</div>}
+    </section>
   )
 }
