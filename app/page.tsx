@@ -22,7 +22,7 @@ type CategoryStat = {
   color: string | null
   count: number
 }
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams?: { highlight?: string } }) {
   // Client Supabase serveur requis pour récupérer les données avant rendu.
   const supabase = await createClient()
 
@@ -92,6 +92,7 @@ export default async function Home() {
   const goodHabitsLoggedToday =
     safeGoodHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
   const hasActivityToday = badHabitsLoggedToday + goodHabitsLoggedToday > 0
+  const highlightHabitId = searchParams?.highlight ?? null
 
   // Agrège toutes les habitudes actives pour construire les stats UI.
   const allActiveHabits = [...safeBadHabits, ...safeGoodHabits]
@@ -197,6 +198,7 @@ export default async function Home() {
         showGoodHabits={showGoodHabits}
         coachMessage={showCoachBubble ? generatedRoastMessage : undefined}
         showHabitDescriptions={showHabitDescriptions}
+        highlightHabitId={highlightHabitId}
       />
     </div>
   )

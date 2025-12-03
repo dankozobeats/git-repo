@@ -58,6 +58,20 @@ export default function NewHabitPage() {
     coach: false,
     tips: false,
   })
+  const errorScrollMap: Record<SmartErrorField, string> = {
+    name: 'new-habit-name',
+    description: 'new-habit-description',
+    dailyGoal: 'new-habit-daily-goal',
+    category: 'new-habit-category',
+    trackingMode: 'new-habit-tracking-mode',
+  }
+  const errorSectionMap: Record<SmartErrorField, keyof typeof openSections> = {
+    name: 'identity',
+    description: 'identity',
+    dailyGoal: 'typeMode',
+    category: 'category',
+    trackingMode: 'typeMode',
+  }
 
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
@@ -95,6 +109,15 @@ export default function NewHabitPage() {
   )
 
   // Valide les critères SMART et accumule les messages UX.
+  const scrollToErrorField = (field: SmartErrorField) => {
+    const targetId = errorScrollMap[field]
+    if (!targetId) return
+    const el = document.getElementById(targetId)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+    }
+  }
+
   const validateSmart = () => {
     const trimmedName = name.trim()
     const trimmedDescription = description.trim()
@@ -127,6 +150,14 @@ export default function NewHabitPage() {
     }
 
     setErrors(newErrors)
+    const firstError = Object.keys(newErrors)[0] as SmartErrorField | undefined
+    if (firstError) {
+      const section = errorSectionMap[firstError]
+      if (section) {
+        setOpenSections(prev => ({ ...prev, [section]: true }))
+      }
+      window.setTimeout(() => scrollToErrorField(firstError), 80)
+    }
     return Object.keys(newErrors).length === 0
   }
 
@@ -156,7 +187,7 @@ export default function NewHabitPage() {
       description,
       type: habitType,
       tracking_mode: trackingMode,
-      category_id: categoryId,
+      category_id: categoryId || null,
     }
 
     if (trackingMode === 'counter') {
@@ -164,14 +195,14 @@ export default function NewHabitPage() {
       habitData.daily_goal_value = dailyGoalValue
     }
 
-    const { error } = await supabase.from('habits').insert(habitData)
-    if (error) {
+    const { data, error } = await supabase.from('habits').insert(habitData).select('id').single()
+    if (error || !data) {
       console.error('Error creating habit:', error)
       setIsLoading(false)
       return
     }
 
-    router.push('/')
+    router.push(`/?highlight=${data.id}#habit-card-${data.id}`)
     router.refresh()
   }
 
@@ -209,7 +240,7 @@ export default function NewHabitPage() {
                 open={openSections.typeMode}
                 onToggle={() => toggleSection('typeMode')}
               >
-                <div className="space-y-2">
+                <div className="space-y-2" id="new-habit-tracking-mode">
                   <p className="text-xs uppercase tracking-[0.35em] text-white/60">Type</p>
                   <h2 className="text-xl font-semibold">Nature de l’habitude</h2>
                   <p className="text-sm text-white/60">
@@ -263,7 +294,7 @@ export default function NewHabitPage() {
                 </div>
 
                 {trackingMode === 'counter' && (
-                  <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5" id="new-habit-daily-goal">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs uppercase tracking-[0.35em] text-white/60">Objectif</p>
@@ -299,7 +330,7 @@ export default function NewHabitPage() {
                 open={openSections.category}
                 onToggle={() => toggleSection('category')}
               >
-                <div>
+                <div id="new-habit-category">
                   <label className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie</label>
                   <select
                     value={categoryId}
@@ -344,7 +375,7 @@ export default function NewHabitPage() {
                 open={openSections.identity}
                 onToggle={() => toggleSection('identity')}
               >
-                <div>
+                <div id="new-habit-name">
                   <label htmlFor="name" className="text-xs uppercase tracking-[0.35em] text-white/60">
                     Nom précis *
                   </label>

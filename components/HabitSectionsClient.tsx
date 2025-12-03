@@ -31,6 +31,7 @@ type HabitSectionsClientProps = {
   showGoodHabits?: boolean
   coachMessage?: string
   showHabitDescriptions?: boolean
+  highlightHabitId?: string | null
 }
 
 type CategoryStat = {
@@ -69,6 +70,7 @@ export default function HabitSectionsClient({
   showGoodHabits = true,
   coachMessage,
   showHabitDescriptions = true,
+  highlightHabitId,
 }: HabitSectionsClientProps) {
   // États locaux pour piloter recherche, filtres et UI responsive.
   const [searchQuery, setSearchQuery] = useState('')
@@ -89,6 +91,7 @@ export default function HabitSectionsClient({
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const feedbackRef = useRef<HTMLDivElement | null>(null)
   const coachContainerRef = useRef<HTMLDivElement | null>(null)
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(highlightHabitId ?? null)
   const categoriesList = categories ?? []
   const todayCountsMap = useMemo(
     // Convertit l'objet provenant du serveur en Map pour des lookups rapides.
@@ -179,6 +182,39 @@ export default function HabitSectionsClient({
       window.removeEventListener('resize', update)
     }
   }, [])
+
+  // Met en avant une habitude fraîchement créée ou ciblée via la query ?highlight=
+  useEffect(() => {
+    const targetId = highlightHabitId || (typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '')
+    if (!targetId) return
+    setActiveHighlightId(targetId.replace('habit-card-', ''))
+
+    const scrollToTarget = () => {
+      const el = document.getElementById(targetId.startsWith('habit-card-') ? targetId : `habit-card-${targetId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+        return true
+      }
+      return false
+    }
+
+    // Essaie immédiatement, puis retente si l'élément n'est pas encore monté.
+    let attempts = 0
+    const tryScroll = () => {
+      attempts += 1
+      if (scrollToTarget() || attempts > 5) {
+        window.clearInterval(intervalId)
+      }
+    }
+    const intervalId = window.setInterval(tryScroll, 200)
+    tryScroll()
+
+    const timer = window.setTimeout(() => setActiveHighlightId(null), 4500)
+    return () => {
+      window.clearInterval(intervalId)
+      window.clearTimeout(timer)
+    }
+  }, [highlightHabitId])
 
   // Handler centralisé pour afficher le toast lorsqu'une habitude est validée (succès ou erreur).
   const handleHabitValidated = useCallback((message: string, variant: 'success' | 'error' = 'success') => {
@@ -346,6 +382,7 @@ export default function HabitSectionsClient({
               onHabitValidated={handleHabitValidated}
               showDescriptions={showHabitDescriptions}
               viewMode={viewMode}
+              highlightHabitId={activeHighlightId}
             />
           </section>
         )}
@@ -370,6 +407,7 @@ export default function HabitSectionsClient({
               onHabitValidated={handleHabitValidated}
               showDescriptions={showHabitDescriptions}
               viewMode={viewMode}
+              highlightHabitId={activeHighlightId}
             />
           </section>
         )}
@@ -477,10 +515,11 @@ type HabitListProps = {
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
   showDescriptions: boolean
   viewMode: 'card' | 'list'
+  highlightHabitId?: string | null
 }
 
 // Affiche toutes les cartes d'une section en conservant une grille full-width, ou un message vide si aucune correspondance.
-function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated, showDescriptions, viewMode }: HabitListProps) {
+function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated, showDescriptions, viewMode, highlightHabitId }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -501,6 +540,7 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
             onHabitValidated={onHabitValidated}
             showDescriptions={showDescriptions}
             viewMode={viewMode}
+            highlightHabitId={highlightHabitId}
           />
         ))}
       </div>
@@ -515,18 +555,24 @@ type HabitRowCardProps = {
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
   showDescriptions: boolean
   viewMode: 'card' | 'list'
+  highlightHabitId?: string | null
 }
 
 // Carte principale d'une habitude avec un lien vers le détail et les actions rapides en style glassmorphism premium.
-function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions, viewMode }: HabitRowCardProps) {
+function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions, viewMode, highlightHabitId }: HabitRowCardProps) {
   // Calcule l'état courant pour afficher le badge restant sans attendre un refresh serveur.
   const counterState = buildCounterState(habit, todayCount)
   const showCounterBadge = counterState.required > 1
+  const isHighlighted = highlightHabitId === habit.id
 
   // Vue liste compacte
   if (viewMode === 'list') {
     return (
-      <div className="group flex items-center justify-between rounded-none border-x-0 border-white/5 bg-white/[0.02] px-4 py-2.5 text-white transition hover:bg-white/[0.04] sm:rounded-xl sm:border-x sm:px-4">
+      <div
+        id={`habit-card-${habit.id}`}
+        className={`group flex items-center justify-between rounded-none border-x-0 border-white/5 bg-white/[0.02] px-4 py-2.5 text-white transition hover:bg-white/[0.04] sm:rounded-xl sm:border-x sm:px-4 ${isHighlighted ? 'ring-2 ring-[#C084FC] shadow-[0_0_0_4px_rgba(192,132,252,0.25)]' : ''
+          }`}
+      >
         <Link href={`/habits/${habit.id}`} className="flex flex-1 items-center gap-3 min-w-0">
           <div
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-lg"
@@ -564,7 +610,11 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
 
   // Vue carte (par défaut)
   return (
-    <div className="group flex w-full flex-col gap-3 rounded-none border-x-0 border-white/10 bg-white/5 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-2xl sm:border-x sm:px-4 sm:py-4">
+    <div
+      id={`habit-card-${habit.id}`}
+      className={`group flex w-full flex-col gap-3 rounded-none border-x-0 border-white/10 bg-white/5 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-2xl sm:border-x sm:px-4 sm:py-4 ${isHighlighted ? 'ring-2 ring-[#C084FC] shadow-[0_0_0_4px_rgba(192,132,252,0.25)]' : ''
+        }`}
+    >
       <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
         <div
           className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"

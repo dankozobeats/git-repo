@@ -62,6 +62,20 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
     coach: false,
     tips: false,
   })
+  const errorScrollMap: Record<SmartErrorField, string> = {
+    name: 'edit-habit-name',
+    description: 'edit-habit-description',
+    dailyGoal: 'edit-habit-daily-goal',
+    category: 'edit-habit-category',
+    trackingMode: 'edit-habit-tracking-mode',
+  }
+  const errorSectionMap: Record<SmartErrorField, keyof typeof openSections> = {
+    name: 'identity',
+    description: 'identity',
+    dailyGoal: 'typeMode',
+    category: 'category',
+    trackingMode: 'typeMode',
+  }
 
   const dailyGoalType = habitType === 'good' ? 'minimum' : 'maximum'
   const presets = habitType === 'bad' ? BAD_PRESETS : GOOD_PRESETS
@@ -86,23 +100,33 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
     [clearError]
   )
 
+  const scrollToErrorField = (field: SmartErrorField) => {
+    const targetId = errorScrollMap[field]
+    if (!targetId) return
+    const el = document.getElementById(targetId)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+    }
+  }
+
   const validateSmart = () => {
     const trimmedName = name.trim()
     const trimmedDescription = description.trim()
     const newErrors: Partial<Record<SmartErrorField, string>> = {}
 
-    if (trimmedName.length < 4) {
-      newErrors.name = 'Le nom doit contenir au moins 4 caractères précis.'
+    if (trimmedName.length < 3) {
+      newErrors.name = 'Le nom doit contenir au moins 3 caractères.'
     } else if (vagueKeywords.some(keyword => trimmedName.toLowerCase().includes(keyword))) {
-      newErrors.name = 'Ajoute un verbe concret et un contexte pour ce nom.'
+      newErrors.name = 'Ajoute un verbe ou un contexte pour clarifier le nom.'
     }
 
     if (trackingMode !== 'binary' && trackingMode !== 'counter') {
       newErrors.trackingMode = 'Choisis un mode de suivi pour cette habitude.'
     }
 
-    if (trackingMode === 'binary' && trimmedDescription.length < 10) {
-      newErrors.description = 'Décris la routine (minimum 10 caractères).'
+    // Description devient facultative pour éviter de bloquer la mise à jour d’habitudes existantes.
+    if (trackingMode === 'binary' && trimmedDescription && trimmedDescription.length < 5) {
+      newErrors.description = 'Décris rapidement la routine (≥ 5 caractères) ou laisse vide.'
     }
 
     if (trackingMode === 'counter') {
@@ -113,11 +137,15 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
       }
     }
 
-    if (!categoryId && categories.length > 0) {
-      newErrors.category = 'Associe une catégorie pour donner du contexte.'
-    }
-
     setErrors(newErrors)
+    const firstError = Object.keys(newErrors)[0] as SmartErrorField | undefined
+    if (firstError) {
+      const section = errorSectionMap[firstError]
+      if (section) {
+        setOpenSections(prev => ({ ...prev, [section]: true }))
+      }
+      window.setTimeout(() => scrollToErrorField(firstError), 80)
+    }
     return Object.keys(newErrors).length === 0
   }
 
@@ -128,6 +156,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
 
     const isValid = validateSmart()
     if (!isValid) {
+      setFormError('Corrige les champs signalés pour enregistrer les modifications.')
       setIsLoading(false)
       return
     }
@@ -176,7 +205,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
       return
     }
 
-    router.push(`/habits/${habit.id}`)
+    router.push(`/?highlight=${habit.id}#habit-card-${habit.id}`)
     router.refresh()
   }
 
@@ -232,7 +261,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
             open={openSections.typeMode}
             onToggle={() => toggleSection('typeMode')}
           >
-            <div className="space-y-2">
+            <div className="space-y-2" id="edit-habit-tracking-mode">
               <p className="text-xs uppercase tracking-[0.35em] text-white/60">Type et mode</p>
               <h2 className="text-xl font-semibold text-white">Paramètres principaux</h2>
               <p className="text-sm text-white/60">Ajuste la polarité et le mode de suivi pour recalibrer la stratégie.</p>
@@ -284,7 +313,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
             </div>
 
             {trackingMode === 'counter' && (
-              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5" id="edit-habit-daily-goal">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.35em] text-white/60">Objectif quotidien</p>
@@ -317,7 +346,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
             open={openSections.category}
             onToggle={() => toggleSection('category')}
           >
-            <div>
+            <div id="edit-habit-category">
               <label className="text-xs uppercase tracking-[0.35em] text-white/60">Catégorie</label>
               <select
                 value={categoryId}
@@ -362,7 +391,7 @@ export default function HabitEditForm({ habit, categories }: HabitEditFormProps)
             open={openSections.identity}
             onToggle={() => toggleSection('identity')}
           >
-            <div>
+            <div id="edit-habit-name">
               <label className="text-xs uppercase tracking-[0.35em] text-white/60">Nom précis *</label>
               <input
                 type="text"
