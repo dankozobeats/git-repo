@@ -183,6 +183,20 @@ export default function HabitSectionsClient({
     }
   }, [])
 
+  // Persiste la préférence d'affichage (carte/liste) pour conserver le choix utilisateur.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.localStorage.getItem('bh-view-mode')
+    if (stored === 'card' || stored === 'list') {
+      setViewMode(stored)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('bh-view-mode', viewMode)
+  }, [viewMode])
+
   // Met en avant une habitude fraîchement créée ou ciblée via la query ?highlight=
   useEffect(() => {
     const targetId = highlightHabitId || (typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '')
