@@ -109,6 +109,7 @@ self.addEventListener('push', (event) => {
         icon: '/icon-192x192.png',
         badge: '/icon-192x192.png',
         habitId: null,
+        url: '/',
     }
 
     // Parse les données du push si disponibles
@@ -121,9 +122,14 @@ self.addEventListener('push', (event) => {
                 icon: data.icon || notificationData.icon,
                 badge: data.badge || notificationData.badge,
                 habitId: data.habitId || data.habit_id || null,
+                url: data.url || (data.habitId ? `/habits/${data.habitId}` : notificationData.url),
                 tag: data.tag || 'badhabit-notification',
                 requireInteraction: data.requireInteraction || false,
-                data: data, // Conserve toutes les données pour notificationclick
+                data: {
+                    ...data,
+                    habitId: data.habitId || data.habit_id || null,
+                    url: data.url || (data.habitId ? `/habits/${data.habitId}` : notificationData.url),
+                }, // Conserve toutes les données pour notificationclick
             }
         } catch (error) {
             console.error('[SW] Erreur lors du parsing des données push:', error)
@@ -170,9 +176,10 @@ self.addEventListener('notificationclick', (event) => {
 
     // Récupère l'habitId depuis les données de la notification
     const habitId = event.notification.data?.habitId || event.notification.data?.habit_id
+    const targetUrl = event.notification.data?.url || (habitId ? `/habits/${habitId}` : '/')
 
     // Détermine l'URL de destination
-    const urlToOpen = habitId ? `/habits/${habitId}` : '/'
+    const urlToOpen = targetUrl
 
     // Ouvre ou focus une fenêtre existante
     event.waitUntil(

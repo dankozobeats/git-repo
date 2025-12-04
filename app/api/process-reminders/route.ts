@@ -126,6 +126,26 @@ export async function POST(req: Request) {
 
         const typedSubs = (subs || []) as PushSubscriptionRow[];
 
+        // 5b) Récupérer les habitudes concernées pour enrichir le message
+        const habitIds = Array.from(
+            new Set(
+                remindersToSend
+                    .map((r) => r.habit_id)
+                    .filter((id): id is string => Boolean(id))
+            )
+        );
+        const habitMap = new Map<string, { id: string; name: string }>();
+        if (habitIds.length > 0) {
+            const { data: habitsData, error: habitsError } = await supabase
+                .from('habits')
+                .select('id, name')
+                .in('id', habitIds);
+
+            if (!habitsError && habitsData) {
+                habitsData.forEach((h) => habitMap.set(h.id, h));
+            }
+        }
+
         // Map user_id → liste de subscriptions
         const subsByUser = new Map<string, PushSubscriptionRow[]>();
         for (const sub of typedSubs) {
@@ -146,10 +166,19 @@ export async function POST(req: Request) {
                     return;
                 }
 
+                const habitName = reminder.habit_id ? habitMap.get(reminder.habit_id)?.name : null;
+                const tz = reminder.timezone || 'Europe/Paris';
+                const reminderTime = DateTime.fromISO(reminder.time_local).setZone(tz);
+                const timeLabel = reminderTime.toFormat('HH:mm');
+
                 const payload = JSON.stringify({
-                    title: 'Rappel d’habitude',
-                    body: 'C’est l’heure de votre habitude !',
+                    title: habitName ? `Rappel: ${habitName}` : 'Rappel d’habitude',
+                    body: habitName
+                        ? `C’est l’heure de "${habitName}" (${timeLabel}).`
+                        : `C’est l’heure de votre habitude (${timeLabel}).`,
                     habitId: reminder.habit_id,
+                    url: reminder.habit_id ? `/habits/${reminder.habit_id}` : '/',
+                    timeLabel,
                 });
 
                 const sendPromises = userSubs.map(async (sub) => {
