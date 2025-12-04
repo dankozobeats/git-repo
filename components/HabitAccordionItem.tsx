@@ -132,6 +132,7 @@ export default function HabitAccordionItem({
               initialCount={todayCount}
               counterRequired={counterRequired}
               habitName={habit.name}
+              habitDescription={habit.description}
               streak={habit.current_streak ?? 0}
               totalLogs={habit.total_logs ?? undefined}
               totalCraquages={habit.total_craquages ?? undefined}

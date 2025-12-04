@@ -612,6 +612,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
             initialCount={todayCount}
             counterRequired={counterState.required}
             habitName={habit.name}
+            habitDescription={habit.description}
             streak={habit.current_streak ?? 0}
             totalLogs={habit.total_logs ?? undefined}
             totalCraquages={habit.total_craquages ?? undefined}
@@ -663,18 +664,19 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
         </div>
       </Link>
       <div className="w-full sm:w-auto">
-        <HabitQuickActions
-          habitId={habit.id}
-          habitType={type}
-          trackingMode={habit.tracking_mode as 'binary' | 'counter'}
-          initialCount={todayCount}
-          counterRequired={counterState.required}
-          habitName={habit.name}
-          streak={habit.current_streak ?? 0}
-          totalLogs={habit.total_logs ?? undefined}
-          totalCraquages={habit.total_craquages ?? undefined}
-          onHabitValidated={onHabitValidated}
-        />
+          <HabitQuickActions
+            habitId={habit.id}
+            habitType={type}
+            trackingMode={habit.tracking_mode as 'binary' | 'counter'}
+            initialCount={todayCount}
+            counterRequired={counterState.required}
+            habitName={habit.name}
+            habitDescription={habit.description}
+            streak={habit.current_streak ?? 0}
+            totalLogs={habit.total_logs ?? undefined}
+            totalCraquages={habit.total_craquages ?? undefined}
+            onHabitValidated={onHabitValidated}
+          />
       </div>
     </div>
   )

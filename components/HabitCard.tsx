@@ -112,6 +112,7 @@ export default function HabitCard({ habit, onActionComplete, hideWhenCompleted =
             initialCount={habit.todayCount}
             counterRequired={counterRequired}
             habitName={habit.name}
+            habitDescription={habit.description}
             variant="compact"
             onActionComplete={onActionComplete}
           />
@@ -125,6 +126,7 @@ export default function HabitCard({ habit, onActionComplete, hideWhenCompleted =
             initialCount={habit.todayCount}
             counterRequired={counterRequired}
             habitName={habit.name}
+            habitDescription={habit.description}
             streak={habit.current_streak ?? undefined}
             totalLogs={habit.total_logs ?? undefined}
             totalCraquages={habit.total_craquages ?? undefined}

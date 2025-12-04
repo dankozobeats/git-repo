@@ -2,11 +2,12 @@
 
 // Raccourcis d'action pour cocher/supprimer une habitude directement depuis les listes.
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreVertical } from 'lucide-react'
+import { MoreVertical, ExternalLink } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { Portal } from '@radix-ui/react-portal'
 type HabitQuickActionsProps = {
   habitId: string
   habitType: 'good' | 'bad'
@@ -14,6 +15,7 @@ type HabitQuickActionsProps = {
   initialCount: number
   counterRequired?: number | null
   habitName: string
+  habitDescription?: string | null
   streak?: number
   totalLogs?: number
   totalCraquages?: number
@@ -27,6 +29,7 @@ export default function HabitQuickActions({
   initialCount,
   counterRequired,
   habitName,
+  habitDescription,
   streak = 0,
   totalLogs = 0,
   totalCraquages = 0,
@@ -37,6 +40,18 @@ export default function HabitQuickActions({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
+  // Empêche le scroll arrière-plan lorsque le modal d'aperçu est ouvert.
+  useEffect(() => {
+    if (isPreviewOpen) {
+      const original = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = original
+      }
+    }
+  }, [isPreviewOpen])
   // Cible dynamique permettant de savoir quand un compteur est considéré comme terminé.
   const [requiredCount, setRequiredCount] = useState(() => {
     if (typeof counterRequired === 'number' && counterRequired > 0) {
@@ -142,14 +157,23 @@ export default function HabitQuickActions({
               <MoreVertical className="h-5 w-5" />
             </button>
           </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              side="bottom"
-              align="end"
-              sideOffset={10}
-              className="z-[999999] w-[208px] rounded-2xl border border-white/10 bg-[#0d0f17] p-2 text-sm text-white shadow-2xl shadow-black/40 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
-            >
-              <MenuLink href={`/habits/${habitId}`} label="Voir l'habitude" />
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            side="bottom"
+            align="end"
+            sideOffset={10}
+            className="z-[10050] w-[208px] rounded-2xl border border-white/10 bg-[#0d0f17]/95 p-2 text-sm text-white shadow-2xl shadow-black/60 backdrop-blur-lg data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
+            collisionPadding={12}
+          >
+            <DropdownMenu.Item
+              onSelect={event => {
+                event.preventDefault()
+                setIsPreviewOpen(true)
+                }}
+                className="rounded-lg px-3 py-2 text-left text-white/90 transition hover:bg-white/10 focus:bg-white/10"
+              >
+                Voir l'habitude
+              </DropdownMenu.Item>
               <MenuLink href={`/habits/${habitId}/edit`} label="Modifier" />
               <MenuLink href={`/habits/${habitId}?view=stats`} label="Statistiques" />
               <DropdownMenu.Item
@@ -165,6 +189,54 @@ export default function HabitQuickActions({
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
+      {isPreviewOpen && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsPreviewOpen(false)}
+          />
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 py-6">
+            <div
+              className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#0b0f1d]/95 p-6 text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="absolute right-4 top-4 rounded-full border border-white/15 px-2 py-1 text-white/70 transition hover:text-white"
+                onClick={() => setIsPreviewOpen(false)}
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+              <div className="space-y-2 pr-8">
+                <p className="text-xs uppercase tracking-[0.35em] text-white/50">Aperçu habitude</p>
+                <h3 className="text-2xl font-semibold">{habitName}</h3>
+                {habitDescription ? (
+                  <p className="text-sm text-white/70 leading-relaxed">{habitDescription}</p>
+                ) : (
+                  <p className="text-sm text-white/40 italic">Aucune description fournie.</p>
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/habits/${habitId}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white text-black px-4 py-2 text-sm font-semibold shadow-[0_12px_30px_rgba(255,255,255,0.25)] transition hover:opacity-90"
+                >
+                  Voir la fiche détaillée
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
     </>
   )
 }

@@ -23,7 +23,7 @@ type CategoryStat = {
   color: string | null
   count: number
 }
-export default async function Home({ searchParams }: { searchParams?: { highlight?: string } }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ highlight?: string }> }) {
   // Client Supabase serveur requis pour récupérer les données avant rendu.
   const supabase = await createClient()
 
@@ -93,7 +93,7 @@ export default async function Home({ searchParams }: { searchParams?: { highligh
   const goodHabitsLoggedToday =
     safeGoodHabits.filter(habit => (todayCounts.get(habit.id) ?? 0) > 0).length || 0
   const hasActivityToday = badHabitsLoggedToday + goodHabitsLoggedToday > 0
-  const highlightHabitId = searchParams?.highlight ?? null
+  const { highlight: highlightHabitId = null } = await searchParams
 
   // Agrège toutes les habitudes actives pour construire les stats UI.
   const allActiveHabits = [...safeBadHabits, ...safeGoodHabits]
