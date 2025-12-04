@@ -9,6 +9,7 @@ import type { Database } from '@/types/database'
 import HabitSectionsClient from '@/components/HabitSectionsClient'
 import ViewHabitsButton from '@/components/ViewHabitsButton'
 import AICoachMessage from '@/components/AICoachMessage' // Design premium unifié pour tous les messages IA.
+import FloatingQuickActions from '@/components/FloatingQuickActions'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -255,6 +256,7 @@ export default async function Home({ searchParams }: { searchParams?: { highligh
           </div>
         )}
       </div>
+      <FloatingQuickActions />
     </main>
   )
 }

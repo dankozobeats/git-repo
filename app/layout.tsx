@@ -2,7 +2,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import DashboardSidebar, { type SidebarNavItem } from '@/components/DashboardSidebar'
-import FloatingQuickActions from '@/components/FloatingQuickActions'
 import AuthSync from '@/components/AuthSync'
 import PWARegister from '@/components/PWARegister'
 import { createClient } from '@/lib/supabase/server'
@@ -64,9 +63,9 @@ export const metadata: Metadata = {
 // Liens principaux affichés dans le DashboardSidebar.
 const mainNav: SidebarNavItem[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
-  { href: '/reminders', label: 'Rappels', icon: 'reminders' },
   { href: '/reports/history', label: 'Historique', icon: 'history' },
   { href: '/report', label: 'Coach IA', icon: 'coach' },
+  { href: '/reminders', label: 'Rappels', icon: 'reminders' },
   { href: '/habits/stats', label: 'Stats détaillées', icon: 'stats' },
 ]
 
@@ -133,7 +132,6 @@ export default async function RootLayout({
           <div className={`${isAuthenticated ? 'md:ml-64 md:h-screen md:overflow-y-auto' : ''} pt-0`}>
             {children}
           </div>
-          {isAuthenticated && <FloatingQuickActions />}
         </div>
       </body>
     </html>

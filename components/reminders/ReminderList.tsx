@@ -22,9 +22,13 @@ interface Reminder {
 
 interface ReminderListProps {
     reminders: Reminder[];
+    emptyLabel?: string;
+    accent?: 'green' | 'neutral';
 }
 
-export default function ReminderList({ reminders }: ReminderListProps) {
+const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+export default function ReminderList({ reminders, emptyLabel = 'Aucun rappel actif.', accent = 'green' }: ReminderListProps) {
     const router = useRouter();
     const supabase = createClient();
 
@@ -40,7 +44,7 @@ export default function ReminderList({ reminders }: ReminderListProps) {
     };
 
     if (reminders.length === 0) {
-        return <div className="text-sm text-white/40 italic">Aucun rappel actif.</div>;
+        return <div className="text-sm text-white/40 italic">{emptyLabel}</div>;
     }
 
     return (
@@ -64,50 +68,69 @@ export default function ReminderList({ reminders }: ReminderListProps) {
                         timeZone: reminder.timezone || 'Europe/Paris'
                     });
                 } else if (reminder.schedule === 'weekly') {
-                    // Get day name from the date
-                    dateString = date.toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        timeZone: reminder.timezone || 'Europe/Paris'
-                    });
-                    dateString = `Chaque ${dateString}`;
+                    const day = dayNames[date.getUTCDay()];
+                    dateString = `Chaque ${day}`;
                 } else {
                     dateString = 'Tous les jours';
                 }
 
+                const isPast = reminder.schedule === 'once' && date.getTime() < Date.now();
+
                 const habit = reminder.habits;
                 const habitColor = habit?.color || '#ffffff';
                 const habitIcon = habit?.icon || '🔔';
+                const pillColor =
+                    accent === 'green'
+                        ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200'
+                        : 'bg-white/10 border-white/15 text-white/70';
+                const statusLabel = reminder.active ? 'Actif' : 'En pause';
+                const statusColor = reminder.active ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/40' : 'bg-white/10 text-white/60 border-white/15';
 
                 return (
-                    <div key={reminder.id} className="group flex flex-col gap-3 rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between">
-                        {/* Info Habitude & Heure */}
-                        <div className="flex items-center gap-4">
-                            <div
-                                className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 text-xl shadow-inner"
-                                style={{ backgroundColor: `${habitColor}20`, color: habitColor }}
-                            >
-                                {habitIcon}
+                    <div
+                        key={reminder.id}
+                        className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-white/30 hover:bg-white/[0.07] shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
+                        style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}
+                    >
+                        {/* Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div
+                                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg shadow-inner"
+                                    style={{ backgroundColor: `${habitColor}20`, color: habitColor }}
+                                >
+                                    {habitIcon}
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-mono text-xl font-bold text-white tracking-tight">{timeString}</span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${pillColor}`}>
+                                            {reminder.schedule === 'once' ? 'Ponctuel' : reminder.schedule === 'daily' ? 'Quotidien' : 'Hebdo'}
+                                        </span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${statusColor}`}>
+                                            {statusLabel}
+                                        </span>
+                                        {isPast && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/70">Passé</span>}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-sm text-white/70">
+                                        <span className="font-medium text-white/90 truncate max-w-[240px] sm:max-w-xs">{habit?.name || 'Habitude inconnue'}</span>
+                                        <span className="text-white/30">•</span>
+                                        <span className="capitalize text-xs text-[#4DD0FB]">{dateString}</span>
+                                    </div>
+                                </div>
                             </div>
-
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xl font-bold text-white tracking-tight">
-                                        {timeString}
-                                    </span>
-                                    <span className={`inline-flex h-2 w-2 rounded-full ${reminder.active ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-white/20'}`} />
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-white/60">
-                                    <span className="font-medium text-white/90">{habit?.name || 'Habitude inconnue'}</span>
-                                    <span>•</span>
-                                    <span className="capitalize text-xs opacity-70 text-[#4DD0FB]">
-                                        {dateString}
-                                    </span>
-                                </div>
+                            <div className="text-xs text-white/50">
+                                <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">{reminder.timezone || 'Europe/Paris'}</span>
                             </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0">
+                        {/* Description */}
+                        {habit?.description && (
+                            <p className="line-clamp-2 text-xs text-white/55">{habit.description}</p>
+                        )}
+
+                        {/* Footer actions */}
+                        <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
                             <Link
                                 href={`/habits/${reminder.habit_id}`}
                                 className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
