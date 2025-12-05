@@ -335,25 +335,37 @@ function buildInsight(
     eventCounts.set(date, (eventCounts.get(date) ?? 0) + 1)
   })
 
-  const relevantCounts = habit.type === 'bad' ? eventCounts : logCounts
+  // Pour les habitudes positives, on fusionne logs + events (mode compteur) afin de ne rien perdre.
+  const mergedCounts = new Map<string, number>()
+  if (habit.type === 'bad') {
+    eventCounts.forEach((value, key) => mergedCounts.set(key, value))
+  } else {
+    dateKeys.forEach(key => {
+      const total = (logCounts.get(key) ?? 0) + (eventCounts.get(key) ?? 0)
+      if (total > 0) mergedCounts.set(key, total)
+    })
+  }
+
+  const relevantCounts = habit.type === 'bad' ? eventCounts : mergedCounts
   const trend = dateKeys.map(key => relevantCounts.get(key) ?? 0)
   const history = dateKeys
     .slice()
     .reverse()
     .map(key => ({
       date: key,
-      completed: habit.type === 'bad' ? (eventCounts.get(key) ?? 0) > 0 : (logCounts.get(key) ?? 0) > 0,
+      completed: habit.type === 'bad' ? (eventCounts.get(key) ?? 0) > 0 : (mergedCounts.get(key) ?? 0) > 0,
     }))
 
   const last7 = dateKeys.slice(-7)
   const week = last7.map(key => relevantCounts.get(key) ?? 0)
 
-  const activeDays = habit.type === 'bad'
-    ? dateKeys.filter(key => (eventCounts.get(key) ?? 0) === 0).length
-    : dateKeys.filter(key => (logCounts.get(key) ?? 0) > 0).length
+  const activeDays =
+    habit.type === 'bad'
+      ? dateKeys.filter(key => (eventCounts.get(key) ?? 0) === 0).length
+      : dateKeys.filter(key => (mergedCounts.get(key) ?? 0) > 0).length
   const frequency = Math.round((activeDays / dateKeys.length) * 100)
 
-  const logSet = new Set(Array.from(logCounts.entries()).filter(([, value]) => value > 0).map(([key]) => key))
+  const logSet = new Set(Array.from(mergedCounts.entries()).filter(([, value]) => value > 0).map(([key]) => key))
   const eventSet = new Set(Array.from(eventCounts.entries()).filter(([, value]) => value > 0).map(([key]) => key))
 
   const streakInfo =

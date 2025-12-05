@@ -143,8 +143,8 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
 function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], period: HabitStatsPeriod): HabitStatsPayload {
   const today = new Date()
   const habitMap = new Map(habits.map(habit => [habit.id, habit]))
-  const logsByDay = new Map<string, number>()
-  const eventsByDay = new Map<string, number>()
+  const goodByDay = new Map<string, number>()
+  const badByDay = new Map<string, number>()
   const allDates = new Set<string>()
   const habitTotals = new Map<
     string,
@@ -167,7 +167,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
     if (!date) return
 
     const amount = typeof log.value === 'number' ? Math.max(1, log.value) : 1
-    logsByDay.set(date, (logsByDay.get(date) ?? 0) + amount)
+    goodByDay.set(date, (goodByDay.get(date) ?? 0) + amount)
     allDates.add(date)
 
     if (!logDatesByHabit.has(log.habit_id)) {
@@ -188,14 +188,18 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
     habitTotals.set(log.habit_id, entry)
   })
 
-  // Agrège les events "bad" de la même manière.
+  // Agrège les events (multi-occurrences) pour les habitudes counter.
   events.forEach(event => {
     const habit = habitMap.get(event.habit_id)
     if (!habit) return
     const date = normalizeDate(event.event_date, event.occurred_at)
     if (!date) return
 
-    eventsByDay.set(date, (eventsByDay.get(date) ?? 0) + 1)
+    if (habit.type === 'bad') {
+      badByDay.set(date, (badByDay.get(date) ?? 0) + 1)
+    } else {
+      goodByDay.set(date, (goodByDay.get(date) ?? 0) + 1)
+    }
     allDates.add(date)
 
     if (!eventDatesByHabit.has(event.habit_id)) {
@@ -230,8 +234,8 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
   // Construit les séries journalières et cumulatives entre startDate et aujourd'hui.
   while (cursor <= end) {
     const key = formatDate(cursor)
-    const good = logsByDay.get(key) ?? 0
-    const bad = eventsByDay.get(key) ?? 0
+    const good = goodByDay.get(key) ?? 0
+    const bad = badByDay.get(key) ?? 0
     const total = good + bad
     daily.push({ date: key, good, bad, total })
     runningGood += good
@@ -257,7 +261,9 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
         return { id: habit.id, name: habit.name, type: 'bad' as const, total: habit.total, streak: current, maxStreak: max }
       }
       const logSet = logDatesByHabit.get(habit.id) ?? new Set<string>()
-      const { current, max } = computeGoodHabitStreak(logSet, today)
+      const eventSet = eventDatesByHabit.get(habit.id) ?? new Set<string>()
+      const merged = new Set<string>([...logSet, ...eventSet])
+      const { current, max } = computeGoodHabitStreak(merged, today)
       return { id: habit.id, name: habit.name, type: 'good' as const, total: habit.total, streak: current, maxStreak: max }
     })
     .sort((a, b) => b.total - a.total)
