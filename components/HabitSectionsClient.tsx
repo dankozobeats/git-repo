@@ -361,7 +361,7 @@ export default function HabitSectionsClient({
 
   // Rend la zone principale: recherche sticky, sections filtrées et gestion des catégories.
   return (
-    <section className="relative z-0 space-y-6">
+    <section className="relative z-0 space-y-6 pt-16 md:pt-0">
       <SearchOverlay
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
@@ -461,65 +461,81 @@ type HabitSectionHeaderProps = {
 }
 
 // Entête de section qui expose le sélecteur de catégorie et le nombre d'éléments.
-function HabitSectionHeader({ title, count, filterId, filterValue, onFilterChange, categories, viewMode, onViewModeChange }: HabitSectionHeaderProps) {
-  // Layout responsive: le filtre passe en colonne sous le titre sur mobile et reste aligné à droite sur desktop.
+function HabitSectionHeader({
+  title,
+  count,
+  filterId,
+  filterValue,
+  onFilterChange,
+  categories,
+  viewMode,
+  onViewModeChange,
+}: HabitSectionHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <h3 className="text-2xl font-semibold text-white">
-        {title} <span className="text-white/50">({count})</span>
-      </h3>
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        {/* Toggle vue carte/liste */}
-        <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
-          <button
-            onClick={() => onViewModeChange('card')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${viewMode === 'card'
-              ? 'bg-white/10 text-white'
-              : 'text-white/50 hover:text-white/70'
-              }`}
-            title="Vue en cartes"
-          >
-            <LayoutGrid className="h-4 w-4" />
-            <span className="hidden sm:inline">Cartes</span>
-          </button>
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${viewMode === 'list'
-              ? 'bg-white/10 text-white'
-              : 'text-white/50 hover:text-white/70'
-              }`}
-            title="Vue en liste"
-          >
-            <List className="h-4 w-4" />
-            <span className="hidden sm:inline">Liste</span>
-          </button>
+    <div className="flex flex-col gap-3 sm:gap-4">
+
+      {/* Ligne haute : label + compteur + view switch */}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50">
+            {title}
+          </span>
+          <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs font-medium text-white/60">
+            {count}
+          </span>
         </div>
 
-        <div className="flex w-full flex-col gap-1 md:w-auto md:max-w-sm">
-          <label htmlFor={filterId} className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
-            Filtre par catégorie
-          </label>
-          <select
-            id={filterId}
-            value={filterValue}
-            onChange={event => onFilterChange(event.target.value as CategoryFilterValue)}
-            className="mobile-ios-filter w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/90 shadow-inner shadow-black/30 backdrop-blur focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
-          >
-            <option value="pending">Habitudes à valider</option>
-            <option value="completed">Habitudes totalement validées</option>
-            <option value="all">Toutes les catégories</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>
-                {`${category.icon || '📂'} ${category.name}`}
-              </option>
-            ))}
-            <option value="uncategorized">Sans catégorie</option>
-          </select>
+        {/* Actions header */}
+        <div className="flex items-center gap-2">
+          {/* Switch vue */}
+          <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5">
+            <button
+              onClick={() => onViewModeChange('card')}
+              className={`rounded-md px-2 py-1 text-xs transition ${viewMode === 'card'
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white/70'
+                }`}
+            >
+              🗂
+            </button>
+            <button
+              onClick={() => onViewModeChange('list')}
+              className={`rounded-md px-2 py-1 text-xs transition ${viewMode === 'list'
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white/70'
+                }`}
+            >
+              ☰
+            </button>
+          </div>
+
+          {/* Hamburger */}
         </div>
       </div>
+
+
+      {/* Filtre principal */}
+      <select
+        id={filterId}
+        value={filterValue}
+        onChange={e => onFilterChange(e.target.value as CategoryFilterValue)}
+        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/90 shadow-inner backdrop-blur focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/10"
+      >
+        <option value="pending">À valider</option>
+        <option value="completed">Complétées</option>
+        <option value="all">Toutes</option>
+        {categories.map(category => (
+          <option key={category.id} value={category.id}>
+            {`${category.icon || '📂'} ${category.name}`}
+          </option>
+        ))}
+        <option value="uncategorized">Sans catégorie</option>
+      </select>
     </div>
   )
 }
+
 
 type HabitListProps = {
   habits: HabitRow[]
@@ -651,6 +667,27 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
         >
           {habit.name}
         </p>
+        {showCounterBadge && (
+          <div className="mt-2 space-y-1">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-sky-400 transition-all"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    (counterState.current / counterState.required) * 100
+                  )}%`,
+                }}
+              />
+            </div>
+
+            <p className="text-[11px] text-white/50">
+              {counterState.current} / {counterState.required}
+              {counterState.isCompleted && ' · Validée ✓'}
+            </p>
+          </div>
+        )}
+
 
         {showDescriptions && habit.description && (
           <p className="mt-0.5 line-clamp-2 text-xs text-white/60">

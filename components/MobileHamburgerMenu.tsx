@@ -74,19 +74,23 @@ export default function MobileHamburgerMenu({ onOpen, isMenuOpen = false }: Mobi
     targetTop < (searchMetrics?.bottom ?? 0) &&
     targetTop + MENU_HEIGHT > (searchMetrics?.top ?? 0)
 
-  const canDisplayMenu = shouldShowMenu && !isSearchFocused && !searchWouldBeBlocked && !isMenuOpen
+  const canDisplayMenu = !isMenuOpen
 
   return (
     <button
       type="button"
       onClick={onOpen}
       aria-label="Ouvrir le menu principal"
-      className={`fixed right-3 z-[1200] flex h-12 w-12 items-center justify-center rounded-2xl border border-white/25 bg-[#050915]/95 text-white shadow-2xl transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D4D]/60 md:hidden ${
-        canDisplayMenu ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 -translate-y-2'
-      }`}
-      style={{ top: targetTop }}
+      className={`fixed top-4 left-4 z-[10001] flex h-12 w-12 items-center justify-center
+        rounded-2xl border border-white/25 bg-[#050915]/95 text-white shadow-2xl
+        transition-all duration-300 ease-out
+        md:hidden ${canDisplayMenu
+          ? 'opacity-100 translate-y-0'
+          : 'pointer-events-none opacity-0 -translate-y-2'
+        }`}
     >
       <Menu className="h-5 w-5" />
     </button>
   )
 }
+

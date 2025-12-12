@@ -1,5 +1,9 @@
 'use client'
 
+
+import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
+
+
 import { useCallback, useEffect, useState } from 'react'
 import type { MouseEvent } from 'react'
 import Link from 'next/link'
@@ -18,7 +22,6 @@ import {
   Search as SearchIcon,
   Bell,
 } from 'lucide-react'
-import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
 import { AUTH_TOKEN_EVENT, UI_VISIBILITY_EVENT, getVisibility } from '@/lib/ui/visibility'
 
 const iconMap = {
@@ -90,58 +93,70 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
   }, [refreshSidebarVisibility])
 
   return (
-    <div id="sidebar" className={sidebarHidden ? 'hidden' : 'contents'} suppressHydrationWarning>
-      <MobileHamburgerMenu onOpen={() => setMobileOpen(true)} isMenuOpen={mobileOpen} />
-
-      <aside className="fixed left-0 top-0 hidden h-full w-64 flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] md:flex z-[9999]">
-        <SidebarContent
-          mainNav={mainNav}
-          utilityNav={utilityNav}
-          userEmail={userEmail}
-          avatarInitial={avatarInitial}
-          onNavigate={() => setMobileOpen(false)}
-          searchQuery={navSearch}
-          onSearchChange={setNavSearch}
-        />
-      </aside>
-
-      <div
-        className={`fixed inset-0 z-[9998] bg-black/70 transition-opacity duration-300 md:hidden ${mobileOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-        onClick={() => setMobileOpen(false)}
+    <>
+      {/* ✅ BOUTON HAMBURGER — TOUJOURS RENDU EN MOBILE */}
+      <MobileHamburgerMenu
+        onOpen={() => setMobileOpen(true)}
+        isMenuOpen={mobileOpen}
       />
 
-      <div
-        className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-      >
-        <div className="flex items-start justify-between">
-          <MiniProfile userEmail={userEmail} avatarInitial={avatarInitial} />
-          <button
-            type="button"
-            aria-label="Fermer le menu"
-            className="rounded-2xl border border-white/15 p-2 text-white/70 transition hover:text-white"
+      {/* ❌ Sidebar totalement masquée si hidden */}
+      {!sidebarHidden && (
+        <div id="sidebar" className="contents">
+          {/* Sidebar desktop */}
+          <aside className="fixed left-0 top-0 hidden h-full w-64 md:flex flex-col border-r border-white/5 bg-[#050915] p-5 text-sm text-white/70 shadow-[4px_0_30px_rgba(0,0,0,0.35)] z-[9999]">
+            <SidebarContent
+              mainNav={mainNav}
+              utilityNav={utilityNav}
+              userEmail={userEmail}
+              avatarInitial={avatarInitial}
+              onNavigate={() => setMobileOpen(false)}
+              searchQuery={navSearch}
+              onSearchChange={setNavSearch}
+            />
+          </aside>
+
+          {/* Overlay mobile */}
+          <div
+            className={`fixed inset-0 z-[9998] bg-black/70 transition-opacity md:hidden ${mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
             onClick={() => setMobileOpen(false)}
+          />
+
+          {/* Sidebar mobile */}
+          <div
+            className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
+              }`}
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="mt-6 flex flex-col gap-6">
-          <SidebarSearchInput value={navSearch} onChange={setNavSearch} />
-          <NavLinks items={mainNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
-          <div className="border-t border-white/10 pt-4">
-            <NavLinks items={utilityNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
-            <form action="/auth/signout" method="post" className="mt-3">
-              <button className="flex w-full items-center gap-3 rounded-2xl bg-[#111827] px-3 py-2 text-left text-sm font-semibold text-white/70 transition hover:bg-[#1f2937] hover:text-white">
-                <LogOut className="h-4 w-4" />
-                Déconnexion
-              </button>
-            </form>
+            <div className="sticky top-0 z-40 bg-[#050915]/95 backdrop-blur border-b border-white/10">
+              <div className="flex items-center justify-between p-4">
+                <MiniProfile userEmail={userEmail} avatarInitial={avatarInitial} />
+                <button
+                  type="button"
+                  aria-label="Fermer le menu"
+                  className="rounded-xl border border-white/15 p-2 text-white/70 hover:text-white"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-6 p-4">
+              <SidebarSearchInput value={navSearch} onChange={setNavSearch} />
+              <NavLinks items={mainNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
+              <div className="border-t border-white/10 pt-4">
+                <NavLinks items={utilityNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   )
+
+
+
 }
 
 function SidebarContent({
