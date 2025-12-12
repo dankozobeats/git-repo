@@ -12,9 +12,13 @@ type HabitValidateButtonProps = {
    * Callback triggered whenever the state toggles.
    */
   onToggle?: (state: boolean) => void
+  /**
+   * Visual variant: default full-width, compact circle, or hidden.
+   */
+  variant?: 'default' | 'compact' | 'hidden'
 }
 
-export default function HabitValidateButton({ initial = false, onToggle }: HabitValidateButtonProps) {
+export default function HabitValidateButton({ initial = false, onToggle, variant = 'default' }: HabitValidateButtonProps) {
   const [validated, setValidated] = useState(initial)
   const [justValidated, setJustValidated] = useState(false)
 
@@ -40,6 +44,10 @@ export default function HabitValidateButton({ initial = false, onToggle }: Habit
     return 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
   }, [validated])
 
+  if (variant === 'hidden') {
+    return null
+  }
+
   return (
     <button
       type="button"
@@ -50,12 +58,13 @@ export default function HabitValidateButton({ initial = false, onToggle }: Habit
         onToggle?.(next)
       }}
       className={`
-        inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold
-        transition-all duration-200 backdrop-blur
+        inline-flex items-center gap-2 rounded-full transition-all duration-200 backdrop-blur
+        ${variant === 'compact' ? 'h-9 w-9 justify-center px-0 py-0 text-xs' : 'px-4 py-2 text-sm font-semibold'}
         ${classes}
         ${validated ? 'shadow-[0_0_12px_rgba(74,222,128,0.25)]' : 'shadow-[0_0_12px_rgba(59,130,246,0.25)]'}
         ${justValidated ? 'animate-[pop_0.18s_ease-out]' : ''}
-        active:scale-[0.98]
+        active:scale-[0.96] active:opacity-90
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40
       `}
     >
       <span
@@ -66,8 +75,8 @@ export default function HabitValidateButton({ initial = false, onToggle }: Habit
       >
         <Check className="h-4 w-4" />
       </span>
-      {/* Hide text when validated to keep a compact icon-only state */}
-      {!validated && <span className="whitespace-nowrap">Valider</span>}
+      {/* Default variant keeps the label; compact is icon-only. */}
+      {variant === 'default' && !validated && <span className="whitespace-nowrap">Valider</span>}
     </button>
   )
 }

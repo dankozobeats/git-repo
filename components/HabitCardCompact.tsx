@@ -61,21 +61,22 @@ export default function HabitCardCompact({
         onClick={handleToggle}
         className="flex flex-1 flex-col gap-1 overflow-hidden"
       >
-        <div className="flex items-center gap-3 overflow-hidden">
+        <div className="flex items-start gap-3 overflow-hidden">
           <span
             className="shrink-0 rounded-xl bg-slate-800/80 p-2 text-lg md:p-3 md:text-2xl"
             style={{ backgroundColor: `${habit.color || '#1f2937'}20` }}
           >
             {icon}
           </span>
-          <div className="min-w-0 space-y-1">
-            <span
-              className={`block truncate text-sm font-semibold md:text-base ${
+          <div className="flex-1 min-w-0">
+            <h3
+              className={`text-sm font-medium leading-tight truncate max-w-full tracking-tight md:text-base ${
                 isCompleted ? 'text-slate-500 line-through' : 'text-slate-50'
               }`}
+              title={habit.name}
             >
               {habit.name}
-            </span>
+            </h3>
             <div className="flex min-w-0 items-center gap-2 text-[11px] text-slate-500">
               <span className="rounded-full border border-slate-800/70 bg-slate-800/40 px-2 py-0.5">
                 {habit.todayCount} {badgeLabel}

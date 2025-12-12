@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { MoreVertical, ExternalLink } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Portal } from '@radix-ui/react-portal'
+import HabitValidateButton from '@/components/HabitValidateButton'
 type HabitQuickActionsProps = {
   habitId: string
   habitType: 'good' | 'bad'
@@ -112,40 +113,22 @@ export default function HabitQuickActions({
     }
   }
 
-  // Palette de couleurs selon le type d'habitude pour maintenir un feedback visuel.
-  const softPrimary =
-    habitType === 'bad'
-      ? 'bg-red-500/80 text-white/90 shadow-inner shadow-red-500/20 hover:bg-red-500'
-      : 'bg-emerald-500/80 text-white/90 shadow-inner shadow-emerald-500/20 hover:bg-emerald-500'
-
-  const primaryClasses = disablePrimary ? 'cursor-not-allowed bg-gray-800 text-gray-500' : softPrimary
-
-  // Texte du bouton principal selon type/mode de suivi.
-  const primaryLabel = () => {
-    if (isFullyValidated) return 'Validée ✓'
-    if (habitType === 'bad') {
-      if (hasValue && !isCounterMode) return 'Craquée'
-      return '+ Craquage'
-    }
-    if (hasValue && !isCounterMode) return 'Validée'
-    return 'Valider'
-  }
-
   // Rend le bouton principal (check-in) et un menu Radix pour les actions secondaires.
   return (
     <>
-      <div data-prevent-toggle="true" className="flex w-full items-center gap-2 sm:gap-3">
-        <button
-          type="button"
-          disabled={disablePrimary}
-          onClick={event => {
-            event.stopPropagation()
+      <div
+  data-prevent-toggle="true"
+      className="ml-auto flex items-center justify-end gap-2 sm:gap-3 min-w-[64px]"
+>
+
+        {/* Compact validation CTA keeps a consistent touch target without dominating the row. */}
+        <HabitValidateButton
+          variant="compact"
+          initial={isFullyValidated}
+          onToggle={() => {
             handleAction()
           }}
-          className={`flex-1 rounded-2xl px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:text-base ${primaryClasses}`}
-        >
-          {primaryLabel()}
-        </button>
+        />
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
             <button

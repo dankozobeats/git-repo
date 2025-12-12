@@ -625,60 +625,65 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
 
   // Vue carte (par défaut)
   return (
-    <div
-      id={`habit-card-${habit.id}`}
-      className={`group flex w-full flex-col gap-3 rounded-none border-x-0 border-white/10 bg-white/5 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-2xl sm:border-x sm:px-4 sm:py-4 ${isHighlighted ? 'ring-2 ring-[#C084FC] shadow-[0_0_0_4px_rgba(192,132,252,0.25)]' : ''
-        }`}
-    >
-      <Link href={`/habits/${habit.id}`} className="flex flex-1 items-start gap-4">
+    <div className="flex w-full items-start gap-3">
+      {/* Icône */}
+      <div className="shrink-0 pt-1">
         <div
-          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner shadow-black/40"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-xl shadow-inner shadow-black/40"
           style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
         >
           {habit.icon || (type === 'bad' ? '🔥' : '✨')}
         </div>
-        <div className="space-y-1">
-          <p className="text-base font-semibold text-white sm:text-lg">{habit.name}</p>
-          {showDescriptions && habit.description && (
-            <p
-              className="text-sm text-white/60"
-              // Limite la description à deux lignes pour éviter les débordements dans la carte.
-              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-            >
-              {habit.description}
-            </p>
-          )}
-          {showCounterBadge && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              <span
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
-                  }`}
-              >
-                {counterState.isCompleted ? 'Validée ✓' : `${counterState.remaining} restant${counterState.remaining > 1 ? 's' : ''}`}
-              </span>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white/70">
-                {counterState.current}/{counterState.required}
-              </span>
-            </div>
-          )}
-        </div>
+      </div>
+
+      {/* Texte */}
+      <Link
+        href={`/habits/${habit.id}`}
+        className="flex-1 min-w-0 space-y-1"
+      >
+        <p
+          className="text-sm font-semibold leading-tight truncate sm:text-base"
+          title={habit.name}
+        >
+          {habit.name}
+        </p>
+
+        {showDescriptions && habit.description && (
+          <p className="text-xs text-white/60 line-clamp-2">
+            {habit.description}
+          </p>
+        )}
+
+        {showCounterBadge && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${counterState.isCompleted
+              ? 'border-emerald-400/50 text-emerald-300'
+              : 'border-sky-400/40 text-sky-200'
+              }`}>
+              {counterState.current}/{counterState.required}
+            </span>
+          </div>
+        )}
       </Link>
-      <div className="w-full sm:w-auto">
-          <HabitQuickActions
-            habitId={habit.id}
-            habitType={type}
-            trackingMode={habit.tracking_mode as 'binary' | 'counter'}
-            initialCount={todayCount}
-            counterRequired={counterState.required}
-            habitName={habit.name}
-            habitDescription={habit.description}
-            streak={habit.current_streak ?? 0}
-            totalLogs={habit.total_logs ?? undefined}
-            totalCraquages={habit.total_craquages ?? undefined}
-            onHabitValidated={onHabitValidated}
-          />
+
+      {/* Actions */}
+      <div className="shrink-0 pt-1">
+        <HabitQuickActions
+          habitId={habit.id}
+          habitType={type}
+          trackingMode={habit.tracking_mode as 'binary' | 'counter'}
+          initialCount={todayCount}
+          counterRequired={counterState.required}
+          habitName={habit.name}
+          habitDescription={habit.description}
+          streak={habit.current_streak ?? 0}
+          totalLogs={habit.total_logs ?? undefined}
+          totalCraquages={habit.total_craquages ?? undefined}
+          onHabitValidated={onHabitValidated}
+        />
       </div>
     </div>
+
   )
 }
 
