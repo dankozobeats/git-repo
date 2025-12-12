@@ -19,6 +19,7 @@ import {
   Bell,
 } from 'lucide-react'
 import MobileHamburgerMenu from '@/components/MobileHamburgerMenu'
+import { AUTH_TOKEN_EVENT, UI_VISIBILITY_EVENT, getVisibility } from '@/lib/ui/visibility'
 
 const iconMap = {
   dashboard: LayoutDashboard,
@@ -54,15 +55,39 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
   const [navSearch, setNavSearch] = useState('')
   const [sidebarHidden, setSidebarHidden] = useState(false)
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
+  const refreshSidebarVisibility = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setSidebarHidden(true)
+      return
+    }
+
     try {
-      const token = window.localStorage.getItem('auth_token')
-      setSidebarHidden(!token)
+      const hasToken = Boolean(window.localStorage.getItem('auth_token'))
+      const hidePref = getVisibility('sidebar')
+      setSidebarHidden(!hasToken || hidePref)
     } catch {
       setSidebarHidden(true)
     }
   }, [])
+
+  useEffect(() => {
+    refreshSidebarVisibility()
+
+    const handleVisibility = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { key?: string; value?: boolean }
+      if (detail?.key === 'sidebar') {
+        refreshSidebarVisibility()
+      }
+    }
+
+    window.addEventListener(UI_VISIBILITY_EVENT, handleVisibility)
+    window.addEventListener(AUTH_TOKEN_EVENT, refreshSidebarVisibility)
+
+    return () => {
+      window.removeEventListener(UI_VISIBILITY_EVENT, handleVisibility)
+      window.removeEventListener(AUTH_TOKEN_EVENT, refreshSidebarVisibility)
+    }
+  }, [refreshSidebarVisibility])
 
   return (
     <div id="sidebar" className={sidebarHidden ? 'hidden' : 'contents'} suppressHydrationWarning>

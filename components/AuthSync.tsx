@@ -18,6 +18,8 @@
 import { useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
+import { AUTH_TOKEN_EVENT } from '@/lib/ui/visibility'
+
 type AuthSyncProps = {
     isAuthenticated: boolean
 }
@@ -79,6 +81,11 @@ export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
             // Synchroniser le token dans localStorage
             try {
                 localStorage.setItem('auth_token', 'active')
+                window.dispatchEvent(
+                    new CustomEvent(AUTH_TOKEN_EVENT, {
+                        detail: { isAuthenticated: true },
+                    })
+                )
             } catch (error) {
                 console.warn('[AuthSync] Impossible d\'écrire dans localStorage:', error)
             }
@@ -103,6 +110,11 @@ export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
             hideProtectedUI()
             try {
                 localStorage.removeItem('auth_token')
+                window.dispatchEvent(
+                    new CustomEvent(AUTH_TOKEN_EVENT, {
+                        detail: { isAuthenticated: false },
+                    })
+                )
             } catch (error) {
                 // Ignore
             }

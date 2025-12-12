@@ -2,7 +2,7 @@
 
 // Premium client page to trigger and display the Gemini-powered report with a Linear-inspired experience.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, BarChart3, Bot } from 'lucide-react'
 
@@ -13,12 +13,20 @@ import ReportLoadingSkeleton from '@/components/ReportLoadingSkeleton'
 import ReportPeriodSelector, { ReportPeriod } from '@/components/ReportPeriodSelector'
 import ReportStatsSummary, { ReportStats } from '@/components/ReportStatsSummary'
 
+const buildFallbackReport = (reason: string) =>
+  `Voici une capsule perso pendant que l'IA se repose :\n- Rappelle-toi de célébrer les petites victoires.\n- Revois ton plan de récupération et identifie 2 actions immédiates.\n- Note ce qui a déclenché tes craquages pour t'en protéger.\n\n(${reason})`
+
 export default function ReportPage() {
   const [period, setPeriod] = useState<ReportPeriod>('30j')
   const [isLoading, setIsLoading] = useState(false)
   const [report, setReport] = useState<string | null>(null)
   const [stats, setStats] = useState<ReportStats | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorHint, setErrorHint] = useState<string | null>(null)
+  const [fallbackReport, setFallbackReport] = useState<string | null>(null)
+  const [autoRetryMessage, setAutoRetryMessage] = useState<string | null>(null)
+  const retryTimerRef = useRef<number | null>(null)
+  const autoRetryAttemptsRef = useRef(0)
 
   const selectedLabel = useMemo(() => {
     if (period === '7j') return 'Analyse hebdo'
@@ -33,7 +41,11 @@ export default function ReportPage() {
   const generateReport = useCallback(async () => {
     setIsLoading(true)
     setReport(null)
+    setStats(null)
     setError(null)
+    setErrorHint(null)
+    setFallbackReport(null)
+    setAutoRetryMessage(null)
 
     try {
       const response = await fetch('/api/report', {
@@ -42,21 +54,87 @@ export default function ReportPage() {
         body: JSON.stringify({ period }),
       })
 
-      if (!response.ok) {
-        throw new Error('Erreur serveur')
+      const payload = (await response.json().catch(() => null)) as
+        | ({ report?: string; stats?: ReportStats; error?: string; details?: string })
+        | null
+
+      const scheduleAutoRetry = () => {
+        if (retryTimerRef.current) {
+          window.clearTimeout(retryTimerRef.current)
+          retryTimerRef.current = null
+        }
+
+        if (autoRetryAttemptsRef.current >= 1) {
+          return
+        }
+
+        autoRetryAttemptsRef.current += 1
+        setAutoRetryMessage('Nouvelle tentative automatique dans 4 secondes...')
+        retryTimerRef.current = window.setTimeout(() => {
+          retryTimerRef.current = null
+          generateReport()
+        }, 4000)
       }
 
-      const data = await response.json()
-      setReport(data.report ?? null)
-      setStats(data.stats ?? null)
+      const handleFailure = (reason: string, detail?: string) => {
+        setIsLoading(false)
+        setError(`Impossible de générer le rapport (${reason}).`)
+        setErrorHint(detail ?? null)
+        setFallbackReport(buildFallbackReport(reason))
+        setStats(null)
+        setReport(null)
+        scheduleAutoRetry()
+      }
+
+      if (!response.ok) {
+        handleFailure(payload?.error ?? 'Erreur serveur', payload?.details)
+        return
+      }
+
+      setReport(payload?.report ?? null)
+      setStats(payload?.stats ?? null)
+      setFallbackReport(null)
+      setAutoRetryMessage(null)
+      autoRetryAttemptsRef.current = 0
     } catch (err) {
       console.error(err)
-      setError('Impossible de générer le rapport pour le moment. Réessaie dans quelques secondes.')
+      const reason = err instanceof Error ? err.message : 'Erreur inattendue'
+      setError(`Impossible de générer le rapport (${reason}).`)
+      setErrorHint('Vérifie ta connexion ou la disponibilité du coach IA.')
+      setFallbackReport(buildFallbackReport(reason))
+      if (autoRetryAttemptsRef.current < 1) {
+        autoRetryAttemptsRef.current += 1
+        setAutoRetryMessage('Nouvelle tentative automatique dans 4 secondes...')
+        retryTimerRef.current = window.setTimeout(() => {
+          retryTimerRef.current = null
+          generateReport()
+        }, 4000)
+      }
       setStats(null)
+      setReport(null)
     } finally {
       setIsLoading(false)
     }
   }, [period])
+
+  const triggerGeneration = useCallback(() => {
+    autoRetryAttemptsRef.current = 0
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current)
+      retryTimerRef.current = null
+    }
+    setAutoRetryMessage(null)
+    setFallbackReport(null)
+    generateReport()
+  }, [generateReport])
+
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+      }
+    }
+  }, [])
 
   const showReport = Boolean(report && !isLoading)
 
@@ -109,11 +187,11 @@ export default function ReportPage() {
             <div>
               <p className="text-xs uppercase tracking-[0.4em] text-white/50">Période d'analyse</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">{selectedLabel}</h2>
-              <p className="mt-2 text-sm text-white/60">Choisis l'horizon qui fait sens puis lance Gemini.</p>
+              <p className="mt-2 text-sm text-white/60">Choisis l'horizon qui fait sens puis lance l'IA.</p>
             </div>
             <button
               type="button"
-              onClick={generateReport}
+              onClick={triggerGeneration}
               disabled={isLoading}
               className="inline-flex items-center justify-center gap-2 rounded-[32px] bg-gradient-to-r from-sky-500 to-indigo-500 px-6 py-3 text-base font-semibold text-white shadow-[0_15px_40px_rgba(14,165,233,0.35)] transition hover:opacity-90 disabled:opacity-50"
             >
@@ -123,7 +201,19 @@ export default function ReportPage() {
 
           <div className="mt-8 space-y-6">
             <ReportPeriodSelector period={period} onChange={handlePeriodChange} loading={isLoading} />
-            {error && <InlineError message={error} onRetry={generateReport} />}
+            {error && (
+              <div className="space-y-2">
+                <InlineError message={error} onRetry={triggerGeneration} />
+                {errorHint && <p className="text-xs text-white/50">Détail : {errorHint}</p>}
+              </div>
+            )}
+            {fallbackReport && (
+              <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-4 text-sm text-white/80">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Fallback IA</p>
+                <pre className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/80">{fallbackReport}</pre>
+                {autoRetryMessage && <p className="mt-2 text-xs text-white/60">{autoRetryMessage}</p>}
+              </div>
+            )}
             <ReportStatsSummary stats={stats} />
           </div>
         </section>

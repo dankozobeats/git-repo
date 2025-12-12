@@ -1,7 +1,7 @@
 // Route API Next.js qui génère une réponse coach IA pour une habitude donnée.
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { fetchAI } from "@/lib/ai/fetchAI"
+import { askAI } from "@/lib/ai"
 import type { CoachFocus, CoachResult, CoachStatsPayload, CoachTone } from "@/types/coach"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/database"
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
       activity: activity.slice(0, MAX_ACTIVITY_ENTRIES),
     })
 
-    // 4. Envoyer à Ollama (modèle phi3:mini recommandé)
+    // 4. Envoyer la requête au coach IA VPS
     let aiResponse: string
     try {
-      aiResponse = await fetchAI(prompt)
+      aiResponse = await askAI(prompt, user.id)
     } catch (error: any) {
       return NextResponse.json(
         {
@@ -269,7 +269,7 @@ function normalizeStats(stats?: Partial<CoachStatsPayload>): CoachStatsPayload {
 // =============================================================
 //
 
-// Construit un prompt textuel minimaliste que fetchAI enverra au modèle choisi.
+// Construit un prompt textuel minimaliste que askAI enverra au modèle choisi.
 function buildCoachPrompt({
   habit,
   tone,

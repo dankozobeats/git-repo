@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Sparkles, Search } from 'lucide-react'
 import { HABIT_SEARCH_EVENT } from '@/lib/ui/scroll'
+import { getVisibility, UI_VISIBILITY_EVENT } from '@/lib/ui/visibility'
 
 // Définit la variation minimale de scroll avant d'appliquer les animations de masquage.
 const SCROLL_THRESHOLD = 10
@@ -20,6 +21,7 @@ export default function FloatingQuickActions() {
   const lastScrollYRef = useRef(0)
   // Stocke l'identifiant du timeout qui réaffiche le menu après une pause.
   const scrollTimeoutRef = useRef<number | null>(null)
+  const [prefHidden, setPrefHidden] = useState(false)
 
   // Vérifie la présence du token dans localStorage et attache les réactions au scroll.
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function FloatingQuickActions() {
       return
     }
 
+    setPrefHidden(getVisibility('floatingMenu'))
     setMenuLocked(false)
     lastScrollYRef.current = window.scrollY
     // Gère le scroll : détecte les mouvements significatifs et masque ou affiche le menu.
@@ -66,6 +69,20 @@ export default function FloatingQuickActions() {
     }
   }, [])
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { key?: string; value?: boolean }
+      if (detail?.key === 'floatingMenu' && typeof detail.value === 'boolean') {
+        setPrefHidden(detail.value)
+      }
+    }
+
+    window.addEventListener(UI_VISIBILITY_EVENT, handler)
+    return () => {
+      window.removeEventListener(UI_VISIBILITY_EVENT, handler)
+    }
+  }, [])
+
   // Empêche le masquage automatique pendant un clic pour éviter les disparitions brusques.
   const preventHideDuringClick = () => {
     document.documentElement.classList.add('no-hide-menu')
@@ -87,7 +104,7 @@ export default function FloatingQuickActions() {
 
   // Classes utilitaires Next/Tailwind pour positionner le menu selon le viewport.
   const positionClass = 'bottom-6 right-4 sm:right-8'
-  const shouldHideMenu = !isHydrated || menuLocked
+  const shouldHideMenu = !isHydrated || menuLocked || prefHidden
 
   // Rend le menu flottant avec trois actions principales (recherche, création, rapport).
   return (

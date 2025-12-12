@@ -10,6 +10,7 @@ import HabitSectionsClient from '@/components/HabitSectionsClient'
 import ViewHabitsButton from '@/components/ViewHabitsButton'
 import AICoachMessage from '@/components/AICoachMessage' // Design premium unifié pour tous les messages IA.
 import FloatingQuickActions from '@/components/FloatingQuickActions'
+import DashboardHeroExtras from '@/components/DashboardHeroExtras'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -100,6 +101,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
   const categoryStats = buildCategoryStats(categoriesList, allActiveHabits)
   const totalHabits = allActiveHabits.length
   const todayCountsRecord: Record<string, number> = Object.fromEntries(todayCounts)
+  const mainHabit = safeBadHabits[0] ?? safeGoodHabits[0] ?? null
+  const todaysBadHabit = safeBadHabits.find(habit => (todayCountsRecord[habit.id] ?? 0) > 0) ?? null
+  const todaysBadCount = todaysBadHabit ? todayCountsRecord[todaysBadHabit.id] ?? 0 : 0
   const generatedRoastMessage = getRandomMessage()
 
   // Génère un message contextuel selon l'activité du jour (utilisé dans la carte focus).
@@ -224,6 +228,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
                   + Ajouter une habitude
                 </Link>
                 <ViewHabitsButton />
+                <Link
+                  href="/analysis"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+                >
+                  🧠 Analyser mes patterns
+                </Link>
               </div>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -236,6 +246,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
                 </div>
               ))}
             </div>
+            <DashboardHeroExtras
+              userId={user.id}
+              mainHabitName={mainHabit?.name ?? null}
+              todaysBadHabitName={todaysBadHabit?.name ?? null}
+              todaysBadCount={todaysBadCount}
+            />
           </section>
         )}
 

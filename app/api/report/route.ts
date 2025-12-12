@@ -1,6 +1,7 @@
-// Route API qui génère un rapport détaillé en interrogeant Gemini.
+// Route API qui génère un rapport détaillé en interrogeant l'IA VPS.
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { askAI } from '@/lib/ai'
 
 // Traite une demande de génération de rapport IA sur une période donnée.
 export async function POST(request: NextRequest) {
@@ -52,8 +53,7 @@ export async function POST(request: NextRequest) {
     const goodLogs = logs?.filter(l => goodHabits.find(h => h.id === l.habit_id)) || []
     const badLogs = (events || []).filter(e => badHabits.find(h => h.id === e.habit_id))
 
-    // ---- Prompt Gemini ----
-    // Prompt textuel envoyé à Gemini qui inclut toutes les statistiques agrégées.
+    // ---- Prompt texte envoyé à l'IA VPS ----
     const prompt = `Tu es un coach en discipline personnelle. Analyse ces données et génère un rapport factuel, direct, sans flatterie.
 
 Période : ${period} (${days} jours)
@@ -87,41 +87,15 @@ Génère un rapport en Markdown avec :
 ## 6. Plan d'action (7 jours)
 ## 7. Conclusion`
 
-    // ---- Appel Gemini corrigé ----
-    // Appel direct à l'API Gemini (restreint par la clé côté serveur).
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,    
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }]
-            }
-          ]
-        }),
-      }
-    )
+    // ---- Appel IA VPS via askAI ----
+    const report = await askAI(prompt, user.id)
 
-    // ---- Gestion d'erreur propre ----
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Erreur Gemini détaillée:', error)
-      return NextResponse.json({ error: 'Erreur API Gemini', details: error }, { status: 500 })
-    }
-
-    const data = await response.json()
-
-    const report = data.candidates?.[0]?.content?.parts?.[0]?.text || '(Pas de rapport généré)'
-
-// Persiste le rapport généré pour pouvoir lister l'historique côté UI.
-await supabase.from('ai_reports').insert({
-  user_id: user.id,
-  period,
-  report
-})
+    // Persiste le rapport généré pour pouvoir lister l'historique côté UI.
+    await supabase.from('ai_reports').insert({
+      user_id: user.id,
+      period,
+      report,
+    })
 
 
     return NextResponse.json({
