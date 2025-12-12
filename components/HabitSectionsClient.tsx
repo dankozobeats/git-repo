@@ -625,9 +625,13 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
 
   // Vue carte (par défaut)
   return (
-    <div className="flex w-full items-start gap-3">
+    <div
+      id={`habit-card-${habit.id}`}
+      className={`group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07]
+      ${isHighlighted ? 'ring-2 ring-[#C084FC]' : ''}`}
+    >
       {/* Icône */}
-      <div className="shrink-0 pt-1">
+      <div className="shrink-0">
         <div
           className="flex h-11 w-11 items-center justify-center rounded-xl text-xl shadow-inner shadow-black/40"
           style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
@@ -639,7 +643,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
       {/* Texte */}
       <Link
         href={`/habits/${habit.id}`}
-        className="flex-1 min-w-0 space-y-1"
+        className="flex-1 min-w-0"
       >
         <p
           className="text-sm font-semibold leading-tight truncate sm:text-base"
@@ -649,25 +653,14 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
         </p>
 
         {showDescriptions && habit.description && (
-          <p className="text-xs text-white/60 line-clamp-2">
+          <p className="mt-0.5 line-clamp-2 text-xs text-white/60">
             {habit.description}
           </p>
-        )}
-
-        {showCounterBadge && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${counterState.isCompleted
-              ? 'border-emerald-400/50 text-emerald-300'
-              : 'border-sky-400/40 text-sky-200'
-              }`}>
-              {counterState.current}/{counterState.required}
-            </span>
-          </div>
         )}
       </Link>
 
       {/* Actions */}
-      <div className="shrink-0 pt-1">
+      <div className="shrink-0">
         <HabitQuickActions
           habitId={habit.id}
           habitType={type}
@@ -683,7 +676,6 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
         />
       </div>
     </div>
-
   )
 }
 
