@@ -36,8 +36,13 @@ export function DailyMantra({ habitName, userId }: DailyMantraProps) {
         const data = await response.json()
         setMantra(data.mantra || 'Je choisis ma santé, pas mes habitudes.')
       } catch (error) {
-        console.error('DailyMantra error', error)
-        setMantra('Tu es plus fort que tu ne le crois.')
+        const isAbort =
+          error instanceof DOMException && error.name === 'AbortError'
+
+        if (!isAbort) {
+          console.error('DailyMantra error', error)
+          setMantra('Tu es plus fort que tu ne le crois.')
+        }
       } finally {
         setLoading(false)
       }
