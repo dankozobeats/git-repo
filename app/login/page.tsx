@@ -28,8 +28,8 @@ export default function LoginPage() {
       setError(error.message)
       setIsLoading(false)
     } else {
-      router.push('/')
-      router.refresh()
+      // Force un rechargement complet pour synchroniser l'état d'authentification
+      window.location.href = '/'
     }
   }
 

@@ -30,36 +30,10 @@ const PUBLIC_ROUTES = ['/login', '/auth/sign-in', '/auth/callback', '/auth/reset
 export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const hasInitialized = useRef(false)
+    const previousAuthState = useRef<boolean | null>(null)
 
     useEffect(() => {
-        // Évite les exécutions multiples en mode strict
-        if (hasInitialized.current) return
-        hasInitialized.current = true
-
         const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
-
-        /**
-         * Fonction utilitaire pour afficher les éléments protégés
-         */
-        const showProtectedUI = () => {
-            const sidebar = document.getElementById('sidebar')
-            const floatingMenu = document.getElementById('floatingMenu')
-
-            if (sidebar) sidebar.classList.remove('hidden')
-            if (floatingMenu) floatingMenu.classList.remove('hidden')
-        }
-
-        /**
-         * Fonction utilitaire pour masquer les éléments protégés
-         */
-        const hideProtectedUI = () => {
-            const sidebar = document.getElementById('sidebar')
-            const floatingMenu = document.getElementById('floatingMenu')
-
-            if (sidebar) sidebar.classList.add('hidden')
-            if (floatingMenu) floatingMenu.classList.add('hidden')
-        }
 
         /**
          * LOGIQUE PRINCIPALE DE SYNCHRONISATION
@@ -67,9 +41,17 @@ export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
 
         // CAS 1 : Route publique (login, reset password, etc.)
         if (isPublicRoute) {
-            hideProtectedUI()
             try {
                 localStorage.removeItem('auth_token')
+
+                if (previousAuthState.current !== false) {
+                    window.dispatchEvent(
+                        new CustomEvent(AUTH_TOKEN_EVENT, {
+                            detail: { isAuthenticated: false },
+                        })
+                    )
+                    previousAuthState.current = false
+                }
             } catch (error) {
                 console.warn('[AuthSync] localStorage non disponible:', error)
             }
@@ -81,17 +63,19 @@ export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
             // Synchroniser le token dans localStorage
             try {
                 localStorage.setItem('auth_token', 'active')
-                window.dispatchEvent(
-                    new CustomEvent(AUTH_TOKEN_EVENT, {
-                        detail: { isAuthenticated: true },
-                    })
-                )
+
+                // Dispatch l'événement seulement si l'état a changé
+                if (previousAuthState.current !== true) {
+                    window.dispatchEvent(
+                        new CustomEvent(AUTH_TOKEN_EVENT, {
+                            detail: { isAuthenticated: true },
+                        })
+                    )
+                    previousAuthState.current = true
+                }
             } catch (error) {
                 console.warn('[AuthSync] Impossible d\'écrire dans localStorage:', error)
             }
-
-            // Afficher immédiatement le sidebar et le menu flottant
-            showProtectedUI()
             return
         }
 
@@ -107,14 +91,17 @@ export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
         if (!hasToken) {
             // Pas de session serveur ET pas de token → redirection
             console.warn('[AuthSync] Accès non autorisé - redirection vers /login')
-            hideProtectedUI()
             try {
                 localStorage.removeItem('auth_token')
-                window.dispatchEvent(
-                    new CustomEvent(AUTH_TOKEN_EVENT, {
-                        detail: { isAuthenticated: false },
-                    })
-                )
+
+                if (previousAuthState.current !== false) {
+                    window.dispatchEvent(
+                        new CustomEvent(AUTH_TOKEN_EVENT, {
+                            detail: { isAuthenticated: false },
+                        })
+                    )
+                    previousAuthState.current = false
+                }
             } catch (error) {
                 // Ignore
             }
@@ -124,9 +111,17 @@ export default function AuthSync({ isAuthenticated }: AuthSyncProps) {
 
         // Si on arrive ici, il y a un token mais pas de session serveur
         // C'est un état incohérent → on fait confiance au serveur
-        hideProtectedUI()
         try {
             localStorage.removeItem('auth_token')
+
+            if (previousAuthState.current !== false) {
+                window.dispatchEvent(
+                    new CustomEvent(AUTH_TOKEN_EVENT, {
+                        detail: { isAuthenticated: false },
+                    })
+                )
+                previousAuthState.current = false
+            }
         } catch (error) {
             // Ignore
         }

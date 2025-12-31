@@ -51,12 +51,14 @@ type DashboardSidebarProps = {
   utilityNav: SidebarNavItem[]
   userEmail: string
   avatarInitial: string
+  isAuthenticated?: boolean
 }
 
-export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avatarInitial }: DashboardSidebarProps) {
+export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avatarInitial, isAuthenticated = true }: DashboardSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [navSearch, setNavSearch] = useState('')
   const [sidebarHidden, setSidebarHidden] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   const refreshSidebarVisibility = useCallback(() => {
     if (typeof window === 'undefined') {
@@ -74,8 +76,15 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
   }, [])
 
   useEffect(() => {
-    refreshSidebarVisibility()
+    // Sur le premier rendu, faire confiance à l'authentification du serveur
+    // pour éviter un flash pendant que AuthSync initialise localStorage
+    if (!isInitialized) {
+      setSidebarHidden(!isAuthenticated || getVisibility('sidebar'))
+      setIsInitialized(true)
+    }
 
+    // Après l'initialisation, on écoute les événements de synchronisation
+    // mais on ne vérifie pas localStorage immédiatement pour éviter la race condition
     const handleVisibility = (event: Event) => {
       const detail = (event as CustomEvent).detail as { key?: string; value?: boolean }
       if (detail?.key === 'sidebar') {
@@ -83,14 +92,19 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
       }
     }
 
+    const handleAuthToken = () => {
+      // Petit délai pour s'assurer que localStorage est bien mis à jour
+      setTimeout(refreshSidebarVisibility, 0)
+    }
+
     window.addEventListener(UI_VISIBILITY_EVENT, handleVisibility)
-    window.addEventListener(AUTH_TOKEN_EVENT, refreshSidebarVisibility)
+    window.addEventListener(AUTH_TOKEN_EVENT, handleAuthToken)
 
     return () => {
       window.removeEventListener(UI_VISIBILITY_EVENT, handleVisibility)
-      window.removeEventListener(AUTH_TOKEN_EVENT, refreshSidebarVisibility)
+      window.removeEventListener(AUTH_TOKEN_EVENT, handleAuthToken)
     }
-  }, [refreshSidebarVisibility])
+  }, [refreshSidebarVisibility, isAuthenticated, isInitialized])
 
   return (
     <>

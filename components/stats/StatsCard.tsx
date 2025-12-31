@@ -21,7 +21,9 @@ function StatsCardComponent({ title, subtitle, actions, children }: StatsCardPro
         </div>
         {actions}
       </div>
-      {children}
+      <div className="min-h-[300px]">
+        {children}
+      </div>
     </section>
   )
 }

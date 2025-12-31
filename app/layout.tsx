@@ -126,6 +126,7 @@ export default async function RootLayout({
               utilityNav={utilityNav}
               userEmail={userEmail}
               avatarInitial={avatarInitial}
+              isAuthenticated={isAuthenticated}
             />
           )}
           {/* Décale le contenu lorsque la sidebar est rendue pour éviter un recouvrement. */}
