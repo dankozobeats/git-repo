@@ -19,8 +19,12 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
-          } catch {
-            // Ignore
+          } catch (error) {
+            // En cas d'erreur lors de la mise à jour des cookies (souvent en read-only mode)
+            // on log mais on ne bloque pas l'application
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[Supabase] Cookie set error (expected in some contexts):', error);
+            }
           }
         },
       },
