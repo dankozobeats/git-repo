@@ -6,8 +6,6 @@ import type { NextRequest } from 'next/server';
 const ALLOWED_ORIGINS = [
   'https://my-badhabit-tracker.vercel.app',
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  // En développement, autoriser localhost
-  process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
 ].filter(Boolean) as string[];
 
 export function middleware(request: NextRequest) {
@@ -18,14 +16,22 @@ export function middleware(request: NextRequest) {
     const requestOrigin = request.headers.get('origin');
     const referer = request.headers.get('referer');
 
-    // Vérifier que la requête vient d'une origine autorisée
-    const isValidOrigin = requestOrigin && ALLOWED_ORIGINS.some(allowed =>
-      requestOrigin.startsWith(allowed)
-    );
+    // En développement, autoriser tous les localhost (3000, 3001, etc.)
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isLocalhost = requestOrigin?.startsWith('http://localhost:') ||
+                        requestOrigin?.startsWith('http://127.0.0.1:');
 
-    const isValidReferer = referer && ALLOWED_ORIGINS.some(allowed =>
-      referer.startsWith(allowed)
-    );
+    // Vérifier que la requête vient d'une origine autorisée
+    const isValidOrigin = (isDevelopment && isLocalhost) ||
+                          (requestOrigin && ALLOWED_ORIGINS.some(allowed =>
+                            requestOrigin.startsWith(allowed)
+                          ));
+
+    const isValidReferer = (isDevelopment && (referer?.startsWith('http://localhost:') ||
+                                              referer?.startsWith('http://127.0.0.1:'))) ||
+                          (referer && ALLOWED_ORIGINS.some(allowed =>
+                            referer.startsWith(allowed)
+                          ));
 
     // Pour les routes API, vérifier l'origine ou le referer
     if (pathname.startsWith('/api/')) {
