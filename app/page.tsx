@@ -58,12 +58,22 @@ export default async function Home() {
               {habits.length} habitude{habits.length > 1 ? 's' : ''} active{habits.length > 1 ? 's' : ''}
             </p>
           </div>
-          <Link
-            href="/habits/new"
-            className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold transition active:scale-95"
-          >
-            + Ajouter
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard-old"
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium transition hover:bg-white/10 active:scale-95"
+              title="Dashboard Classique"
+            >
+              <span className="hidden sm:inline">📊 Classique</span>
+              <span className="sm:hidden">📊</span>
+            </Link>
+            <Link
+              href="/habits/new"
+              className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold transition active:scale-95"
+            >
+              + Ajouter
+            </Link>
+          </div>
         </div>
 
         {/* Client component avec priorités + patterns */}
