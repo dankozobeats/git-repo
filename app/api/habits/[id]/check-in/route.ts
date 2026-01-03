@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTodayDateISO } from '@/lib/date-utils'
+import { checkRateLimit } from '@/lib/api/ratelimit'
+import { z } from 'zod'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
 const getToday = () => getTodayDateISO()
+
+const IdSchema = z.string().uuid()
 
 // Normalise la cible quotidienne : 1 pour les habitudes binaires, goal explicite pour un compteur.
 const resolveCounterRequirement = (trackingMode: 'binary' | 'counter' | null, dailyGoal: number | null) => {
@@ -15,10 +19,26 @@ const resolveCounterRequirement = (trackingMode: 'binary' | 'counter' | null, da
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: RouteContext
 ) {
+  // 1. Rate Limiting (WRITE)
+  const rateLimit = await checkRateLimit(request, 'WRITE')
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', retryAfter: rateLimit.reset },
+      { status: 429, headers: { 'Retry-After': rateLimit.reset.toString() } }
+    )
+  }
+
   const { id: habitId } = await params
+
+  // 2. Validation ID
+  const idValidation = IdSchema.safeParse(habitId)
+  if (!idValidation.success) {
+    return NextResponse.json({ error: 'ID invalide' }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -154,10 +174,25 @@ export async function POST(
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: RouteContext
 ) {
+  // 1. Rate Limiting (READ)
+  const rateLimit = await checkRateLimit(request, 'READ')
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', retryAfter: rateLimit.reset },
+      { status: 429, headers: { 'Retry-After': rateLimit.reset.toString() } }
+    )
+  }
+
   const { id } = await params
+
+  // 2. Validation ID
+  if (!IdSchema.safeParse(id).success) {
+    return NextResponse.json({ error: 'ID invalide' }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -188,9 +223,10 @@ export async function GET(
   const table = isCounter ? 'habit_events' : 'logs'
   const dateColumn = isCounter ? 'event_date' : 'completed_date'
 
+  // Correction typage strict: removed created_at from select
   const { data, error } = await supabase
     .from(table)
-    .select(isCounter ? 'id, occurred_at' : 'id, created_at')
+    .select(isCounter ? 'id, occurred_at' : 'id')
     .eq('habit_id', id)
     .eq('user_id', user.id)
     .eq(dateColumn, today)
@@ -217,10 +253,24 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: RouteContext
 ) {
+  // 1. Rate Limiting (WRITE)
+  const rateLimit = await checkRateLimit(request, 'WRITE')
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', retryAfter: rateLimit.reset },
+      { status: 429, headers: { 'Retry-After': rateLimit.reset.toString() } }
+    )
+  }
+
   const { id } = await params
+
+  if (!IdSchema.safeParse(id).success) {
+    return NextResponse.json({ error: 'ID invalide' }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -250,7 +300,9 @@ export async function DELETE(
   const isCounter = habit.tracking_mode === 'counter'
   const table = isCounter ? 'habit_events' : 'logs'
   const dateColumn = isCounter ? 'event_date' : 'completed_date'
-  const orderColumn = isCounter ? 'occurred_at' : 'created_at'
+  const orderColumn = isCounter ? 'occurred_at' : 'completed_date'
+
+  // Correction typage strict: created_at -> completed_date or generic order
 
   const {
     data: rows,

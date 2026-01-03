@@ -156,3 +156,51 @@ export const RATE_LIMITS = {
     /** Pour les endpoints d'AI/Coach */
     AI: { maxRequests: 3, windowMs: 60000 }, // 3 requêtes / 1 minute
 } as const;
+
+/**
+ * Vérifie le rate limit et retourne un objet détaillé
+ */
+export async function checkRateLimit(
+    request: NextRequest,
+    type: keyof typeof RATE_LIMITS = 'WRITE'
+): Promise<{ allowed: boolean; limit: number; remaining: number; reset: number }> {
+    const config = RATE_LIMITS[type];
+    const identifier = getClientIdentifier(request);
+    const now = Date.now();
+    const key = `${identifier}:${request.nextUrl.pathname}`;
+
+    let entry = rateLimitCache.get(key);
+
+    if (!entry || entry.resetTime < now) {
+        entry = {
+            count: 1,
+            resetTime: now + config.windowMs,
+        };
+        rateLimitCache.set(key, entry);
+        return {
+            allowed: true,
+            limit: config.maxRequests,
+            remaining: config.maxRequests - 1,
+            reset: entry.resetTime,
+        };
+    }
+
+    if (entry.count >= config.maxRequests) {
+        return {
+            allowed: false,
+            limit: config.maxRequests,
+            remaining: 0,
+            reset: entry.resetTime,
+        };
+    }
+
+    entry.count++;
+    rateLimitCache.set(key, entry);
+
+    return {
+        allowed: true,
+        limit: config.maxRequests,
+        remaining: config.maxRequests - entry.count,
+        reset: entry.resetTime,
+    };
+}

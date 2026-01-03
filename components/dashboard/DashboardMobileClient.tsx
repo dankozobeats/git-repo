@@ -1,0 +1,295 @@
+'use client'
+
+/**
+ * Dashboard Mobile - Version compacte et mobile-first
+ * Combine priorités + patterns dans une interface légère
+ */
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
+import { usePatternDetection } from '@/lib/habits/usePatternDetection'
+import type { Database } from '@/types/database'
+
+type Habit = Database['public']['Tables']['habits']['Row']
+type Log = Database['public']['Tables']['logs']['Row']
+type Event = Database['public']['Tables']['habit_events']['Row']
+
+type DashboardMobileClientProps = {
+  habits: Habit[]
+  logs: Log[]
+  events: Event[]
+  userId: string
+}
+
+export default function DashboardMobileClient({
+  habits,
+  logs,
+  events,
+  userId,
+}: DashboardMobileClientProps) {
+  const router = useRouter()
+  const { topRisks, remainingHabits, globalState } = useRiskAnalysis(habits, logs, events)
+  const patternInsights = usePatternDetection(habits, logs, events)
+  const [showPatterns, setShowPatterns] = useState(false)
+  const [loadingHabit, setLoadingHabit] = useState<string | null>(null)
+
+  const handleQuickAction = async (
+    habitId: string,
+    action: 'validate' | 'relapse' | 'substitute'
+  ) => {
+    setLoadingHabit(habitId)
+    try {
+      if (action === 'validate') {
+        await fetch(`/api/habits/${habitId}/check-in`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: new Date().toISOString().split('T')[0],
+            value: 1,
+          }),
+        })
+      } else if (action === 'relapse') {
+        await fetch(`/api/habits/${habitId}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: new Date().toISOString().split('T')[0],
+          }),
+        })
+      } else if (action === 'substitute') {
+        router.push(`/habits/${habitId}`)
+        return
+      }
+
+      router.refresh()
+    } catch (error) {
+      console.error('Erreur:', error)
+    } finally {
+      setLoadingHabit(null)
+    }
+  }
+
+  // Config couleurs selon niveau de risque
+  const alertConfig = {
+    critical: {
+      bg: 'bg-red-500/10',
+      border: 'border-red-500/30',
+      text: 'text-red-200',
+      badge: '🔴',
+    },
+    warning: {
+      bg: 'bg-orange-500/10',
+      border: 'border-orange-500/30',
+      text: 'text-orange-200',
+      badge: '🟠',
+    },
+    good: {
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-500/30',
+      text: 'text-emerald-200',
+      badge: '🟢',
+    },
+  }
+
+  const currentAlert = alertConfig[globalState.riskLevel]
+
+  return (
+    <div className="space-y-4">
+      {/* Alerte principale compacte */}
+      <div className={`rounded-2xl border ${currentAlert.border} ${currentAlert.bg} p-4`}>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-xs uppercase tracking-wider text-white/50">Focus</p>
+            <p className={`mt-1 text-sm font-semibold ${currentAlert.text}`}>
+              {globalState.message}
+            </p>
+          </div>
+          <span className="text-2xl">{currentAlert.badge}</span>
+        </div>
+      </div>
+
+      {/* Top 3 priorités - Version compacte */}
+      {topRisks.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            Priorités du jour
+          </h2>
+          {topRisks.map((habit, index) => {
+            const isLoading = loadingHabit === habit.id
+            const riskConfig = {
+              critical: { border: 'border-red-500/30', bg: 'bg-red-500/5' },
+              warning: { border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
+              good: { border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
+            }
+            const config = riskConfig[habit.riskLevel]
+
+            return (
+              <div
+                key={habit.id}
+                className={`rounded-xl border ${config.border} ${config.bg} p-3`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{index === 0 ? '🎯' : index === 1 ? '⚡' : '💪'}</span>
+                      <h3 className="text-sm font-semibold text-white truncate">{habit.name}</h3>
+                    </div>
+                    <p className="mt-1 text-xs text-white/60">{habit.message}</p>
+                  </div>
+                </div>
+
+                {/* Actions rapides */}
+                <div className="mt-3 flex gap-2">
+                  {habit.type === 'good' && (
+                    <button
+                      onClick={() => handleQuickAction(habit.id, 'validate')}
+                      disabled={isLoading}
+                      className="flex-1 rounded-lg bg-emerald-500/20 py-2 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
+                    >
+                      ✓ Valider
+                    </button>
+                  )}
+
+                  {habit.type === 'bad' && (
+                    <button
+                      onClick={() => handleQuickAction(habit.id, 'relapse')}
+                      disabled={isLoading}
+                      className="flex-1 rounded-lg bg-red-500/20 py-2 text-xs font-medium text-red-200 transition active:scale-95 disabled:opacity-50"
+                    >
+                      J'ai craqué
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Autres habitudes - Liste simple */}
+      {remainingHabits.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            Autres habitudes ({remainingHabits.length})
+          </h2>
+          <div className="space-y-2">
+            {remainingHabits.map(habit => {
+              const isLoading = loadingHabit === habit.id
+              return (
+                <div
+                  key={habit.id}
+                  className="rounded-lg border border-white/10 bg-white/5 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium text-white truncate">{habit.name}</h3>
+                      {habit.currentStreak > 0 && (
+                        <p className="text-xs text-white/50">
+                          {habit.type === 'bad'
+                            ? `${habit.currentStreak}j sans craquage`
+                            : `Série: ${habit.currentStreak}j`}
+                        </p>
+                      )}
+                    </div>
+
+                    {habit.type === 'good' && (
+                      <button
+                        onClick={() => handleQuickAction(habit.id, 'validate')}
+                        disabled={isLoading}
+                        className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
+                      >
+                        ✓
+                      </button>
+                    )}
+
+                    {habit.type === 'bad' && (
+                      <button
+                        onClick={() => handleQuickAction(habit.id, 'relapse')}
+                        disabled={isLoading}
+                        className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition active:scale-95 disabled:opacity-50"
+                      >
+                        ⚠️
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Patterns - Section repliable */}
+      {patternInsights.patterns.length > 0 && (
+        <div className="rounded-xl border border-purple-500/30 bg-purple-500/5">
+          <button
+            onClick={() => setShowPatterns(!showPatterns)}
+            className="flex w-full items-center justify-between p-4 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🧠</span>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Patterns détectés</h2>
+                <p className="text-xs text-white/50">
+                  {patternInsights.patterns.length} schéma{patternInsights.patterns.length > 1 ? 's' : ''} identifié{patternInsights.patterns.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+            {showPatterns ? (
+              <ChevronUp className="h-5 w-5 text-white/50" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-white/50" />
+            )}
+          </button>
+
+          {showPatterns && (
+            <div className="space-y-2 border-t border-purple-500/20 p-4 pt-3">
+              {patternInsights.patterns.map(pattern => {
+                const severityColors = {
+                  high: 'bg-red-500/10 border-red-500/30',
+                  medium: 'bg-orange-500/10 border-orange-500/30',
+                  low: 'bg-blue-500/10 border-blue-500/30',
+                }
+
+                return (
+                  <div
+                    key={pattern.id}
+                    className={`rounded-lg border p-3 ${severityColors[pattern.severity]}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg">{pattern.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-xs font-semibold text-white">
+                            {pattern.title}
+                          </h3>
+                          <span className="text-xs text-white/50">{pattern.confidence}%</span>
+                        </div>
+                        <p className="mt-1 text-xs text-white/70">{pattern.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Message d'encouragement si tout va bien */}
+      {topRisks.length === 0 && habits.length > 0 && (
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+          <span className="text-3xl">🎉</span>
+          <p className="mt-2 text-sm font-semibold text-emerald-200">
+            Tout est sous contrôle !
+          </p>
+          <p className="mt-1 text-xs text-white/60">
+            Continue comme ça, tu gères bien.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}

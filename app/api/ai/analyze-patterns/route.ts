@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { askAI } from '@/lib/ai'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/api/ratelimit'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
 export async function POST(request: NextRequest) {
-  try {
-    const { userId } = await request.json()
+  // 1. Rate Limiting (AI)
+  const rateLimit = await checkRateLimit(request as any, 'AI')
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests', retryAfter: rateLimit.reset },
+      { status: 429, headers: { 'Retry-After': rateLimit.reset.toString() } }
+    )
+  }
 
-    if (!userId) {
-      return NextResponse.json({ error: 'userId requis' }, { status: 400 })
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    const userId = user.id
+    // Note: userId from body is ignored for security
+
     const startDate = new Date(Date.now() - 30 * DAY_MS)
     const startDateStr = startDate.toISOString().split('T')[0]
 
@@ -22,7 +35,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId)
       .eq('is_archived', false)
 
-    const nameById = new Map((habits || []).map(habit => [habit.id, habit.name]))
+    const nameById = new Map((habits || []).map((habit: any) => [habit.id, habit.name]))
 
     const { data: logs } = await supabase
       .from('logs')
@@ -39,11 +52,11 @@ export async function POST(request: NextRequest) {
       .order('event_date', { ascending: false })
 
     const entries = [
-      ...(logs || []).map(entry => ({
+      ...(logs || []).map((entry: any) => ({
         habitName: nameById.get(entry.habit_id) || 'Habitude inconnue',
         timestamp: entry.completed_date || entry.created_at,
       })),
-      ...(events || []).map(entry => ({
+      ...(events || []).map((entry: any) => ({
         habitName: nameById.get(entry.habit_id) || 'Habitude inconnue',
         timestamp: entry.event_date || entry.occurred_at,
       })),

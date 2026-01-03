@@ -66,7 +66,7 @@ export const CoachRequestSchema = z.object({
 export const CreateReminderSchema = z.object({
   habit_id: z.string().uuid('ID d\'habitude invalide').nullable().optional(),
   time_local: z.string()
-    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, 'Format de date invalide (ISO 8601 requis)'),
+    .regex(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?/, 'Format de date invalide (YYYY-MM-DD HH:mm ou ISO)'),
   timezone: z.string()
     .min(1, 'Timezone requis')
     .max(50, 'Timezone trop long'),
