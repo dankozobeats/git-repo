@@ -2,6 +2,7 @@
 
 // Client component orchestrating all interactive widgets for a single habit view.
 import { useState, type ReactNode } from 'react'
+import HeroCard from './HeroCard'
 import HabitCounter from './HabitCounter'
 import { WeeklyCalendar } from '@/components/WeeklyCalendar'
 import { DayReportModal } from '@/components/DayReportModal'
@@ -9,6 +10,7 @@ import GoalSettingsModal from './GoalSettingsModal'
 import GamificationPanel from './GamificationPanel'
 import HabitCoach from './HabitCoach'
 import type { HabitCalendarMap, HabitStats } from '@/lib/habits/computeHabitStats'
+import { useRouter } from 'next/navigation'
 
 type Habit = {
   id: string
@@ -32,15 +34,17 @@ type Props = {
 }
 
 export default function HabitDetailClient({ habit, calendarData, stats }: Props) {
+  const router = useRouter()
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [count, setCount] = useState(stats.todayCount)
+  const [isValidating, setIsValidating] = useState(false)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    focus: false,
-    stats: false,
+    focus: true,      // Ouvert par défaut
+    stats: true,      // Ouvert par défaut
     gamification: false,
-    coach: false,
-    calendar: false,
+    coach: true,      // Ouvert par défaut
+    calendar: true,   // Ouvert par défaut
     message: false,
   })
 
@@ -74,6 +78,25 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
 
   const toggleSection = (id: string) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const handleQuickValidate = async () => {
+    setIsValidating(true)
+    try {
+      const res = await fetch(`/api/habits/${habit.id}/check-in`, {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error('Validation failed')
+
+      const data = await res.json()
+      const newCount = typeof data.count === 'number' ? data.count : count + 1
+      setCount(newCount)
+      router.refresh()
+    } catch (error) {
+      console.error('Erreur validation:', error)
+    } finally {
+      setIsValidating(false)
+    }
   }
 
   const sections = [
@@ -244,7 +267,20 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
 
   return (
     <>
-      <div className="space-y-6">
+      {/* Hero Card - Always Visible */}
+      <HeroCard
+        habit={habit}
+        stats={{
+          currentStreak: stats.currentStreak,
+          todayCount: count,
+          last7DaysCount: stats.last7DaysCount,
+          monthCompletionRate: stats.monthCompletionRate,
+        }}
+        onValidate={handleQuickValidate}
+        isValidating={isValidating}
+      />
+
+      <div className="space-y-6 mt-6">
         {sections.map(section => (
           <CollapsibleCard
             key={section.id}
