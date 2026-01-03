@@ -24,6 +24,9 @@ export type RiskHabit = {
   currentStreak: number
   actionSuggestion: string
   isDoneToday: boolean // Nouvelle propriété pour tracker si fait aujourd'hui
+  todayCount: number // Compteur du jour pour les habitudes en mode counter
+  trackingMode: 'binary' | 'counter' | null
+  dailyGoalValue: number | null
 }
 
 export type GlobalState = {
@@ -122,6 +125,9 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
       currentStreak: 0,
       actionSuggestion: 'Maintiens ta vigilance',
       isDoneToday: false,
+      todayCount: 0,
+      trackingMode: habit.tracking_mode,
+      dailyGoalValue: habit.daily_goal_value,
     }
   }
 
@@ -156,6 +162,9 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     currentStreak: daysSinceLastEvent,
     actionSuggestion,
     isDoneToday: false, // Les mauvaises habitudes n'ont pas de concept de "fait aujourd'hui"
+    todayCount: 0,
+    trackingMode: habit.tracking_mode,
+    dailyGoalValue: habit.daily_goal_value,
   }
 }
 
@@ -172,6 +181,14 @@ function analyzeGoodHabit(
     .filter((d): d is string => Boolean(d))
     .sort()
 
+  // Calculer le compteur du jour (somme des values pour aujourd'hui)
+  const todayCount = logs
+    .filter(l => {
+      const logDate = l.completed_date || l.created_at?.split('T')[0]
+      return logDate === today
+    })
+    .reduce((sum, log) => sum + (log.value || 1), 0)
+
   if (allDates.length === 0) {
     return {
       id: habit.id,
@@ -183,6 +200,9 @@ function analyzeGoodHabit(
       currentStreak: 0,
       actionSuggestion: 'Commence aujourd\'hui',
       isDoneToday: false,
+      todayCount: 0,
+      trackingMode: habit.tracking_mode,
+      dailyGoalValue: habit.daily_goal_value,
     }
   }
 
@@ -207,21 +227,37 @@ function analyzeGoodHabit(
   let message = `Série de ${currentStreak} jour${currentStreak > 1 ? 's' : ''}`
   let actionSuggestion = 'Continue ta série'
 
-  // Risque si pas fait aujourd'hui
-  if (daysSinceLastAction > 0) {
-    riskLevel = 'critical'
-    message = `Pas fait depuis ${daysSinceLastAction} jour${daysSinceLastAction > 1 ? 's' : ''}`
-    actionSuggestion = 'Fais-le maintenant'
-  } else if (currentStreak >= 5) {
-    // IMPORTANT: Même si fait aujourd'hui avec une série, on garde 'warning' pour rester visible
-    riskLevel = 'warning'
-    message = `✓ Fait aujourd'hui! ${currentStreak} jours d'affilée`
-    actionSuggestion = 'Continue ta série'
-  } else if (isDoneToday) {
-    // Série courte mais fait aujourd'hui
-    riskLevel = 'warning'
-    message = `✓ Fait aujourd'hui! Série: ${currentStreak}j`
-    actionSuggestion = 'Continue ta série'
+  // Pour les habitudes en mode compteur
+  if (habit.tracking_mode === 'counter') {
+    const goal = habit.daily_goal_value || 1
+    if (todayCount === 0) {
+      riskLevel = 'critical'
+      message = `0/${goal} aujourd'hui`
+      actionSuggestion = 'Commence maintenant'
+    } else if (todayCount < goal) {
+      riskLevel = 'warning'
+      message = `${todayCount}/${goal} aujourd'hui`
+      actionSuggestion = 'Continue, presque là'
+    } else {
+      riskLevel = 'warning'
+      message = `✓ ${todayCount}/${goal} aujourd'hui!`
+      actionSuggestion = 'Objectif atteint'
+    }
+  } else {
+    // Pour les habitudes binaires (mode classique)
+    if (daysSinceLastAction > 0) {
+      riskLevel = 'critical'
+      message = `Pas fait depuis ${daysSinceLastAction} jour${daysSinceLastAction > 1 ? 's' : ''}`
+      actionSuggestion = 'Fais-le maintenant'
+    } else if (currentStreak >= 5) {
+      riskLevel = 'warning'
+      message = `✓ Fait aujourd'hui! ${currentStreak} jours d'affilée`
+      actionSuggestion = 'Continue ta série'
+    } else if (isDoneToday) {
+      riskLevel = 'warning'
+      message = `✓ Fait aujourd'hui! Série: ${currentStreak}j`
+      actionSuggestion = 'Continue ta série'
+    }
   }
 
   return {
@@ -234,6 +270,9 @@ function analyzeGoodHabit(
     currentStreak,
     actionSuggestion,
     isDoneToday,
+    todayCount,
+    trackingMode: habit.tracking_mode,
+    dailyGoalValue: habit.daily_goal_value,
   }
 }
 
