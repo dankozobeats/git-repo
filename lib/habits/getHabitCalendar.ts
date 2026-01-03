@@ -34,7 +34,7 @@ export async function getHabitCalendar({
       .gte('event_date', windowStartISO)
       .order('event_date', { ascending: true })
 
-    const calendarData = (data || []).reduce((acc, event) => {
+    const calendarData = ((data as unknown as { event_date: string }[] | null) || []).reduce((acc, event) => {
       const date = event.event_date
       acc[date] = (acc[date] ?? 0) + 1
       return acc
@@ -53,7 +53,7 @@ export async function getHabitCalendar({
     .gte('completed_date', windowStartISO)
     .order('completed_date', { ascending: false })
 
-  const calendarData = (data || []).reduce((acc, log) => {
+  const calendarData = ((data as unknown as { completed_date: string }[] | null) || []).reduce((acc, log) => {
     acc[log.completed_date] = 1
     return acc
   }, {} as HabitCalendarMap)

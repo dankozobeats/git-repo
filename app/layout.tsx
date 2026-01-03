@@ -63,6 +63,7 @@ export const metadata: Metadata = {
 // Liens principaux affichés dans le DashboardSidebar.
 const mainNav: SidebarNavItem[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/dashboard-advanced', label: 'Dashboard Advanced', icon: 'stats' },
   { href: '/reports/history', label: 'Historique', icon: 'history' },
   { href: '/report', label: 'Coach IA', icon: 'coach' },
   { href: '/reminders', label: 'Rappels', icon: 'reminders' },

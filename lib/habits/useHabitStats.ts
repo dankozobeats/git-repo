@@ -10,7 +10,7 @@ export type HabitStatsPeriod = 7 | 30 | 90 | 'all'
 
 type HabitRow = Pick<Database['public']['Tables']['habits']['Row'], 'id' | 'name' | 'type' | 'created_at'>
 type LogRow = Pick<Database['public']['Tables']['logs']['Row'], 'habit_id' | 'completed_date' | 'value' | 'created_at'>
-type EventRow = Pick<Database['public']['Tables']['habit_events']['Row'], 'habit_id' | 'event_date' | 'occurred_at' | 'created_at'>
+type EventRow = Pick<Database['public']['Tables']['habit_events']['Row'], 'habit_id' | 'event_date' | 'occurred_at'>
 
 export type DailyPoint = {
   date: string
@@ -103,7 +103,7 @@ export function useHabitStats(period: HabitStatsPeriod): UseHabitStatsState {
           .order('completed_date', { ascending: true }),
         supabase
           .from('habit_events')
-          .select('habit_id, event_date, occurred_at, created_at')
+          .select('habit_id, event_date, occurred_at')
           .eq('user_id', user.id)
           .order('event_date', { ascending: true }),
       ])
@@ -180,7 +180,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
       {
         id: habit.id,
         name: habit.name,
-        type: habit.type,
+        type: habit.type as 'good' | 'bad',
         total: 0,
         createdAt: habit.created_at ?? null,
       }
@@ -212,7 +212,7 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
       {
         id: habit.id,
         name: habit.name,
-        type: habit.type,
+        type: habit.type as 'good' | 'bad',
         total: 0,
         createdAt: habit.created_at ?? null,
       }

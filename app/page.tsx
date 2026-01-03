@@ -229,10 +229,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
                 </Link>
                 <ViewHabitsButton />
                 <Link
-                  href="/analysis"
+                  href="/dashboard-advanced"
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
                 >
-                  🧠 Analyser mes patterns
+                  🧠 Dashboard Advanced
                 </Link>
               </div>
             </div>

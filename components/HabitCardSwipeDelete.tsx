@@ -31,7 +31,7 @@ export default function HabitCardSwipeDelete({ habit, onToggle, onDelete, onStep
   const startXRef = useRef(0)
 
   const isBad = habit.type === 'bad'
-  const canValidate = habit.type === 'boolean' && habit.type !== 'bad'
+  const canValidate = habit.type === 'boolean'
 
   // Reset position when needed
   useEffect(() => {
@@ -153,16 +153,14 @@ export default function HabitCardSwipeDelete({ habit, onToggle, onDelete, onStep
             <button
               type="button"
               onClick={() => onToggle?.(habit.id)}
-              className={`flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 backdrop-blur ${
-                habit.completed
+              className={`flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 backdrop-blur ${habit.completed
                   ? 'bg-green-600/20 border border-green-500/30 text-green-300 scale-95 shadow-[0_0_12px_rgba(74,222,128,0.25)]'
                   : 'bg-blue-600/20 border border-blue-500/30 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.25)]'
-              } active:scale-95`}
+                } active:scale-95`}
             >
               <span
-                className={`flex h-6 w-6 items-center justify-center rounded-full border border-current ${
-                  habit.completed ? 'bg-green-500/20 text-green-200' : 'bg-blue-500/20 text-blue-200'
-                }`}
+                className={`flex h-6 w-6 items-center justify-center rounded-full border border-current ${habit.completed ? 'bg-green-500/20 text-green-200' : 'bg-blue-500/20 text-blue-200'
+                  }`}
               >
                 <Check className="h-3.5 w-3.5" />
               </span>

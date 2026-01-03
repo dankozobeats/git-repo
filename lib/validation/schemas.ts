@@ -25,9 +25,7 @@ export const CreateHabitSchema = z.object({
     .max(1000, 'La description ne peut pas dépasser 1000 caractères')
     .nullable()
     .optional(),
-  type: z.enum(['good', 'bad'], {
-    errorMap: () => ({ message: 'Le type doit être "good" ou "bad"' }),
-  }),
+  type: z.enum(['good', 'bad'] as const),
   icon: z.string()
     .max(10, 'L\'icône ne peut pas dépasser 10 caractères')
     .nullable()
@@ -36,7 +34,7 @@ export const CreateHabitSchema = z.object({
     .regex(/^#[0-9A-F]{6}$/i, 'Format de couleur invalide')
     .nullable()
     .optional(),
-  tracking_mode: z.enum(['binary', 'counter']).default('binary'),
+  tracking_mode: z.enum(['binary', 'counter'] as const).default('binary'),
   daily_goal_value: z.number()
     .int('La valeur doit être un entier')
     .min(1, 'La valeur doit être au moins 1')
@@ -53,8 +51,8 @@ export const CoachRequestSchema = z.object({
   habitId: z.string()
     .uuid('ID d\'habitude invalide')
     .min(1, 'habitId est requis'),
-  tone: z.enum(['supportive', 'balanced', 'sarcastic']).default('balanced'),
-  focus: z.enum(['mindset', 'patterns', 'motivation']).default('mindset'),
+  tone: z.enum(['supportive', 'balanced', 'sarcastic'] as const).default('balanced'),
+  focus: z.enum(['mindset', 'patterns', 'motivation'] as const).default('mindset'),
   stats: z.object({
     totalCount: z.number().int().min(0).optional(),
     last7DaysCount: z.number().int().min(0).optional(),
@@ -78,8 +76,8 @@ export const CreateReminderSchema = z.object({
     .max(6, 'Le jour doit être entre 0 et 6')
     .nullable()
     .optional(),
-  channel: z.enum(['push', 'email']).default('push'),
-  schedule: z.enum(['once', 'daily']).default('daily'),
+  channel: z.enum(['push', 'email'] as const).default('push'),
+  schedule: z.enum(['once', 'daily'] as const).default('daily'),
   active: z.boolean().default(true),
 });
 

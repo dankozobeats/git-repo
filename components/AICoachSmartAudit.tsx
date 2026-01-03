@@ -19,7 +19,7 @@ type Criterion = {
   label: string
   description: string
   score: number
-  icon: JSX.Element
+  icon: React.ReactElement
   accent: string
 }
 

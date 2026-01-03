@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // ✅ TypeScript errors will now block builds (security best practice)
+  // typescript: {
+  //   ignoreBuildErrors: false, // Default behavior
+  // },
 
   // Headers de sécurité pour toutes les routes
   async headers() {

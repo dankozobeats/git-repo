@@ -17,7 +17,7 @@ export function validateRequest<T>(
     return { success: true, data: validated };
   } catch (error) {
     if (error instanceof ZodError) {
-      const formattedErrors = error.errors.map((err) => ({
+      const formattedErrors = (error as any).errors.map((err: any) => ({
         field: err.path.join('.'),
         message: err.message,
       }));

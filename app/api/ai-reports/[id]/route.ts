@@ -4,8 +4,9 @@ import { NextResponse } from "next/server"
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -20,7 +21,7 @@ export async function DELETE(
   const { error } = await supabase
     .from("ai_reports")
     .delete()
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_id", user.id)
 
   if (error) {

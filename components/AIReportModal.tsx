@@ -25,14 +25,15 @@ export default function AIReportModal({ open, report, title, onClose }: AIReport
 
   // Permet d'ajouter des IDs prévisibles aux titres rendus par ReactMarkdown.
   function headingRenderer(level: number) {
-    const Tag = `h${level}` as keyof JSX.IntrinsicElements
+    const Tag = `h${level}` as keyof React.JSX.IntrinsicElements
     const sizeClass = level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
-    return ({ children }: { children: React.ReactNode }) => {
+    return (props: any) => {
+      const { children } = props
       const plain = Array.isArray(children)
-        ? children.map(child => (typeof child === 'string' ? child : '')).join(' ')
+        ? children.map((child: any) => (typeof child === 'string' ? child : '')).join(' ')
         : typeof children === 'string'
-        ? children
-        : ''
+          ? children
+          : ''
       const id = slugifyHeading(plain)
       return (
         <Tag id={id} className={`${sizeClass} font-semibold mt-8 mb-3`}>
@@ -115,11 +116,11 @@ export default function AIReportModal({ open, report, title, onClose }: AIReport
                   td: ({ children }) => <td className="border border-white/10 px-3 py-2">{children}</td>,
                   ul: ({ children }) => <ul className="list-disc pl-6 space-y-1">{children}</ul>,
                   ol: ({ children }) => <ol className="list-decimal pl-6 space-y-1">{children}</ol>,
-                  code: ({ inline, children }) =>
-                    inline ? (
-                      <code className="rounded bg-white/10 px-1 py-0.5 text-xs">{children}</code>
+                  code: (props: any) =>
+                    props.inline ? (
+                      <code className="rounded bg-white/10 px-1 py-0.5 text-xs">{props.children}</code>
                     ) : (
-                      <code className="block rounded-xl bg-black/60 border border-white/10 px-4 py-3 text-sm">{children}</code>
+                      <code className="block rounded-xl bg-black/60 border border-white/10 px-4 py-3 text-sm">{props.children}</code>
                     ),
                 }}
               >

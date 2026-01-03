@@ -158,7 +158,11 @@ export default async function HabitDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        <HabitDetailClient habit={habit} calendarData={calendarData} stats={stats} />
+        <HabitDetailClient
+          habit={habit as typeof habit & { type: 'good' | 'bad' }}
+          calendarData={calendarData}
+          stats={stats}
+        />
       </div>
     </main>
   )

@@ -103,9 +103,8 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
           </div>
 
           <div
-            className={`flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:px-7 sm:py-6 ${
-              isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
-            }`}
+            className={`flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:px-7 sm:py-6 ${isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
+              }`}
           >
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -116,8 +115,8 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
                       ? `${count} craquage${count > 1 ? 's' : ''}`
                       : 'Aucun craquage'
                     : count > 0
-                    ? 'Habitude validée'
-                    : 'En attente'}
+                      ? 'Habitude validée'
+                      : 'En attente'}
                 </p>
                 <p className="mt-2 text-sm text-white/70">
                   {isBadHabit
@@ -125,18 +124,17 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
                       ? 'Note rapidement le contexte pour identifier tes leviers de contrôle.'
                       : 'Status clean pour le moment, garde cette vigilance.'
                     : count > 0
-                    ? 'Momentum enclenché, verrouille ta progression par une répétition bonus.'
-                    : 'Une micro-action suffit pour basculer dans le camp des disciplinés.'}
+                      ? 'Momentum enclenché, verrouille ta progression par une répétition bonus.'
+                      : 'Une micro-action suffit pour basculer dans le camp des disciplinés.'}
                 </p>
               </div>
               <span
-                className={`inline-flex items-center justify-center rounded-full border px-4 py-1 text-xs font-semibold ${
-                  count > 0
-                    ? isBadHabit
-                      ? 'border-[#FF6B6B] text-[#FF6B6B]'
-                      : 'border-[#5EEAD4] text-[#5EEAD4]'
-                    : 'border-white/20 text-white/60'
-                }`}
+                className={`inline-flex items-center justify-center rounded-full border px-4 py-1 text-xs font-semibold ${count > 0
+                  ? isBadHabit
+                    ? 'border-[#FF6B6B] text-[#FF6B6B]'
+                    : 'border-[#5EEAD4] text-[#5EEAD4]'
+                  : 'border-white/20 text-white/60'
+                  }`}
               >
                 {count > 0 ? (isBadHabit ? 'Craquage détecté' : 'Validée') : 'À lancer'}
               </span>
@@ -222,10 +220,9 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
       subtitle: 'Semaine en un coup d’œil',
       content: (
         <WeeklyCalendar
-          habitId={habit.id}
           habitType={habit.type}
           calendarData={calendarData}
-          trackingMode={habit.tracking_mode}
+          trackingMode={habit.tracking_mode ?? 'binary'}
           onDayClick={date => setSelectedDate(date)}
         />
       ),
@@ -236,9 +233,8 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
       subtitle: 'Contexte rapide',
       content: (
         <div
-          className={`rounded-[24px] border p-6 text-center shadow-lg ${
-            isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
-          }`}
+          className={`rounded-[24px] border p-6 text-center shadow-lg ${isBadHabit ? 'border-[#FF6B6B]/40 bg-[#1A0E11]' : 'border-[#5EEAD4]/30 bg-[#0D1B1E]'
+            }`}
         >
           <p className="text-base text-white/90">&ldquo;{getContextualMessage()}&rdquo;</p>
         </div>

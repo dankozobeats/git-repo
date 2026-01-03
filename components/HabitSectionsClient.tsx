@@ -353,6 +353,7 @@ export default function HabitSectionsClient({
             todayCount={todayCountsMap.get(habit.id) ?? 0}
             onHabitValidated={handleHabitValidated}
             showDescriptions={showHabitDescriptions}
+            viewMode={viewMode}
           />
         ))
       )}
@@ -527,7 +528,7 @@ function HabitSectionHeader({
         <option value="all">Toutes</option>
         {categories.map(category => (
           <option key={category.id} value={category.id}>
-            {`${category.icon || '📂'} ${category.name}`}
+            {`📂 ${category.name}`}
           </option>
         ))}
         <option value="uncategorized">Sans catégorie</option>

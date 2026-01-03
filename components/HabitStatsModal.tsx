@@ -43,7 +43,7 @@ type HabitStatsModalProps = {
 
 type HabitMetaRow = Pick<Database['public']['Tables']['habits']['Row'], 'icon' | 'color' | 'category_id' | 'created_at'>
 type HabitLogRow = Pick<Database['public']['Tables']['logs']['Row'], 'completed_date' | 'value' | 'created_at'>
-type HabitEventRow = Pick<Database['public']['Tables']['habit_events']['Row'], 'event_date' | 'occurred_at' | 'created_at'>
+type HabitEventRow = Pick<Database['public']['Tables']['habit_events']['Row'], 'event_date' | 'occurred_at'>
 
 const formatDate = (date: Date) => date.toISOString().split('T')[0]
 
@@ -174,9 +174,8 @@ export default function HabitStatsModal({ habit, onClose }: HabitStatsModalProps
               <h2 className="text-2xl font-bold text-white sm:text-3xl">{habit.name}</h2>
               <p className="text-sm text-gray-400">{data.category}</p>
               <span
-                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
-                  habit.type === 'bad' ? 'border-red-500 text-red-300' : 'border-emerald-400 text-emerald-300'
-                }`}
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${habit.type === 'bad' ? 'border-red-500 text-red-300' : 'border-emerald-400 text-emerald-300'
+                  }`}
               >
                 {habit.type === 'bad' ? 'Habitude négative' : 'Habitude positive'}
               </span>
@@ -270,9 +269,8 @@ export default function HabitStatsModal({ habit, onClose }: HabitStatsModalProps
                     {new Date(entry.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </span>
                   <span
-                    className={`text-sm font-semibold ${
-                      entry.completed ? (habit.type === 'bad' ? 'text-red-400' : 'text-emerald-400') : 'text-gray-500'
-                    }`}
+                    className={`text-sm font-semibold ${entry.completed ? (habit.type === 'bad' ? 'text-red-400' : 'text-emerald-400') : 'text-gray-500'
+                      }`}
                   >
                     {entry.completed ? (habit.type === 'bad' ? 'Craqué' : 'Validé') : '—'}
                   </span>
@@ -330,7 +328,7 @@ function buildInsight(
 
   const eventCounts = new Map<string, number>()
   events.forEach(event => {
-    const date = normalizeDate(event.event_date, event.occurred_at ?? event.created_at)
+    const date = normalizeDate(event.event_date, event.occurred_at)
     if (!date) return
     eventCounts.set(date, (eventCounts.get(date) ?? 0) + 1)
   })
@@ -379,8 +377,8 @@ function buildInsight(
         ? 'Tu protèges bien ton rythme. Continue à identifier les déclencheurs pour rester focus.'
         : 'Chaque jour clean compte. Prends une minute pour comprendre ce qui t’a fait craquer.'
       : streakInfo.current > 5
-      ? 'Tu construis une routine solide. Continue d’empiler les validations sans te poser de questions.'
-      : 'Reviens à l’essentiel : une action simple aujourd’hui débloque la suite.'
+        ? 'Tu construis une routine solide. Continue d’empiler les validations sans te poser de questions.'
+        : 'Reviens à l’essentiel : une action simple aujourd’hui débloque la suite.'
 
   return {
     icon,

@@ -102,7 +102,10 @@ export default function CompareContent() {
       setAnalysis(null)
       setAnalysisError(null)
       try {
-        const query = new URLSearchParams({ id1, id2 })
+        const params: Record<string, string> = {};
+        if (id1) params.id1 = id1;
+        if (id2) params.id2 = id2;
+        const query = new URLSearchParams(params)
         const response = await fetch(`/api/ai-reports/compare?${query.toString()}`)
         if (!response.ok) {
           throw new Error("Impossible d'analyser la comparaison via l'IA.")

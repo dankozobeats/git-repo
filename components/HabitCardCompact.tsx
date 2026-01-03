@@ -48,13 +48,12 @@ export default function HabitCardCompact({
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 rounded-2xl border bg-slate-900/80 px-4 py-3 text-white shadow-inner shadow-black/20 transition ${
-        hasLoggedToday
+      className={`flex items-center justify-between gap-3 rounded-2xl border bg-slate-900/80 px-4 py-3 text-white shadow-inner shadow-black/20 transition ${hasLoggedToday
           ? habit.type === 'bad'
             ? 'border-red-700/60'
             : 'border-emerald-700/60'
           : 'border-slate-800'
-      }`}
+        }`}
     >
       <Link
         href={`/habits/${habit.id}`}
@@ -70,9 +69,8 @@ export default function HabitCardCompact({
           </span>
           <div className="flex-1 min-w-0">
             <h3
-              className={`text-sm font-medium leading-tight truncate max-w-full tracking-tight md:text-base ${
-                isCompleted ? 'text-slate-500 line-through' : 'text-slate-50'
-              }`}
+              className={`text-sm font-medium leading-tight truncate max-w-full tracking-tight md:text-base ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-50'
+                }`}
               title={habit.name}
             >
               {habit.name}
@@ -102,9 +100,8 @@ export default function HabitCardCompact({
 
         {showDescriptions && habit.description && (
           <div
-            className={`overflow-hidden text-xs leading-relaxed text-slate-400 transition-[max-height,margin-top] duration-200 ${
-              isExpanded ? 'max-h-24 mt-1' : 'max-h-0'
-            }`}
+            className={`overflow-hidden text-xs leading-relaxed text-slate-400 transition-[max-height,margin-top] duration-200 ${isExpanded ? 'max-h-24 mt-1' : 'max-h-0'
+              }`}
           >
             <p className="line-clamp-3">{habit.description}</p>
           </div>
@@ -123,8 +120,7 @@ export default function HabitCardCompact({
           streak={habit.current_streak ?? undefined}
           totalLogs={habit.total_logs ?? undefined}
           totalCraquages={habit.total_craquages ?? undefined}
-          onActionComplete={onActionComplete}
-          size="compact"
+          onHabitValidated={() => onActionComplete?.()}
         />
       </div>
     </div>
