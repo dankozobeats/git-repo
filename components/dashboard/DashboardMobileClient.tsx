@@ -43,8 +43,10 @@ export default function DashboardMobileClient({
   ) => {
     setLoadingHabit(habitId)
     try {
+      let res: Response | null = null
+
       if (action === 'validate') {
-        await fetch(`/api/habits/${habitId}/check-in`, {
+        res = await fetch(`/api/habits/${habitId}/check-in`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -53,7 +55,7 @@ export default function DashboardMobileClient({
           }),
         })
       } else if (action === 'relapse') {
-        await fetch(`/api/habits/${habitId}/events`, {
+        res = await fetch(`/api/habits/${habitId}/events`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -65,9 +67,15 @@ export default function DashboardMobileClient({
         return
       }
 
+      if (res && !res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Erreur API: ${errorText}`)
+      }
+
       router.refresh()
     } catch (error) {
-      console.error('Erreur:', error)
+      console.error('Erreur action rapide:', error)
+      alert('Impossible d\'enregistrer l\'action. Vérifie ta connexion.')
     } finally {
       setLoadingHabit(null)
     }

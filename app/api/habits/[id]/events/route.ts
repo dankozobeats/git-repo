@@ -16,14 +16,17 @@ export async function POST(
 
   const { data: habit } = await supabase
     .from('habits')
-    .select('id, tracking_mode')
+    .select('id, type')
     .eq('id', id)
     .eq('user_id', user.id)
     .single()
 
-  if (!habit || habit.tracking_mode !== 'counter') {
-    return NextResponse.json({ error: 'Invalid habit' }, { status: 400 })
+  if (!habit) {
+    return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
   }
+
+  // Les events sont pour les mauvaises habitudes (craquages)
+  // Pas de restriction sur tracking_mode
 
   const now = new Date()
   const { data, error } = await supabase
