@@ -11,6 +11,8 @@ import ViewHabitsButton from '@/components/ViewHabitsButton'
 import AICoachMessage from '@/components/AICoachMessage' // Design premium unifié pour tous les messages IA.
 import FloatingQuickActions from '@/components/FloatingQuickActions'
 import DashboardHeroExtras from '@/components/DashboardHeroExtras'
+import DashboardToggle from '@/components/dashboard/DashboardToggle'
+import DashboardPreferenceSync from '@/components/dashboard/DashboardPreferenceSync'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -211,6 +213,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
   // Rend la page dashboard côté serveur en passant les données nécessaires au client.
   return (
     <main className="min-h-screen overflow-visible bg-[#0c0f1a] text-[#E0E0E0]">
+      <DashboardPreferenceSync />
       <div className="mx-auto max-w-full space-y-6 px-0 py-6 sm:space-y-8 sm:px-6 md:max-w-6xl md:px-10 md:py-10">
         {showFocusCard && (
           <section className="section-snap rounded-none border-x-0 border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 sm:rounded-3xl sm:border-x md:py-10 md:px-8" aria-live="polite">
@@ -221,6 +224,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
                 <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
               </div>
               <div className="flex w-full flex-col gap-2 md:w-auto">
+                <Link
+                  href="/"
+                  className="rounded-2xl border border-blue-500/40 bg-blue-500/10 px-4 py-3 text-center text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20"
+                >
+                  📱 Dashboard Mobile
+                </Link>
                 <Link
                   href="/habits/new"
                   className="rounded-2xl bg-[#FF4D4D] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e04343]"
