@@ -29,12 +29,14 @@ export async function POST(
   // Pas de restriction sur tracking_mode
 
   const now = new Date()
+  const today = now.toISOString().split('T')[0]
+
   const { data, error } = await supabase
     .from('habit_events')
     .insert({
       habit_id: id,
       user_id: user.id,
-      event_date: now.toISOString().split('T')[0],
+      event_date: today,
       occurred_at: now.toISOString()
     })
     .select()
@@ -45,8 +47,16 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Compter le nombre total de craquages aujourd'hui
+  const { count } = await supabase
+    .from('habit_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('habit_id', id)
+    .eq('user_id', user.id)
+    .eq('event_date', today)
+
   revalidatePath('/')
   revalidatePath(`/habits/${id}`)
 
-  return NextResponse.json(data)
+  return NextResponse.json({ ...data, count: count || 1 })
 }
