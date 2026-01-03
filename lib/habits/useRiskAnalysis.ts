@@ -114,6 +114,12 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     .filter((d): d is string => Boolean(d))
     .sort()
 
+  // Compter les craquages d'aujourd'hui
+  const todayCount = events.filter(e => {
+    const eventDate = e.event_date || e.occurred_at?.split('T')[0]
+    return eventDate === today
+  }).length
+
   if (sortedEvents.length === 0) {
     return {
       id: habit.id,
@@ -141,7 +147,9 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
   // Risque élevé si craquage dans les dernières 24h
   if (hoursSinceLastEvent < 24) {
     riskLevel = 'critical'
-    message = `Craquage il y a ${Math.floor(hoursSinceLastEvent)}h`
+    message = todayCount > 1
+      ? `${todayCount} craquages aujourd'hui`
+      : `Craquage il y a ${Math.floor(hoursSinceLastEvent)}h`
     actionSuggestion = 'Action de substitution immédiate'
   } else if (hoursSinceLastEvent < 48) {
     riskLevel = 'warning'
@@ -161,8 +169,8 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     lastActionDate: lastEvent,
     currentStreak: daysSinceLastEvent,
     actionSuggestion,
-    isDoneToday: false, // Les mauvaises habitudes n'ont pas de concept de "fait aujourd'hui"
-    todayCount: 0,
+    isDoneToday: todayCount > 0,
+    todayCount,
     trackingMode: habit.tracking_mode,
     dailyGoalValue: habit.daily_goal_value,
   }

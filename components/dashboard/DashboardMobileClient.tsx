@@ -164,6 +164,11 @@ export default function DashboardMobileClient({
                       <h3 className="text-sm font-semibold text-white truncate">{habit.name}</h3>
                     </div>
                     <p className="mt-1 text-xs text-white/60">{habit.message}</p>
+                    {habit.type === 'bad' && habit.todayCount > 0 && (
+                      <p className="mt-0.5 text-xs font-semibold text-red-300">
+                        {habit.todayCount} craquage{habit.todayCount > 1 ? 's' : ''} aujourd'hui
+                      </p>
+                    )}
                   </div>
 
                   {/* Menu contextuel */}
