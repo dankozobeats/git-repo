@@ -146,7 +146,8 @@ export default function DashboardMobileClient({
             return (
               <div
                 key={habit.id}
-                className={`rounded-xl border ${config.border} ${config.bg} p-3`}
+                className={`rounded-xl border ${config.border} ${config.bg} p-3 cursor-pointer transition hover:bg-white/5`}
+                onClick={() => router.push(`/habits/${habit.id}`)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -160,7 +161,10 @@ export default function DashboardMobileClient({
                   {/* Menu contextuel */}
                   <div className="relative">
                     <button
-                      onClick={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOpenMenuId(openMenuId === habit.id ? null : habit.id)
+                      }}
                       className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/10 hover:text-white"
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -172,6 +176,13 @@ export default function DashboardMobileClient({
                           onClick={() => setOpenMenuId(null)}
                         />
                         <div className="absolute right-0 top-8 z-20 w-40 rounded-lg border border-white/10 bg-[#0d0f17] p-1 shadow-xl">
+                          <Link
+                            href={`/habits/${habit.id}`}
+                            className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
+                            onClick={() => setOpenMenuId(null)}
+                          >
+                            Voir détails
+                          </Link>
                           <Link
                             href={`/habits/${habit.id}/edit`}
                             className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
@@ -192,7 +203,7 @@ export default function DashboardMobileClient({
                 </div>
 
                 {/* Actions rapides */}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                   {habit.type === 'good' && (
                     <button
                       onClick={() => handleQuickAction(habit.id, 'validate')}
@@ -231,7 +242,8 @@ export default function DashboardMobileClient({
               return (
                 <div
                   key={habit.id}
-                  className="rounded-lg border border-white/10 bg-white/5 p-3"
+                  className="rounded-lg border border-white/10 bg-white/5 p-3 cursor-pointer transition hover:bg-white/10"
+                  onClick={() => router.push(`/habits/${habit.id}`)}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -245,7 +257,7 @@ export default function DashboardMobileClient({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {habit.type === 'good' && (
                         <button
                           onClick={() => handleQuickAction(habit.id, 'validate')}
@@ -269,7 +281,10 @@ export default function DashboardMobileClient({
                       {/* Menu contextuel */}
                       <div className="relative">
                         <button
-                          onClick={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenMenuId(openMenuId === habit.id ? null : habit.id)
+                          }}
                           className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/10 hover:text-white"
                         >
                           <MoreVertical className="h-3.5 w-3.5" />
@@ -281,6 +296,13 @@ export default function DashboardMobileClient({
                               onClick={() => setOpenMenuId(null)}
                             />
                             <div className="absolute right-0 top-8 z-20 w-40 rounded-lg border border-white/10 bg-[#0d0f17] p-1 shadow-xl">
+                              <Link
+                                href={`/habits/${habit.id}`}
+                                className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
+                                onClick={() => setOpenMenuId(null)}
+                              >
+                                Voir détails
+                              </Link>
                               <Link
                                 href={`/habits/${habit.id}/edit`}
                                 className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
