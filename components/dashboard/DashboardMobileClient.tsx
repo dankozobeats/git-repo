@@ -7,7 +7,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react'
+import Link from 'next/link'
 import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
 import { usePatternDetection } from '@/lib/habits/usePatternDetection'
 import type { Database } from '@/types/database'
@@ -34,6 +35,7 @@ export default function DashboardMobileClient({
   const patternInsights = usePatternDetection(habits, logs, events)
   const [showPatterns, setShowPatterns] = useState(false)
   const [loadingHabit, setLoadingHabit] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   const handleQuickAction = async (
     habitId: string,
@@ -68,6 +70,22 @@ export default function DashboardMobileClient({
       console.error('Erreur:', error)
     } finally {
       setLoadingHabit(null)
+    }
+  }
+
+  const handleDelete = async (habitId: string, habitName: string) => {
+    if (!confirm(`Supprimer "${habitName}" et tous ses logs ?`)) return
+
+    setLoadingHabit(habitId)
+    try {
+      const res = await fetch(`/api/habits/${habitId}/delete`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      router.refresh()
+    } catch (error) {
+      console.error('Erreur suppression:', error)
+    } finally {
+      setLoadingHabit(null)
+      setOpenMenuId(null)
     }
   }
 
@@ -138,6 +156,39 @@ export default function DashboardMobileClient({
                     </div>
                     <p className="mt-1 text-xs text-white/60">{habit.message}</p>
                   </div>
+
+                  {/* Menu contextuel */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
+                      className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                    {openMenuId === habit.id && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setOpenMenuId(null)}
+                        />
+                        <div className="absolute right-0 top-8 z-20 w-40 rounded-lg border border-white/10 bg-[#0d0f17] p-1 shadow-xl">
+                          <Link
+                            href={`/habits/${habit.id}/edit`}
+                            className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
+                            onClick={() => setOpenMenuId(null)}
+                          >
+                            Modifier
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(habit.id, habit.name)}
+                            className="w-full rounded px-3 py-2 text-left text-xs text-red-400 transition hover:bg-white/10"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions rapides */}
@@ -194,25 +245,60 @@ export default function DashboardMobileClient({
                       )}
                     </div>
 
-                    {habit.type === 'good' && (
-                      <button
-                        onClick={() => handleQuickAction(habit.id, 'validate')}
-                        disabled={isLoading || habit.isDoneToday}
-                        className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
-                      >
-                        {habit.isDoneToday ? '✓' : '✓'}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {habit.type === 'good' && (
+                        <button
+                          onClick={() => handleQuickAction(habit.id, 'validate')}
+                          disabled={isLoading || habit.isDoneToday}
+                          className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
+                        >
+                          {habit.isDoneToday ? '✓' : '✓'}
+                        </button>
+                      )}
 
-                    {habit.type === 'bad' && (
-                      <button
-                        onClick={() => handleQuickAction(habit.id, 'relapse')}
-                        disabled={isLoading}
-                        className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition active:scale-95 disabled:opacity-50"
-                      >
-                        ⚠️
-                      </button>
-                    )}
+                      {habit.type === 'bad' && (
+                        <button
+                          onClick={() => handleQuickAction(habit.id, 'relapse')}
+                          disabled={isLoading}
+                          className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition active:scale-95 disabled:opacity-50"
+                        >
+                          ⚠️
+                        </button>
+                      )}
+
+                      {/* Menu contextuel */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
+                          className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </button>
+                        {openMenuId === habit.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setOpenMenuId(null)}
+                            />
+                            <div className="absolute right-0 top-8 z-20 w-40 rounded-lg border border-white/10 bg-[#0d0f17] p-1 shadow-xl">
+                              <Link
+                                href={`/habits/${habit.id}/edit`}
+                                className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
+                                onClick={() => setOpenMenuId(null)}
+                              >
+                                Modifier
+                              </Link>
+                              <button
+                                onClick={() => handleDelete(habit.id, habit.name)}
+                                className="w-full rounded px-3 py-2 text-left text-xs text-red-400 transition hover:bg-white/10"
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )
