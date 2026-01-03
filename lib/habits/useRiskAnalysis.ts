@@ -23,6 +23,7 @@ export type RiskHabit = {
   lastActionDate: string | null
   currentStreak: number
   actionSuggestion: string
+  isDoneToday: boolean // Nouvelle propriété pour tracker si fait aujourd'hui
 }
 
 export type GlobalState = {
@@ -120,6 +121,7 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
       lastActionDate: null,
       currentStreak: 0,
       actionSuggestion: 'Maintiens ta vigilance',
+      isDoneToday: false,
     }
   }
 
@@ -153,6 +155,7 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     lastActionDate: lastEvent,
     currentStreak: daysSinceLastEvent,
     actionSuggestion,
+    isDoneToday: false, // Les mauvaises habitudes n'ont pas de concept de "fait aujourd'hui"
   }
 }
 
@@ -179,11 +182,13 @@ function analyzeGoodHabit(
       lastActionDate: null,
       currentStreak: 0,
       actionSuggestion: 'Commence aujourd\'hui',
+      isDoneToday: false,
     }
   }
 
   const lastDate = allDates[allDates.length - 1]
   const daysSinceLastAction = getDaysDiff(lastDate, today)
+  const isDoneToday = daysSinceLastAction === 0
 
   // Calculer la série actuelle
   let currentStreak = 0
@@ -208,8 +213,14 @@ function analyzeGoodHabit(
     message = `Pas fait depuis ${daysSinceLastAction} jour${daysSinceLastAction > 1 ? 's' : ''}`
     actionSuggestion = 'Fais-le maintenant'
   } else if (currentStreak >= 5) {
-    riskLevel = 'good'
-    message = `Excellent! ${currentStreak} jours d'affilée`
+    // IMPORTANT: Même si fait aujourd'hui avec une série, on garde 'warning' pour rester visible
+    riskLevel = 'warning'
+    message = `✓ Fait aujourd'hui! ${currentStreak} jours d'affilée`
+    actionSuggestion = 'Continue ta série'
+  } else if (isDoneToday) {
+    // Série courte mais fait aujourd'hui
+    riskLevel = 'warning'
+    message = `✓ Fait aujourd'hui! Série: ${currentStreak}j`
     actionSuggestion = 'Continue ta série'
   }
 
@@ -222,6 +233,7 @@ function analyzeGoodHabit(
     lastActionDate: lastDate,
     currentStreak,
     actionSuggestion,
+    isDoneToday,
   }
 }
 

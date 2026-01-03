@@ -97,10 +97,10 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
             {habit.type === 'good' && (
               <button
                 onClick={() => handleAction('validate')}
-                disabled={loading}
+                disabled={loading || habit.isDoneToday}
                 className="rounded-xl bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
               >
-                ✓ Valider aujourd'hui
+                {habit.isDoneToday ? '✓ Fait aujourd\'hui' : '✓ Valider aujourd\'hui'}
               </button>
             )}
 

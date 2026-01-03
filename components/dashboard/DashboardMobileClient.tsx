@@ -145,10 +145,10 @@ export default function DashboardMobileClient({
                   {habit.type === 'good' && (
                     <button
                       onClick={() => handleQuickAction(habit.id, 'validate')}
-                      disabled={isLoading}
+                      disabled={isLoading || habit.isDoneToday}
                       className="flex-1 rounded-lg bg-emerald-500/20 py-2 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
                     >
-                      ✓ Valider
+                      {habit.isDoneToday ? '✓ Fait' : '✓ Valider'}
                     </button>
                   )}
 
@@ -197,10 +197,10 @@ export default function DashboardMobileClient({
                     {habit.type === 'good' && (
                       <button
                         onClick={() => handleQuickAction(habit.id, 'validate')}
-                        disabled={isLoading}
+                        disabled={isLoading || habit.isDoneToday}
                         className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
                       >
-                        ✓
+                        {habit.isDoneToday ? '✓' : '✓'}
                       </button>
                     )}
 
