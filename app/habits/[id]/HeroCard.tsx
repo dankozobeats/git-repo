@@ -198,20 +198,22 @@ export default function HeroCard({ habit, stats, onValidate, isValidating }: Her
         {onValidate && (
           <button
             onClick={onValidate}
-            disabled={isValidating || (isDone && !isCounterMode)}
+            disabled={isValidating || (isDone && !isCounterMode && !isBadHabit)}
             className="w-full rounded-2xl py-4 text-base font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              backgroundColor: isDone && !isCounterMode ? '#1f2937' : `${primaryColor}20`,
-              color: isDone && !isCounterMode ? '#6b7280' : primaryColor,
+              backgroundColor: isDone && !isCounterMode && !isBadHabit ? '#1f2937' : `${primaryColor}20`,
+              color: isDone && !isCounterMode && !isBadHabit ? '#6b7280' : primaryColor,
               border: `1px solid ${primaryColor}40`,
             }}
           >
             {isValidating ? (
               'Enregistrement...'
+            ) : isBadHabit ? (
+              stats.todayCount > 0 ? `+ Signaler craquage (${stats.todayCount})` : '+ Signaler craquage'
             ) : isDone && !isCounterMode ? (
-              isBadHabit ? 'Craquage enregistré' : '✓ Validé aujourd\'hui'
+              '✓ Validé aujourd\'hui'
             ) : (
-              isBadHabit ? '+ Signaler craquage' : isCounterMode ? '+ Ajouter répétition' : '✓ Valider aujourd\'hui'
+              isCounterMode ? '+ Ajouter répétition' : '✓ Valider aujourd\'hui'
             )}
           </button>
         )}

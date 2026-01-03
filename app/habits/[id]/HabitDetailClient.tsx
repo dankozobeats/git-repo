@@ -83,7 +83,12 @@ export default function HabitDetailClient({ habit, calendarData, stats }: Props)
   const handleQuickValidate = async () => {
     setIsValidating(true)
     try {
-      const res = await fetch(`/api/habits/${habit.id}/check-in`, {
+      // Pour les mauvaises habitudes, on utilise l'endpoint events
+      const endpoint = isBadHabit
+        ? `/api/habits/${habit.id}/events`
+        : `/api/habits/${habit.id}/check-in`
+
+      const res = await fetch(endpoint, {
         method: 'POST',
       })
       if (!res.ok) throw new Error('Validation failed')
