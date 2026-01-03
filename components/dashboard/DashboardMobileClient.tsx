@@ -256,13 +256,13 @@ export default function DashboardMobileClient({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-medium text-white truncate">{habit.name}</h3>
-                      {habit.currentStreak > 0 && (
-                        <p className="text-xs text-white/50">
-                          {habit.type === 'bad'
-                            ? `${habit.currentStreak}j sans craquage`
-                            : `Série: ${habit.currentStreak}j`}
-                        </p>
-                      )}
+                      <p className="text-xs text-white/50">
+                        {habit.type === 'bad'
+                          ? `${habit.currentStreak}j sans craquage`
+                          : habit.currentStreak > 0
+                            ? `Série: ${habit.currentStreak}j`
+                            : 'Pas encore commencé'}
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
