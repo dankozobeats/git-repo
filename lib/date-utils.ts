@@ -12,10 +12,17 @@ export type FormatDateHumanOptions = {
  * Description: Génère une clé date AAAA-MM-JJ stable pour les regroupements.
  * Objectif: Réduire les duplications dans les hooks manipulant des séries temporelles.
  * Utilisation: const key = formatDateKey(report.created_at)
+ *
+ * IMPORTANT: Utilise la timezone LOCALE pour éviter les décalages jour/nuit.
+ * Exemple: à 00h42 CET (UTC+1), on est le 5 janvier en local mais le 4 en UTC.
+ * Cette fonction retourne correctement '2026-01-05' au lieu de '2026-01-04'.
  */
 export function formatDateKey(date: string | Date) {
   const value = date instanceof Date ? date : new Date(date)
-  return value.toISOString().split('T')[0]
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**

@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react'
 import type { Database } from '@/types/database'
+import { getLocalDate, getLocalDateDaysAgo } from '@/lib/utils/date'
 
 type Habit = Database['public']['Tables']['habits']['Row']
 type Log = Database['public']['Tables']['logs']['Row']
@@ -48,9 +49,8 @@ export function useRiskAnalysis(
   events: Event[]
 ): UseRiskAnalysisResult {
   return useMemo(() => {
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const today = getLocalDate()
+    const threeDaysAgo = getLocalDateDaysAgo(3)
 
     // Analyser chaque habitude
     const analyzed = habits
@@ -296,13 +296,13 @@ function getRiskScore(level: RiskLevel): number {
 }
 
 function getDaysDiff(dateStr: string, today: string): number {
-  const date1 = new Date(dateStr)
-  const date2 = new Date(today)
+  const date1 = new Date(dateStr + 'T00:00:00')
+  const date2 = new Date(today + 'T00:00:00')
   return Math.floor((date2.getTime() - date1.getTime()) / (24 * 60 * 60 * 1000))
 }
 
 function getHoursDiff(dateStr: string, today: string): number {
-  const date1 = new Date(dateStr)
-  const date2 = new Date(today)
+  const date1 = new Date(dateStr + 'T00:00:00')
+  const date2 = new Date(today + 'T00:00:00')
   return (date2.getTime() - date1.getTime()) / (60 * 60 * 1000)
 }

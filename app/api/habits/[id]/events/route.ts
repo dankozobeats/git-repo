@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { getLocalDate } from '@/lib/utils/date'
 
 export async function POST(
   request: NextRequest,
@@ -29,7 +30,7 @@ export async function POST(
   // Pas de restriction sur tracking_mode
 
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
+  const today = getLocalDate()
 
   const { data, error } = await supabase
     .from('habit_events')
