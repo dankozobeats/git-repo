@@ -268,9 +268,16 @@ export default function DashboardMobileClient({
                             : habit.currentStreak === 0
                               ? 'Dernier craquage aujourd\'hui'
                               : `${habit.currentStreak}j sans craquage`
-                          : habit.currentStreak > 0
+                          : habit.isDoneToday
                             ? `Série: ${habit.currentStreak}j`
-                            : 'Pas encore commencé'}
+                            : habit.lastActionDate
+                              ? (() => {
+                                  const today = new Date()
+                                  const lastDate = new Date(habit.lastActionDate)
+                                  const daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (24 * 60 * 60 * 1000))
+                                  return `Pas fait depuis ${daysSince}j`
+                                })()
+                              : 'Jamais fait'}
                       </p>
                     </div>
 
