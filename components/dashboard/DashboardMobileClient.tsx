@@ -263,7 +263,11 @@ export default function DashboardMobileClient({
                       <h3 className="text-sm font-medium text-white truncate">{habit.name}</h3>
                       <p className="text-xs text-white/50">
                         {habit.type === 'bad'
-                          ? `${habit.currentStreak}j sans craquage`
+                          ? habit.todayCount > 0
+                            ? `${habit.todayCount} craquage${habit.todayCount > 1 ? 's' : ''} aujourd'hui`
+                            : habit.currentStreak === 0
+                              ? 'Dernier craquage aujourd\'hui'
+                              : `${habit.currentStreak}j sans craquage`
                           : habit.currentStreak > 0
                             ? `Série: ${habit.currentStreak}j`
                             : 'Pas encore commencé'}
