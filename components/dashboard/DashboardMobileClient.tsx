@@ -265,9 +265,11 @@ export default function DashboardMobileClient({
                         {habit.type === 'bad'
                           ? habit.todayCount > 0
                             ? `${habit.todayCount} craquage${habit.todayCount > 1 ? 's' : ''} aujourd'hui`
-                            : habit.currentStreak === 0
-                              ? 'Dernier craquage aujourd\'hui'
-                              : `${habit.currentStreak}j sans craquage`
+                            : habit.lastActionDate
+                              ? habit.currentStreak === 0
+                                ? 'Dernier craquage aujourd\'hui'
+                                : `${habit.currentStreak}j sans craquage`
+                              : 'Aucun craquage'
                           : habit.isDoneToday
                             ? `Série: ${habit.currentStreak}j`
                             : habit.lastActionDate
