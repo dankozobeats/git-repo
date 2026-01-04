@@ -117,7 +117,17 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
   // Compter les craquages d'aujourd'hui
   const todayCount = events.filter(e => {
     const eventDate = e.event_date || e.occurred_at?.split('T')[0]
-    return eventDate === today
+    const matches = eventDate === today
+    // Debug log pour identifier le problème
+    if (matches) {
+      console.log(`[${habit.name}] Event aujourd'hui:`, {
+        eventDate,
+        today,
+        event_id: e.id,
+        occurred_at: e.occurred_at
+      })
+    }
+    return matches
   }).length
 
   if (sortedEvents.length === 0) {
