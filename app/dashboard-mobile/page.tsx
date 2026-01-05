@@ -52,22 +52,6 @@ export default async function Home() {
 
       {/* Container responsive: mobile max-w-2xl, desktop pleine largeur avec padding */}
       <div className="relative mx-auto max-w-2xl px-4 py-6 space-y-4 md:max-w-none md:px-8 lg:px-12">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold md:text-3xl">BadHabit Tracker</h1>
-            <p className="mt-1 text-sm text-white/60">
-              {habits.length} habitude{habits.length > 1 ? 's' : ''} active{habits.length > 1 ? 's' : ''}
-            </p>
-          </div>
-          <Link
-            href="/habits/new"
-            className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold transition active:scale-95"
-          >
-            + Ajouter
-          </Link>
-        </div>
-
         {/* Toggle Dashboard - À la même hauteur que dashboard-old */}
         <div className="flex justify-center px-4">
           <DashboardViewToggle />
