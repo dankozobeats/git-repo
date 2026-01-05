@@ -13,7 +13,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2 } from 'lucide-react'
-import { formatTimeSince } from '@/lib/utils/date'
+import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useDashboard } from '@/lib/habits/useDashboard'
 
@@ -251,6 +251,39 @@ function HabitCard({
   const isBadHabit = habit.type === 'bad'
   const isDone = isBadHabit ? habit.todayCount === 0 : habit.todayCount > 0
 
+  // Générer le message de risque comme dans l'ancien dashboard
+  const getRiskMessage = () => {
+    if (isBadHabit) {
+      if (habit.todayCount > 0) {
+        return `${habit.todayCount} craquage${habit.todayCount > 1 ? 's' : ''} aujourd'hui`
+      }
+      if (habit.currentStreak > 0) {
+        return `${habit.currentStreak} jour${habit.currentStreak > 1 ? 's' : ''} sans craquage`
+      }
+      if (habit.lastActionDate) {
+        const daysAgo = Math.floor((new Date().getTime() - new Date(habit.lastActionDate).getTime()) / (1000 * 60 * 60 * 24))
+        return daysAgo === 0 ? 'Dernier craquage aujourd\'hui' : `Pas de craquage depuis ${daysAgo}j`
+      }
+      return 'Aucun craquage enregistré'
+    } else {
+      // Bonne habitude
+      if (habit.todayCount > 0) {
+        return `Validée ${habit.todayCount} fois aujourd'hui`
+      }
+      if (habit.lastActionDate) {
+        const daysAgo = Math.floor((new Date().getTime() - new Date(habit.lastActionDate).getTime()) / (1000 * 60 * 60 * 24))
+        if (daysAgo === 0) {
+          return 'Pas fait aujourd\'hui'
+        } else if (daysAgo === 1) {
+          return 'Pas fait depuis hier'
+        } else {
+          return `Pas fait depuis ${daysAgo} jours`
+        }
+      }
+      return 'Pas encore fait'
+    }
+  }
+
   return (
     <div
       className={`rounded-xl border p-4 transition ${
@@ -274,19 +307,18 @@ function HabitCard({
               <Link href={`/habits/${habit.id}`} className="font-semibold hover:underline">
                 {habit.name}
               </Link>
+
+              {/* Message de risque */}
               <p className="mt-1 text-xs text-white/60">
-                {isBadHabit
-                  ? habit.todayCount > 0
-                    ? `${habit.todayCount} craquage${habit.todayCount > 1 ? 's' : ''} aujourd'hui`
-                    : habit.currentStreak > 0
-                      ? `${habit.currentStreak}j sans craquage`
-                      : 'Aucun craquage'
-                  : habit.todayCount > 0
-                    ? `${habit.todayCount} fois aujourd'hui`
-                    : habit.lastActionTimestamp
-                      ? formatTimeSince(habit.lastActionTimestamp, 'Dernière validation')
-                      : 'Pas encore fait'}
+                {getRiskMessage()}
               </p>
+
+              {/* Dernière validation avec formatage détaillé */}
+              {habit.lastActionTimestamp && (
+                <p className="mt-1 text-xs text-white/40">
+                  {formatDateTime(habit.lastActionTimestamp, isBadHabit ? 'Dernier craquage :' : 'Dernière validation :')}
+                </p>
+              )}
             </div>
             <button
               onClick={onValidate}
