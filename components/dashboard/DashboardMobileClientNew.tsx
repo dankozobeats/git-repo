@@ -22,11 +22,15 @@ type FilterType = 'all' | 'validated' | 'not_validated' | 'to_do'
 
 type DashboardMobileClientNewProps = {
   userId: string
+  initialData?: {
+    habits: any[]
+    summary: any
+  }
 }
 
-export default function DashboardMobileClientNew({ userId }: DashboardMobileClientNewProps) {
+export default function DashboardMobileClientNew({ userId, initialData }: DashboardMobileClientNewProps) {
   const router = useRouter()
-  const { habits, summary, isLoading, isError, mutate } = useDashboard()
+  const { habits, summary, isLoading, isError, mutate } = useDashboard(initialData)
 
   const [filter, setFilter] = useState<FilterType>('to_do')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')

@@ -5,12 +5,14 @@
  * - Sauvegarde la préférence dans localStorage
  * - Par défaut: version classique (old)
  * - Toggle animé pour switcher
+ * - Optimisation: calcule les stats côté serveur pour éviter le fetch initial
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import DashboardMobileClient from './DashboardMobileClient'
 import DashboardMobileClientNew from './DashboardMobileClientNew'
 import { Smartphone, LayoutGrid } from 'lucide-react'
+import { computeDashboardStats } from '@/lib/habits/computeDashboardStats'
 
 type DashboardVersion = 'classic' | 'new'
 
@@ -24,6 +26,11 @@ type DashboardWrapperProps = {
 export default function DashboardWrapper({ userId, habits, logs, events }: DashboardWrapperProps) {
   const [version, setVersion] = useState<DashboardVersion>('classic')
   const [isLoading, setIsLoading] = useState(true)
+
+  // Pré-calculer les stats côté client pour éviter le fetch initial
+  const initialDashboardData = useMemo(() => {
+    return computeDashboardStats(habits, logs, events)
+  }, [habits, logs, events])
 
   // Charger la préférence au montage
   useEffect(() => {
@@ -101,7 +108,7 @@ export default function DashboardWrapper({ userId, habits, logs, events }: Dashb
 
       {/* Dashboard content */}
       {version === 'new' ? (
-        <DashboardMobileClientNew userId={userId} />
+        <DashboardMobileClientNew userId={userId} initialData={initialDashboardData} />
       ) : (
         <DashboardMobileClient
           habits={habits}

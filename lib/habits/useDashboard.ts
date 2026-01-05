@@ -49,11 +49,12 @@ type DashboardData = {
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-export function useDashboard() {
+export function useDashboard(initialData?: DashboardData) {
   const { data, error, isLoading, mutate } = useSWR<DashboardData>(
     '/api/dashboard',
     fetcher,
     {
+      fallbackData: initialData, // Utiliser les données initiales pour un rendu instantané
       // Revalidation settings
       revalidateOnFocus: true, // Revalider quand on revient sur l'onglet
       revalidateOnReconnect: true, // Revalider quand la connexion revient
