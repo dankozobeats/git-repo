@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Info } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Info, Filter } from 'lucide-react'
 import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
@@ -18,6 +18,7 @@ import type { Database } from '@/types/database'
 type Habit = Database['public']['Tables']['habits']['Row']
 type Log = Database['public']['Tables']['logs']['Row']
 type Event = Database['public']['Tables']['habit_events']['Row']
+type FilterType = 'all' | 'validated' | 'not_validated' | 'to_do'
 
 type DashboardMobileClientProps = {
   habits: Habit[]
@@ -40,12 +41,17 @@ export default function DashboardMobileClient({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
+  const [filter, setFilter] = useState<FilterType>('to_do')
 
   // Charger la préférence depuis localStorage au montage
   useEffect(() => {
     const saved = localStorage.getItem('dashboard-view-mode')
     if (saved === 'grid' || saved === 'list') {
       setViewMode(saved)
+    }
+    const savedFilter = localStorage.getItem('dashboard-filter')
+    if (savedFilter === 'all' || savedFilter === 'validated' || savedFilter === 'not_validated' || savedFilter === 'to_do') {
+      setFilter(savedFilter)
     }
   }, [])
 
@@ -54,6 +60,45 @@ export default function DashboardMobileClient({
     setViewMode(mode)
     localStorage.setItem('dashboard-view-mode', mode)
   }
+
+  const handleFilterChange = (newFilter: FilterType) => {
+    setFilter(newFilter)
+    localStorage.setItem('dashboard-filter', newFilter)
+  }
+
+  // Filtrer les habitudes selon le filtre sélectionné
+  const allHabits = [...topRisks, ...remainingHabits]
+  const filteredHabits = allHabits.filter(habit => {
+    switch (filter) {
+      case 'all':
+        return true
+      case 'validated':
+        // Pour les bonnes habitudes : faites aujourd'hui
+        // Pour les mauvaises habitudes : pas de craquage aujourd'hui
+        if (habit.type === 'good') {
+          return habit.isDoneToday
+        } else {
+          return habit.todayCount === 0
+        }
+      case 'not_validated':
+        // Pour les bonnes habitudes : pas faites aujourd'hui
+        // Pour les mauvaises habitudes : au moins 1 craquage aujourd'hui
+        if (habit.type === 'good') {
+          return !habit.isDoneToday
+        } else {
+          return habit.todayCount > 0
+        }
+      case 'to_do':
+        // Habitudes critiques ou warning (à risque, à faire)
+        return habit.riskLevel === 'critical' || habit.riskLevel === 'warning'
+      default:
+        return true
+    }
+  })
+
+  // Séparer en top 3 et reste après filtrage
+  const displayedTopRisks = filteredHabits.slice(0, 3)
+  const displayedRemainingHabits = filteredHabits.slice(3)
 
   const handleQuickAction = async (
     habitId: string,
@@ -154,44 +199,91 @@ export default function DashboardMobileClient({
         </div>
       </div>
 
-      {/* Toggle Vue Carte/Liste */}
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-          Priorités du jour
-        </h2>
-        <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+      {/* Filtres et Vue */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            Mes habitudes ({filteredHabits.length})
+          </h2>
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+            <button
+              onClick={() => handleViewModeChange('grid')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                viewMode === 'grid'
+                  ? 'bg-white/15 text-white'
+                  : 'text-white/50 hover:text-white'
+              }`}
+              title="Vue carte"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Cartes</span>
+            </button>
+            <button
+              onClick={() => handleViewModeChange('list')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                viewMode === 'list'
+                  ? 'bg-white/15 text-white'
+                  : 'text-white/50 hover:text-white'
+              }`}
+              title="Vue liste"
+            >
+              <List className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Liste</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filtres */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
           <button
-            onClick={() => handleViewModeChange('grid')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              viewMode === 'grid'
-                ? 'bg-white/15 text-white'
-                : 'text-white/50 hover:text-white'
+            onClick={() => handleFilterChange('to_do')}
+            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              filter === 'to_do'
+                ? 'bg-blue-500/20 text-blue-200 border border-blue-500/30'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
             }`}
-            title="Vue carte"
           >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Cartes</span>
+            <Filter className="inline h-3 w-3 mr-1" />
+            À faire
           </button>
           <button
-            onClick={() => handleViewModeChange('list')}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              viewMode === 'list'
-                ? 'bg-white/15 text-white'
-                : 'text-white/50 hover:text-white'
+            onClick={() => handleFilterChange('validated')}
+            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              filter === 'validated'
+                ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
             }`}
-            title="Vue liste"
           >
-            <List className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Liste</span>
+            ✓ Validées
+          </button>
+          <button
+            onClick={() => handleFilterChange('not_validated')}
+            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              filter === 'not_validated'
+                ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            }`}
+          >
+            ✗ Non validées
+          </button>
+          <button
+            onClick={() => handleFilterChange('all')}
+            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              filter === 'all'
+                ? 'bg-purple-500/20 text-purple-200 border border-purple-500/30'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            }`}
+          >
+            Toutes
           </button>
         </div>
       </div>
 
       {/* Top 3 priorités - Version compacte */}
-      {topRisks.length > 0 && (
+      {displayedTopRisks.length > 0 && (
         <div className="space-y-3">
           <div className={viewMode === 'grid' ? 'grid gap-3 md:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
-          {topRisks.map((habit, index) => {
+          {displayedTopRisks.map((habit, index) => {
             const isLoading = loadingHabit === habit.id
             const riskConfig = {
               critical: { border: 'border-red-500/30', bg: 'bg-red-500/5' },
@@ -317,13 +409,13 @@ export default function DashboardMobileClient({
       )}
 
       {/* Autres habitudes - Liste simple */}
-      {remainingHabits.length > 0 && (
+      {displayedRemainingHabits.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-            Autres habitudes ({remainingHabits.length})
+            Autres habitudes ({displayedRemainingHabits.length})
           </h2>
           <div className={viewMode === 'grid' ? 'grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'}>
-            {remainingHabits.map(habit => {
+            {displayedRemainingHabits.map(habit => {
               const isLoading = loadingHabit === habit.id
               return (
                 <div
@@ -493,8 +585,21 @@ export default function DashboardMobileClient({
         </div>
       )}
 
+      {/* Message si aucune habitude après filtrage */}
+      {filteredHabits.length === 0 && habits.length > 0 && (
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
+          <span className="text-3xl">🔍</span>
+          <p className="mt-2 text-sm font-semibold text-blue-200">
+            Aucune habitude dans ce filtre
+          </p>
+          <p className="mt-1 text-xs text-white/60">
+            Essaie un autre filtre pour voir tes habitudes
+          </p>
+        </div>
+      )}
+
       {/* Message d'encouragement si tout va bien */}
-      {topRisks.length === 0 && habits.length > 0 && (
+      {filter === 'to_do' && filteredHabits.length === 0 && habits.length > 0 && (
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
           <span className="text-3xl">🎉</span>
           <p className="mt-2 text-sm font-semibold text-emerald-200">
