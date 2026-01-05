@@ -55,6 +55,7 @@ export function useDashboard(initialData?: DashboardData) {
     fetcher,
     {
       fallbackData: initialData, // Utiliser les données initiales pour un rendu instantané
+      revalidateOnMount: !initialData, // Ne pas revalider au mount si on a des données initiales
       // Revalidation settings
       revalidateOnFocus: true, // Revalider quand on revient sur l'onglet
       revalidateOnReconnect: true, // Revalider quand la connexion revient
