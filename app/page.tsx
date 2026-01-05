@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import DashboardMobileClient from '@/components/dashboard/DashboardMobileClient'
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -59,22 +60,17 @@ export default async function Home() {
               {habits.length} habitude{habits.length > 1 ? 's' : ''} active{habits.length > 1 ? 's' : ''}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard-old"
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium transition hover:bg-white/10 active:scale-95"
-              title="Dashboard Classique"
-            >
-              <span className="hidden sm:inline">📊 Classique</span>
-              <span className="sm:hidden">📊</span>
-            </Link>
-            <Link
-              href="/habits/new"
-              className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold transition active:scale-95"
-            >
-              + Ajouter
-            </Link>
-          </div>
+          <Link
+            href="/habits/new"
+            className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold transition active:scale-95"
+          >
+            + Ajouter
+          </Link>
+        </div>
+
+        {/* Toggle Dashboard - Bien visible */}
+        <div className="flex justify-center pt-2">
+          <DashboardViewToggle />
         </div>
 
         {/* Client component avec priorités + patterns */}
@@ -101,18 +97,10 @@ export default async function Home() {
         )}
 
         {/* Actions secondaires - Grid responsive */}
-        <div className="grid gap-3 pt-4 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6">
-          <Link
-            href="/dashboard-old"
-            className="rounded-xl border border-purple-500/40 bg-purple-500/10 p-4 text-center transition hover:bg-purple-500/20 lg:col-span-2"
-          >
-            <p className="text-sm font-semibold">📊 Dashboard Classique</p>
-            <p className="mt-1 text-xs text-purple-200/70">Version complète</p>
-          </Link>
-
+        <div className="grid gap-3 pt-4 sm:grid-cols-2 md:grid-cols-2">
           <Link
             href="/habits/stats"
-            className="rounded-xl border border-white/10 bg-white/5 p-4 text-center transition hover:bg-white/10 lg:col-span-2"
+            className="rounded-xl border border-white/10 bg-white/5 p-4 text-center transition hover:bg-white/10"
           >
             <p className="text-sm font-semibold">📈 Stats détaillées</p>
             <p className="mt-1 text-xs text-white/50">Analyse approfondie</p>
@@ -120,7 +108,7 @@ export default async function Home() {
 
           <Link
             href="/dashboard-advanced"
-            className="rounded-xl border border-white/10 bg-white/5 p-4 text-center transition hover:bg-white/10 lg:col-span-2"
+            className="rounded-xl border border-white/10 bg-white/5 p-4 text-center transition hover:bg-white/10"
           >
             <p className="text-sm font-semibold">🧠 Patterns</p>
             <p className="mt-1 text-xs text-white/50">Détection IA</p>

@@ -13,6 +13,7 @@ import FloatingQuickActions from '@/components/FloatingQuickActions'
 import DashboardHeroExtras from '@/components/DashboardHeroExtras'
 import DashboardToggle from '@/components/dashboard/DashboardToggle'
 import DashboardPreferenceSync from '@/components/dashboard/DashboardPreferenceSync'
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -223,13 +224,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
                 <AICoachMessage message={generatedCoachMessage} variant="default" showCTA />
                 <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
               </div>
-              <div className="flex w-full flex-col gap-2 md:w-auto">
-                <Link
-                  href="/"
-                  className="rounded-2xl border border-blue-500/40 bg-blue-500/10 px-4 py-3 text-center text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20"
-                >
-                  📱 Dashboard Mobile
-                </Link>
+              <div className="flex w-full flex-col gap-3 md:w-auto md:min-w-[280px]">
+                {/* Toggle Dashboard - Bien visible */}
+                <DashboardViewToggle />
+
                 <Link
                   href="/habits/new"
                   className="rounded-2xl bg-[#FF4D4D] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e04343]"
