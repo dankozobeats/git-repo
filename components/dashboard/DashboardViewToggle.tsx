@@ -13,15 +13,24 @@ type DashboardVersion = 'mobile' | 'classic'
 
 export default function DashboardViewToggle() {
   const pathname = usePathname()
-  const [version, setVersion] = useState<DashboardVersion>('mobile')
+  const [version, setVersion] = useState<DashboardVersion>('classic')
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Détecter la version depuis l'URL ou localStorage
     const isOnOldDashboard = pathname === '/dashboard-old'
+    const isOnMobileDashboard = pathname === '/dashboard-mobile'
     const saved = localStorage.getItem('dashboard_version') as DashboardVersion | null
 
-    const detectedVersion = isOnOldDashboard ? 'classic' : (saved || 'mobile')
+    let detectedVersion: DashboardVersion
+    if (isOnOldDashboard) {
+      detectedVersion = 'classic'
+    } else if (isOnMobileDashboard) {
+      detectedVersion = 'mobile'
+    } else {
+      detectedVersion = saved || 'classic'
+    }
+
     setVersion(detectedVersion)
     setIsLoading(false)
   }, [pathname])
@@ -33,7 +42,7 @@ export default function DashboardViewToggle() {
 
     // Rediriger avec transition fluide
     if (newVersion === 'mobile') {
-      window.location.href = '/'
+      window.location.href = '/dashboard-mobile'
     } else {
       window.location.href = '/dashboard-old'
     }

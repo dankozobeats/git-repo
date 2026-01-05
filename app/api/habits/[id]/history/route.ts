@@ -1,0 +1,89 @@
+/**
+ * GET /api/habits/[id]/history
+ * Retourne l'historique complet des logs et events pour une habitude
+ */
+
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  const { id: habitId } = await context.params
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Vérifier que l'habitude appartient à l'utilisateur
+  const { data: habit } = await supabase
+    .from('habits')
+    .select('id, type, tracking_mode')
+    .eq('id', habitId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!habit) {
+    return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
+  }
+
+  try {
+    // Récupérer les logs (bonnes habitudes) ou events (mauvaises habitudes)
+    const isBadHabit = habit.type === 'bad'
+
+    if (isBadHabit) {
+      // Pour les mauvaises habitudes, récupérer les events
+      const { data: events, error } = await supabase
+        .from('habit_events')
+        .select('id, event_date, count')
+        .eq('habit_id', habitId)
+        .eq('user_id', user.id)
+        .order('event_date', { ascending: false })
+        .limit(100)
+
+      if (error) throw error
+
+      const history = events?.map(event => ({
+        id: event.id,
+        date: event.event_date,
+        value: event.count || 1,
+        type: 'event' as const,
+      })) || []
+
+      return NextResponse.json(history)
+    } else {
+      // Pour les bonnes habitudes, récupérer les logs
+      const { data: logs, error } = await supabase
+        .from('logs')
+        .select('id, completed_date, count')
+        .eq('habit_id', habitId)
+        .eq('user_id', user.id)
+        .order('completed_date', { ascending: false })
+        .limit(100)
+
+      if (error) throw error
+
+      const history = logs?.map(log => ({
+        id: log.id,
+        date: log.completed_date,
+        value: log.count || 1,
+        type: 'log' as const,
+      })) || []
+
+      return NextResponse.json(history)
+    }
+  } catch (error) {
+    console.error('Error fetching history:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch history' },
+      { status: 500 }
+    )
+  }
+}

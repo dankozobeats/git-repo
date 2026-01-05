@@ -11,9 +11,10 @@ import OverviewTab from './tabs/OverviewTab'
 import CalendarTab from './tabs/CalendarTab'
 import CoachTab from './tabs/CoachTab'
 import SettingsTab from './tabs/SettingsTab'
+import HistoryTab from './tabs/HistoryTab'
 import type { HabitCalendarMap, HabitStats } from '@/lib/habits/computeHabitStats'
 
-type TabType = 'overview' | 'calendar' | 'coach' | 'settings'
+type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'settings'
 
 type Reminder = {
   id: string
@@ -68,7 +69,7 @@ export default function HabitDetailClient({
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(`habit-detail-tab-${habit.id}`)
-      if (saved === 'overview' || saved === 'calendar' || saved === 'coach' || saved === 'settings') {
+      if (saved === 'overview' || saved === 'calendar' || saved === 'coach' || saved === 'history' || saved === 'settings') {
         return saved
       }
     }
@@ -156,6 +157,14 @@ export default function HabitDetailClient({
             monthCompletionRate: stats.monthCompletionRate,
           }}
           calendarData={calendarData}
+        />
+      )}
+
+      {activeTab === 'history' && (
+        <HistoryTab
+          habitId={habit.id}
+          habitType={habit.type}
+          trackingMode={habit.tracking_mode ?? 'binary'}
         />
       )}
 
