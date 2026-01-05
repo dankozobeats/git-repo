@@ -2,7 +2,7 @@
 
 /**
  * Toggle switch animé pour basculer entre dashboard Mobile et Classique
- * Navigation instantanée sans effet de transition pour performance optimale
+ * Navigation instantanée avec barre de progression discrète
  */
 
 import { useState, useEffect } from 'react'
@@ -16,6 +16,7 @@ export default function DashboardViewToggle() {
   const router = useRouter()
   const [version, setVersion] = useState<DashboardVersion>('classic')
   const [isLoading, setIsLoading] = useState(true)
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     // Détecter la version depuis l'URL ou localStorage
@@ -34,6 +35,7 @@ export default function DashboardViewToggle() {
 
     setVersion(detectedVersion)
     setIsLoading(false)
+    setIsNavigating(false) // Reset navigation state
 
     // Prefetch l'autre dashboard pour navigation instantanée
     if (detectedVersion === 'classic') {
@@ -47,8 +49,9 @@ export default function DashboardViewToggle() {
     const newVersion: DashboardVersion = version === 'mobile' ? 'classic' : 'mobile'
     setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
+    setIsNavigating(true) // Activer l'animation
 
-    // Navigation immédiate sans transition
+    // Navigation immédiate
     if (newVersion === 'mobile') {
       router.push('/dashboard-mobile')
     } else {
@@ -63,52 +66,74 @@ export default function DashboardViewToggle() {
   }
 
   return (
-    <div className="w-full max-w-xs">
-      <div className="rounded-xl border border-white/10 bg-white/5 p-1 backdrop-blur">
-        <div className="relative flex items-center gap-1">
-          {/* Background slider */}
-          <div
-            className={`absolute inset-y-1 w-[calc(50%-2px)] rounded-lg bg-gradient-to-r transition-all duration-300 ${
-              version === 'classic'
-                ? 'left-1 from-purple-500 to-pink-500'
-                : 'left-[calc(50%+1px)] from-blue-500 to-purple-500'
-            }`}
-          />
-
-          {/* Vue simple button */}
-          <button
-            onClick={() => version !== 'classic' && handleToggle()}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              version === 'classic'
-                ? 'text-white'
-                : 'text-white/50 hover:text-white/80'
-            }`}
-          >
-            <LayoutGrid className="h-4 w-4" />
-            <span>Vue simple</span>
-          </button>
-
-          {/* Vue détaillée button */}
-          <button
-            onClick={() => version !== 'mobile' && handleToggle()}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              version === 'mobile'
-                ? 'text-white'
-                : 'text-white/50 hover:text-white/80'
-            }`}
-          >
-            <Smartphone className="h-4 w-4" />
-            <span>Vue détaillée</span>
-          </button>
+    <>
+      {/* Barre de progression en haut de l'écran */}
+      {isNavigating && (
+        <div className="fixed left-0 right-0 top-0 z-50 h-1 overflow-hidden bg-transparent">
+          <div className="h-full w-full origin-left animate-[progress_0.6s_ease-in-out] bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500" />
         </div>
+      )}
+
+      <div className="w-full max-w-xs">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-1 backdrop-blur">
+          <div className="relative flex items-center gap-1">
+            {/* Background slider */}
+            <div
+              className={`absolute inset-y-1 w-[calc(50%-2px)] rounded-lg bg-gradient-to-r transition-all duration-300 ${
+                version === 'classic'
+                  ? 'left-1 from-purple-500 to-pink-500'
+                  : 'left-[calc(50%+1px)] from-blue-500 to-purple-500'
+              }`}
+            />
+
+            {/* Vue simple button */}
+            <button
+              onClick={() => version !== 'classic' && handleToggle()}
+              disabled={isNavigating}
+              className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                version === 'classic'
+                  ? 'text-white'
+                  : 'text-white/50 hover:text-white/80'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span>Vue simple</span>
+            </button>
+
+            {/* Vue détaillée button */}
+            <button
+              onClick={() => version !== 'mobile' && handleToggle()}
+              disabled={isNavigating}
+              className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                version === 'mobile'
+                  ? 'text-white'
+                  : 'text-white/50 hover:text-white/80'
+              }`}
+            >
+              <Smartphone className="h-4 w-4" />
+              <span>Vue détaillée</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="mt-2 text-center text-xs text-white/50">
+          {version === 'classic'
+            ? 'Vue complète avec toutes les habitudes'
+            : 'Analyse intelligente et priorisation automatique'}
+        </p>
       </div>
 
-      {/* Description */}
-      <p className="mt-2 text-center text-xs text-white/50">
-        {version === 'classic'
-          ? 'Vue complète avec toutes les habitudes'
-          : 'Analyse intelligente et priorisation automatique'}
-      </p>
-    </div>
+      <style jsx global>{`
+        @keyframes progress {
+          0% {
+            transform: scaleX(0);
+          }
+          100% {
+            transform: scaleX(1);
+          }
+        }
+      `}</style>
+    </>
   )
 }
