@@ -10,9 +10,9 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2, Info, Check, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2, Info, Check, Plus, TrendingUp } from 'lucide-react'
 import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useDashboard } from '@/lib/habits/useDashboard'
@@ -33,6 +33,7 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
   const [loadingHabit, setLoadingHabit] = useState<string | null>(null)
   const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [showPatterns, setShowPatterns] = useState(false)
 
   // Charger les préférences depuis localStorage
   useEffect(() => {
@@ -56,6 +57,47 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
     localStorage.setItem('dashboard-filter', newFilter)
   }
 
+  // Détecter les patterns (calcul simple côté client pour démo)
+  const patterns = useMemo(() => {
+    const badHabits = habits.filter(h => h.type === 'bad')
+    const detectedPatterns: any[] = []
+
+    // Pattern: Effet domino
+    const habitsByDay = badHabits.reduce((acc, h) => {
+      if (h.lastActionDate) {
+        if (!acc[h.lastActionDate]) acc[h.lastActionDate] = []
+        acc[h.lastActionDate].push(h.name)
+      }
+      return acc
+    }, {} as Record<string, string[]>)
+
+    Object.entries(habitsByDay).forEach(([date, habitNames]) => {
+      if (habitNames.length >= 2) {
+        detectedPatterns.push({
+          type: 'domino',
+          title: 'Effet domino identifié',
+          description: `${habitNames[0]} → ${habitNames[1]} (${habitNames.length} fois détecté)`,
+          confidence: 90
+        })
+      }
+    })
+
+    // Pattern: Déclencheur potentiel
+    badHabits.forEach(habit => {
+      const relapseRate = habit.totalCount > 0 ? (habit.last7DaysCount / 7) * 100 : 0
+      if (relapseRate > 80) {
+        detectedPatterns.push({
+          type: 'trigger',
+          title: 'Déclencheur potentiel',
+          description: `Quand tu sautes "${habit.name}", tu craques ${Math.round(relapseRate)}% du temps`,
+          confidence: 85
+        })
+      }
+    })
+
+    return detectedPatterns
+  }, [habits])
+
   // Filtrer les habitudes
   const filteredHabits = habits.filter(habit => {
     switch (filter) {
@@ -66,20 +108,17 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
       case 'not_validated':
         return habit.type === 'good' ? habit.todayCount === 0 : habit.todayCount > 0
       case 'to_do':
-        // Afficher les habitudes à risque
         return habit.riskLevel === 'danger' || habit.riskLevel === 'warning'
       default:
         return true
     }
   })
 
-  // Séparer en prioritaire (top 3 danger/warning) et reste
   const criticalHabits = filteredHabits
     .filter(h => h.riskLevel === 'danger' || h.riskLevel === 'warning')
     .slice(0, 3)
   const remainingHabits = filteredHabits.filter(h => !criticalHabits.includes(h))
 
-  // Handler pour valider une habitude
   const handleQuickValidate = async (habitId: string, habitType: 'good' | 'bad') => {
     setLoadingHabit(habitId)
     try {
@@ -90,9 +129,7 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
       const res = await fetch(endpoint, { method: 'POST' })
       if (!res.ok) throw new Error('Validation failed')
 
-      // Revalider les données du dashboard
       await mutate()
-
       router.refresh()
     } catch (error) {
       console.error('Erreur validation:', error)
@@ -101,7 +138,6 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
     }
   }
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -110,7 +146,6 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
     )
   }
 
-  // Error state
   if (isError) {
     return (
       <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-6 text-center">
@@ -125,7 +160,6 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
     )
   }
 
-  // Empty state
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
@@ -195,7 +229,6 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Critical Habits (top 3) */}
           {criticalHabits.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
@@ -216,7 +249,6 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
             </div>
           )}
 
-          {/* Remaining Habits */}
           {remainingHabits.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
@@ -234,6 +266,71 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
                   onCloseMenu={() => setOpenMenuId(null)}
                 />
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Patterns Section */}
+      {patterns.length > 0 && (
+        <div className="rounded-xl border border-purple-500/30 bg-purple-500/5">
+          <button
+            onClick={() => setShowPatterns(!showPatterns)}
+            className="flex w-full items-center justify-between p-4 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🧠</span>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Patterns détectés</h2>
+                <p className="text-xs text-white/50">
+                  {patterns.length} schéma{patterns.length > 1 ? 's' : ''} identifié{patterns.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+            {showPatterns ? (
+              <ChevronUp className="h-5 w-5 text-white/50" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-white/50" />
+            )}
+          </button>
+
+          {showPatterns && (
+            <div className="space-y-2 px-4 pb-4">
+              {patterns.map((pattern, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-lg border border-white/10 bg-white/5 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-purple-400" />
+                        <h3 className="text-sm font-semibold text-white">{pattern.title}</h3>
+                      </div>
+                      <p className="mt-1 text-xs text-white/70">{pattern.description}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-purple-400">
+                      {pattern.confidence}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Boutons */}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link
+                  href="/habits/stats"
+                  className="rounded-lg border border-white/10 bg-white/5 py-2 text-center text-xs font-semibold transition hover:bg-white/10"
+                >
+                  📈 Stats détaillées
+                </Link>
+                <Link
+                  href="/dashboard-advanced"
+                  className="rounded-lg border border-purple-500/20 bg-purple-500/10 py-2 text-center text-xs font-semibold text-purple-300 transition hover:bg-purple-500/20"
+                >
+                  🧠 Patterns
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -279,7 +376,6 @@ function HabitCard({
   const isBadHabit = habit.type === 'bad'
   const isDone = isBadHabit ? habit.todayCount === 0 : habit.todayCount > 0
 
-  // Générer le message de risque comme dans l'ancien dashboard
   const getRiskMessage = () => {
     if (isBadHabit) {
       if (habit.todayCount > 0) {
@@ -294,7 +390,6 @@ function HabitCard({
       }
       return 'Aucun craquage enregistré'
     } else {
-      // Bonne habitude
       if (habit.todayCount > 0) {
         return `Validée ${habit.todayCount} fois aujourd'hui`
       }
@@ -335,13 +430,9 @@ function HabitCard({
               <Link href={`/habits/${habit.id}`} className="font-semibold hover:underline">
                 {habit.name}
               </Link>
-
-              {/* Message de risque */}
               <p className="mt-1 text-xs text-white/60">
                 {getRiskMessage()}
               </p>
-
-              {/* Dernière validation avec formatage détaillé */}
               {habit.lastActionTimestamp && (
                 <p className="mt-1 text-xs text-white/40">
                   {formatDateTime(habit.lastActionTimestamp, isBadHabit ? 'Dernier craquage :' : 'Dernière validation :')}
@@ -351,7 +442,6 @@ function HabitCard({
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {/* Bouton Valider/Craquage */}
               <button
                 onClick={onValidate}
                 disabled={isLoading || (isBadHabit ? false : isDone)}
@@ -375,7 +465,6 @@ function HabitCard({
                 )}
               </button>
 
-              {/* Bouton Info (Vue rapide) */}
               <button
                 onClick={onOpenQuickView}
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/70 transition hover:bg-white/20"
@@ -384,7 +473,6 @@ function HabitCard({
                 <Info className="h-4 w-4" />
               </button>
 
-              {/* Bouton Menu (3 points) */}
               <div className="relative">
                 <button
                   onClick={(e) => {
@@ -397,7 +485,6 @@ function HabitCard({
                   <MoreVertical className="h-4 w-4" />
                 </button>
 
-                {/* Menu contextuel */}
                 {isMenuOpen && (
                   <>
                     <div
