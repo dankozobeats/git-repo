@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2, Info, Check, Plus, TrendingUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2, Info, Check, Plus, TrendingUp, Trash2 } from 'lucide-react'
 import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useDashboard } from '@/lib/habits/useDashboard'
@@ -34,6 +34,22 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
   const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showPatterns, setShowPatterns] = useState(false)
+
+  // Handler pour supprimer une habitude
+  const handleDelete = async (habitId: string, habitName: string) => {
+    if (!confirm(`Supprimer "${habitName}" ?`)) return
+
+    try {
+      const res = await fetch(`/api/habits/${habitId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+
+      await mutate()
+      router.refresh()
+    } catch (error) {
+      console.error('Erreur suppression:', error)
+      alert('Impossible de supprimer l\'habitude')
+    }
+  }
 
   // Charger les préférences depuis localStorage
   useEffect(() => {
@@ -244,6 +260,7 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
                   onOpenMenu={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
                   isMenuOpen={openMenuId === habit.id}
                   onCloseMenu={() => setOpenMenuId(null)}
+                  onDelete={() => handleDelete(habit.id, habit.name)}
                 />
               ))}
             </div>
@@ -264,6 +281,7 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
                   onOpenMenu={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
                   isMenuOpen={openMenuId === habit.id}
                   onCloseMenu={() => setOpenMenuId(null)}
+                  onDelete={() => handleDelete(habit.id, habit.name)}
                 />
               ))}
             </div>
@@ -348,6 +366,7 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
         <HabitQuickViewModal
           habitId={quickViewHabit.id}
           habitName={quickViewHabit.name}
+          isOpen={true}
           onClose={() => setQuickViewHabit(null)}
         />
       )}
@@ -364,6 +383,7 @@ function HabitCard({
   onOpenMenu,
   isMenuOpen,
   onCloseMenu,
+  onDelete,
 }: {
   habit: any
   isLoading: boolean
@@ -372,6 +392,7 @@ function HabitCard({
   onOpenMenu: () => void
   isMenuOpen: boolean
   onCloseMenu: () => void
+  onDelete: () => void
 }) {
   const isBadHabit = habit.type === 'bad'
   const isDone = isBadHabit ? habit.todayCount === 0 : habit.todayCount > 0
@@ -506,6 +527,16 @@ function HabitCard({
                       >
                         Modifier
                       </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onCloseMenu()
+                          onDelete()
+                        }}
+                        className="w-full rounded px-3 py-2 text-left text-xs text-red-400 transition hover:bg-white/10"
+                      >
+                        Supprimer
+                      </button>
                     </div>
                   </>
                 )}
