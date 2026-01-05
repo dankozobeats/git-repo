@@ -49,27 +49,27 @@ export default function DashboardViewToggle() {
     setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
 
-    // Transition visible rapide
+    // Transition ultra-rapide
     setIsTransitioning(true)
 
-    // Fade out rapide
+    // Fade out minimal
     document.body.style.opacity = '0'
-    document.body.style.transition = 'opacity 100ms ease-out'
+    document.body.style.transition = 'opacity 50ms ease-out'
 
     setTimeout(() => {
-      // Navigation
+      // Navigation immédiate
       if (newVersion === 'mobile') {
         router.push('/dashboard-mobile')
       } else {
         router.push('/dashboard-old')
       }
-    }, 100)
+    }, 50)
   }
 
-  // Fade in après navigation
+  // Fade in rapide après navigation
   useEffect(() => {
     document.body.style.opacity = '1'
-    document.body.style.transition = 'opacity 150ms ease-in'
+    document.body.style.transition = 'opacity 100ms ease-in'
     setIsTransitioning(false)
   }, [pathname])
 
