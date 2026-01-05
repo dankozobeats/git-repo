@@ -60,19 +60,22 @@ export const metadata: Metadata = {
   },
 }
 
-// Liens principaux affichés dans le DashboardSidebar.
+// Liens principaux - Organisation logique: Consulter → Agir → Configurer
 const mainNav: SidebarNavItem[] = [
+  // Section Vision & Pilotage
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/dashboard-advanced', label: 'Analyse comportementale', icon: 'stats' },
-  { href: '/reports/history', label: 'Historique', icon: 'history' },
-  { href: '/report', label: 'Coach IA', icon: 'coach' },
-  { href: '/reminders', label: 'Rappels', icon: 'reminders' },
   { href: '/habits/stats', label: 'Stats détaillées', icon: 'stats' },
+  { href: '/reports/history', label: 'Historique', icon: 'history' },
+
+  // Section Actions & Outils
+  { href: '/habits/new', label: 'Nouvelle habitude', icon: 'target' },
+  { href: '/reminders', label: 'Rappels', icon: 'reminders' },
+  { href: '/report', label: 'Coach IA', icon: 'coach' },
 ]
 
-// Liens utilitaires/secondaires accessibles depuis la colonne.
+// Liens utilitaires - Toujours accessibles en bas
 const utilityNav: SidebarNavItem[] = [
-  { href: '/habits/new', label: 'Nouvelle habitude', icon: 'target' },
   { href: '/settings', label: 'Paramètres', icon: 'settings' },
   { href: '/aide', label: 'Aide & support', icon: 'help' },
 ]
