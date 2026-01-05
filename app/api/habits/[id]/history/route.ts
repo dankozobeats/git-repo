@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const history = events?.map(event => ({
         id: event.id,
         date: event.event_date,
-        value: event.count || 1,
+        value: 1, // habit_events doesn't have a count column - each event = 1 occurrence
         type: 'event' as const,
       })) || []
 

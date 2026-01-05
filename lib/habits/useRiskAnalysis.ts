@@ -125,10 +125,10 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     return eventDate === today
   })
 
-  // Pour le mode counter, sommer les valeurs count
-  // Pour le mode binaire, compter juste les événements (0 ou 1+)
+  // Pour le mode counter, compter le nombre d'événements (chaque event = 1 occurrence)
+  // Pour le mode binaire, max 1 événement par jour
   const todayCount = habit.tracking_mode === 'counter'
-    ? todayEvents.reduce((sum, e) => sum + (e.count || 1), 0)
+    ? todayEvents.length // Chaque event = 1 occurrence
     : Math.min(todayEvents.length, 1) // Mode binaire: max 1
 
   if (eventsWithTimestamp.length === 0) {

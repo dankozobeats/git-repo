@@ -98,11 +98,20 @@ export default function HabitDetailClient({
         : `/api/habits/${habit.id}/check-in`
 
       const res = await fetch(endpoint, { method: 'POST' })
-      if (!res.ok) throw new Error('Validation failed')
+
+      // En mode binaire, l'API retourne 200 même si déjà validé aujourd'hui
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Validation failed')
+      }
 
       const data = await res.json()
+
+      // Mettre à jour le count depuis la réponse
       const newCount = typeof data.count === 'number' ? data.count : count + 1
       setCount(newCount)
+
+      // Rafraîchir pour mettre à jour l'UI (notamment pour retirer de "À faire" si binaire)
       router.refresh()
     } catch (error) {
       console.error('Erreur validation:', error)

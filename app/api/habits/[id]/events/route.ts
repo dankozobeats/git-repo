@@ -55,8 +55,7 @@ export async function POST(
       habit_id: id,
       user_id: user.id,
       event_date: today,
-      occurred_at: now.toISOString(),
-      count: habit.tracking_mode === 'counter' ? 1 : null
+      occurred_at: now.toISOString()
     })
     .select()
     .single()
