@@ -5,7 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import DashboardMobileClient from '@/components/dashboard/DashboardMobileClient'
+import DashboardWrapper from '@/components/dashboard/DashboardWrapper'
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle'
 
 export default async function Home() {
@@ -52,34 +52,18 @@ export default async function Home() {
 
       {/* Container responsive: mobile max-w-2xl, desktop pleine largeur avec padding */}
       <div className="relative mx-auto max-w-2xl px-4 py-6 space-y-4 md:max-w-none md:px-8 lg:px-12">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold md:text-3xl">BadHabit Tracker</h1>
-            <p className="mt-1 text-sm text-white/60">
-              {habits.length} habitude{habits.length > 1 ? 's' : ''} active{habits.length > 1 ? 's' : ''}
-            </p>
-          </div>
-          <Link
-            href="/habits/new"
-            className="rounded-xl bg-[#FF4D4D] px-4 py-2 text-sm font-semibold transition active:scale-95"
-          >
-            + Ajouter
-          </Link>
-        </div>
-
-        {/* Toggle Dashboard - Bien visible */}
-        <div className="flex justify-center pt-2">
+        {/* Toggle Dashboard - À la même hauteur que dashboard-old */}
+        <div className="flex justify-center px-4 pt-12">
           <DashboardViewToggle />
         </div>
 
-        {/* Client component avec priorités + patterns */}
+        {/* Dashboard avec switch Classic/Mobile */}
         {habits.length > 0 ? (
-          <DashboardMobileClient
+          <DashboardWrapper
+            userId={user.id}
             habits={habits}
             logs={logs}
             events={events}
-            userId={user.id}
           />
         ) : (
           <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center">

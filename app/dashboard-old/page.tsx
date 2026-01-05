@@ -216,6 +216,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
     <main className="min-h-screen overflow-visible bg-[#0c0f1a] text-[#E0E0E0]">
       <DashboardPreferenceSync />
       <div className="mx-auto max-w-full space-y-6 px-0 py-6 sm:space-y-8 sm:px-6 md:max-w-6xl md:px-10 md:py-10">
+        {/* Toggle Dashboard - Toujours visible, même hauteur que dashboard-mobile */}
+        <div className="flex justify-center px-4 pt-12">
+          <DashboardViewToggle />
+        </div>
+
         {showFocusCard && (
           <section className="section-snap rounded-none border-x-0 border-white/5 bg-gradient-to-br from-[#1E1E1E] via-[#1A1A1A] to-[#151515] p-4 pt-10 pb-12 sm:rounded-3xl sm:border-x md:py-10 md:px-8" aria-live="polite">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
@@ -258,11 +263,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
             />
           </section>
         )}
-
-        {/* Toggle Dashboard - Toujours visible */}
-        <div className="flex justify-center px-4">
-          <DashboardViewToggle />
-        </div>
 
         {habitDashboardSection}
 

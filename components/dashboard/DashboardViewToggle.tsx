@@ -20,7 +20,7 @@ export default function DashboardViewToggle() {
     // Détecter la version depuis l'URL ou localStorage
     const isOnOldDashboard = pathname === '/dashboard-old'
     const isOnMobileDashboard = pathname === '/dashboard-mobile'
-    const saved = localStorage.getItem('dashboard_version') as DashboardVersion | null
+    const saved = localStorage.getItem('dashboard-version') as DashboardVersion | null
 
     let detectedVersion: DashboardVersion
     if (isOnOldDashboard) {
@@ -38,7 +38,7 @@ export default function DashboardViewToggle() {
   const handleToggle = () => {
     const newVersion: DashboardVersion = version === 'mobile' ? 'classic' : 'mobile'
     setVersion(newVersion)
-    localStorage.setItem('dashboard_version', newVersion)
+    localStorage.setItem('dashboard-version', newVersion)
 
     // Rediriger avec transition fluide
     if (newVersion === 'mobile') {
@@ -61,26 +61,13 @@ export default function DashboardViewToggle() {
           {/* Background slider */}
           <div
             className={`absolute inset-y-1 w-[calc(50%-2px)] rounded-lg bg-gradient-to-r transition-all duration-300 ${
-              version === 'mobile'
-                ? 'left-1 from-blue-500 to-purple-500'
-                : 'left-[calc(50%+1px)] from-purple-500 to-pink-500'
+              version === 'classic'
+                ? 'left-1 from-purple-500 to-pink-500'
+                : 'left-[calc(50%+1px)] from-blue-500 to-purple-500'
             }`}
           />
 
-          {/* Mobile button */}
-          <button
-            onClick={() => version !== 'mobile' && handleToggle()}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              version === 'mobile'
-                ? 'text-white'
-                : 'text-white/50 hover:text-white/80'
-            }`}
-          >
-            <Smartphone className="h-4 w-4" />
-            <span>Mobile</span>
-          </button>
-
-          {/* Classic button */}
+          {/* Vue simple button */}
           <button
             onClick={() => version !== 'classic' && handleToggle()}
             className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
@@ -90,16 +77,29 @@ export default function DashboardViewToggle() {
             }`}
           >
             <LayoutGrid className="h-4 w-4" />
-            <span>Classique</span>
+            <span>Vue simple</span>
+          </button>
+
+          {/* Vue détaillée button */}
+          <button
+            onClick={() => version !== 'mobile' && handleToggle()}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              version === 'mobile'
+                ? 'text-white'
+                : 'text-white/50 hover:text-white/80'
+            }`}
+          >
+            <Smartphone className="h-4 w-4" />
+            <span>Vue détaillée</span>
           </button>
         </div>
       </div>
 
       {/* Description */}
       <p className="mt-2 text-center text-xs text-white/50">
-        {version === 'mobile'
-          ? 'Vue optimisée avec priorités intelligentes'
-          : 'Vue complète avec toutes les habitudes'}
+        {version === 'classic'
+          ? 'Vue complète avec toutes les habitudes'
+          : 'Analyse intelligente et priorisation automatique'}
       </p>
     </div>
   )
