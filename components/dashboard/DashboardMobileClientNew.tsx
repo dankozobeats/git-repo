@@ -358,13 +358,6 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
         </div>
       )}
 
-      {/* Debug info */}
-      <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-3">
-        <p className="text-xs font-mono text-white/50">
-          ✅ Stats serveur - Source: /api/dashboard | Cache: SWR 30s
-        </p>
-      </div>
-
       {/* Quick View Modal */}
       {quickViewHabit && (
         <HabitQuickViewModal

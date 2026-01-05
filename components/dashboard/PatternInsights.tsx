@@ -31,12 +31,12 @@ export default function PatternInsights({ insights }: PatternInsightsProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-purple-500/20 p-2">
+          <div className="flex-shrink-0 rounded-xl bg-purple-500/20 p-2">
             <Brain className="h-5 w-5 text-purple-400" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">
               Patterns inconscients
             </h2>
@@ -48,7 +48,7 @@ export default function PatternInsights({ insights }: PatternInsightsProps) {
           </div>
         </div>
         {(mostDangerousDay || averageRelapseCycle) && (
-          <div className="text-right text-xs text-white/40">
+          <div className="text-left text-xs text-white/40 sm:text-right">
             {mostDangerousDay && <div>Jour critique: {mostDangerousDay}</div>}
             {averageRelapseCycle && <div>Cycle moyen: {averageRelapseCycle}j</div>}
           </div>
