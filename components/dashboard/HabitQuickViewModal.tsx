@@ -165,47 +165,82 @@ export default function HabitQuickViewModal({
               {/* Calendrier visuel */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50">
-                  Calendrier (28 jours)
+                  Historique visuel
                 </h3>
-                <div className="grid grid-cols-7 gap-2">
-                  {data.calendar.map((day, idx) => {
-                    const dayNum = new Date(day.date).getDate()
-                    const hasValue = day.value > 0
-                    const intensity = Math.min(day.value / 3, 1) // 0-1 scale
+                <div className="space-y-2">
+                  {/* En-têtes des jours */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {['LUN.', 'MAR.', 'MER.', 'JEU.', 'VEN.', 'SAM.', 'DIM.'].map((day, idx) => (
+                      <div key={idx} className="text-center text-[10px] font-semibold text-white/40">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
 
-                    return (
-                      <div key={idx} className="flex flex-col items-center gap-1">
-                        <div
-                          className={`h-9 w-9 rounded-lg border transition ${
-                            day.isToday
-                              ? 'border-white ring-2 ring-white/50'
-                              : hasValue
-                              ? 'border-transparent'
-                              : 'border-white/10'
-                          }`}
-                          style={{
-                            backgroundColor: hasValue
-                              ? `${primaryColor}${Math.floor(intensity * 100)
-                                  .toString()
-                                  .padStart(2, '0')}`
-                              : 'transparent',
-                          }}
-                          title={`${day.date}: ${day.value}`}
-                        >
-                          {day.isToday && (
-                            <div className="flex h-full items-center justify-center text-xs font-bold text-white">
+                  {/* Calendrier par semaines */}
+                  <div className="space-y-2">
+                    {Array.from({ length: 4 }).map((_, weekIdx) => (
+                      <div key={weekIdx} className="grid grid-cols-7 gap-2">
+                        {data.calendar.slice(weekIdx * 7, (weekIdx + 1) * 7).map((day, dayIdx) => {
+                          const date = new Date(day.date)
+                          const dayNum = date.getDate()
+                          const hasValue = day.value > 0
+
+                          // Couleurs : Vert = fait/pas craqué, Rouge = craqué, Gris = manqué
+                          let bgColor = '#1a1a1a' // Gris foncé par défaut (manqué)
+                          let textColor = '#666666'
+
+                          if (hasValue) {
+                            if (isBadHabit) {
+                              // Mauvaise habitude : rouge = craqué
+                              bgColor = '#dc2626' // Rouge
+                              textColor = '#ffffff'
+                            } else {
+                              // Bonne habitude : vert = fait
+                              bgColor = '#16a34a' // Vert
+                              textColor = '#ffffff'
+                            }
+                          }
+
+                          return (
+                            <div
+                              key={dayIdx}
+                              className={`relative flex h-12 items-center justify-center rounded-lg text-sm font-semibold transition ${
+                                day.isToday ? 'ring-2 ring-white' : ''
+                              }`}
+                              style={{
+                                backgroundColor: bgColor,
+                                color: textColor,
+                              }}
+                              title={`${day.date}: ${hasValue ? (isBadHabit ? 'Craqué' : 'Fait') : 'Manqué'}`}
+                            >
                               {dayNum}
                             </div>
-                          )}
-                        </div>
-                        {idx < 7 && (
-                          <span className="text-[10px] text-white/40">
-                            {['D', 'L', 'M', 'M', 'J', 'V', 'S'][idx]}
-                          </span>
-                        )}
+                          )
+                        })}
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
+
+                  {/* Légende */}
+                  <div className="flex items-center justify-center gap-4 pt-2 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-4 w-4 rounded bg-[#16a34a]" />
+                      <span className="text-white/60">
+                        {isBadHabit ? 'Pas craqué' : 'Fait'}
+                      </span>
+                    </div>
+                    {isBadHabit && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-4 w-4 rounded bg-[#dc2626]" />
+                        <span className="text-white/60">Craqué</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-4 w-4 rounded bg-[#1a1a1a]" />
+                      <span className="text-white/60">Manqué</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
