@@ -394,6 +394,7 @@ function HabitCard({
   onCloseMenu: () => void
   onDelete: () => void
 }) {
+  const router = useRouter()
   const isBadHabit = habit.type === 'bad'
   const isDone = isBadHabit ? habit.todayCount === 0 : habit.todayCount > 0
 
@@ -430,7 +431,8 @@ function HabitCard({
 
   return (
     <div
-      className={`rounded-xl border p-4 transition ${
+      onClick={() => router.push(`/habits/${habit.id}`)}
+      className={`cursor-pointer rounded-xl border p-4 transition hover:bg-white/[0.08] ${
         habit.riskLevel === 'danger'
           ? 'border-red-500/50 bg-red-500/10'
           : habit.riskLevel === 'warning'
@@ -464,7 +466,10 @@ function HabitCard({
             {/* Actions */}
             <div className="flex items-center gap-2">
               <button
-                onClick={onValidate}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onValidate()
+                }}
                 disabled={isLoading || (isBadHabit ? false : isDone)}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-50 ${
                   isBadHabit
@@ -487,7 +492,10 @@ function HabitCard({
               </button>
 
               <button
-                onClick={onOpenQuickView}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOpenQuickView()
+                }}
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/70 transition hover:bg-white/20"
                 title="Vue rapide"
               >
