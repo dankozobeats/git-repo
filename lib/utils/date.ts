@@ -92,3 +92,63 @@ export function formatDaysSince(lastDate: string, prefix: string = 'Pas fait dep
   }
   return `${prefix} ${diffDays}j ${remainingHours}h`
 }
+
+/**
+ * Formate une date/heure en format lisible français
+ *
+ * Exemples:
+ * - Aujourd'hui : "Aujourd'hui à 14h35"
+ * - Hier : "Hier à 09h20"
+ * - Cette semaine : "Lun 3 jan à 18h45"
+ * - Plus ancien : "15 déc 2025 à 10h30"
+ *
+ * @param dateTimeString - ISO string avec date et heure (ex: "2026-01-05T14:35:22.000Z")
+ * @param prefix - Préfixe optionnel (ex: "Dernière validation :")
+ */
+export function formatDateTime(dateTimeString: string, prefix?: string): string {
+  const date = new Date(dateTimeString)
+  const now = new Date()
+
+  // Calculer la différence en jours
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const diffDays = Math.floor((today.getTime() - targetDay.getTime()) / (24 * 60 * 60 * 1000))
+
+  // Formater l'heure
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const timeStr = `${hours}h${minutes}`
+
+  let dateStr = ''
+
+  if (diffDays === 0) {
+    // Aujourd'hui
+    dateStr = `Aujourd'hui à ${timeStr}`
+  } else if (diffDays === 1) {
+    // Hier
+    dateStr = `Hier à ${timeStr}`
+  } else if (diffDays < 7) {
+    // Cette semaine - afficher jour de la semaine
+    const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+    const dayName = dayNames[date.getDay()]
+    const day = date.getDate()
+    const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
+    const month = monthNames[date.getMonth()]
+    dateStr = `${dayName} ${day} ${month} à ${timeStr}`
+  } else {
+    // Plus ancien - date complète
+    const day = date.getDate()
+    const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
+    const month = monthNames[date.getMonth()]
+    const year = date.getFullYear()
+    const currentYear = now.getFullYear()
+
+    if (year === currentYear) {
+      dateStr = `${day} ${month} à ${timeStr}`
+    } else {
+      dateStr = `${day} ${month} ${year} à ${timeStr}`
+    }
+  }
+
+  return prefix ? `${prefix} ${dateStr}` : dateStr
+}

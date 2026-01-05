@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List } from 'lucide-react'
-import { formatTimeSince } from '@/lib/utils/date'
+import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
 import { usePatternDetection } from '@/lib/habits/usePatternDetection'
@@ -216,6 +216,11 @@ export default function DashboardMobileClient({
                         {habit.todayCount} craquage{habit.todayCount > 1 ? 's' : ''} aujourd'hui
                       </p>
                     )}
+                    {habit.lastActionTimestamp && (
+                      <p className="mt-1 text-xs text-white/40">
+                        {formatDateTime(habit.lastActionTimestamp, 'Dernière validation :')}
+                      </p>
+                    )}
                   </div>
 
                   {/* Menu contextuel */}
@@ -324,6 +329,11 @@ export default function DashboardMobileClient({
                               ? formatTimeSince(habit.lastActionTimestamp)
                               : 'Jamais fait'}
                       </p>
+                      {habit.lastActionTimestamp && (
+                        <p className="text-xs text-white/40">
+                          {formatDateTime(habit.lastActionTimestamp, 'Dernière validation :')}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
