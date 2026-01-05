@@ -2,7 +2,7 @@
 
 /**
  * Toggle switch animé pour basculer entre dashboard Mobile et Classique
- * Design premium avec animation fluide et transition en fondu
+ * Navigation instantanée sans effet de transition pour performance optimale
  */
 
 import { useState, useEffect } from 'react'
@@ -16,7 +16,6 @@ export default function DashboardViewToggle() {
   const router = useRouter()
   const [version, setVersion] = useState<DashboardVersion>('classic')
   const [isLoading, setIsLoading] = useState(true)
-  const [isTransitioning, setIsTransitioning] = useState(false)
 
   useEffect(() => {
     // Détecter la version depuis l'URL ou localStorage
@@ -49,29 +48,13 @@ export default function DashboardViewToggle() {
     setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
 
-    // Transition ultra-rapide
-    setIsTransitioning(true)
-
-    // Fade out minimal
-    document.body.style.opacity = '0'
-    document.body.style.transition = 'opacity 50ms ease-out'
-
-    setTimeout(() => {
-      // Navigation immédiate
-      if (newVersion === 'mobile') {
-        router.push('/dashboard-mobile')
-      } else {
-        router.push('/dashboard-old')
-      }
-    }, 50)
+    // Navigation immédiate sans transition
+    if (newVersion === 'mobile') {
+      router.push('/dashboard-mobile')
+    } else {
+      router.push('/dashboard-old')
+    }
   }
-
-  // Fade in rapide après navigation
-  useEffect(() => {
-    document.body.style.opacity = '1'
-    document.body.style.transition = 'opacity 100ms ease-in'
-    setIsTransitioning(false)
-  }, [pathname])
 
   if (isLoading) {
     return (
@@ -94,9 +77,8 @@ export default function DashboardViewToggle() {
 
           {/* Vue simple button */}
           <button
-            onClick={() => version !== 'classic' && !isTransitioning && handleToggle()}
-            disabled={isTransitioning}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+            onClick={() => version !== 'classic' && handleToggle()}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
               version === 'classic'
                 ? 'text-white'
                 : 'text-white/50 hover:text-white/80'
@@ -108,9 +90,8 @@ export default function DashboardViewToggle() {
 
           {/* Vue détaillée button */}
           <button
-            onClick={() => version !== 'mobile' && !isTransitioning && handleToggle()}
-            disabled={isTransitioning}
-            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+            onClick={() => version !== 'mobile' && handleToggle()}
+            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
               version === 'mobile'
                 ? 'text-white'
                 : 'text-white/50 hover:text-white/80'
