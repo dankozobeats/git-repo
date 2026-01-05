@@ -42,46 +42,20 @@ export default function DashboardViewToggle() {
     setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
 
-    // Afficher le loader
+    // Transition ultra-rapide
     setIsTransitioning(true)
 
-    // Créer overlay de chargement
-    const loader = document.createElement('div')
-    loader.id = 'page-transition-loader'
-    loader.className = 'fixed inset-0 z-50 flex items-center justify-center bg-[#01030a]/95 backdrop-blur-sm'
-    loader.innerHTML = `
-      <div class="flex flex-col items-center gap-4">
-        <div class="h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-blue-500"></div>
-        <p class="text-sm text-white/60">Chargement...</p>
-      </div>
-    `
-    document.body.appendChild(loader)
-
-    // Petite pause pour animation puis navigation
-    setTimeout(() => {
-      if (newVersion === 'mobile') {
-        router.push('/dashboard-mobile')
-      } else {
-        router.push('/dashboard-old')
-      }
-    }, 100)
+    // Navigation immédiate sans délai
+    if (newVersion === 'mobile') {
+      router.push('/dashboard-mobile')
+    } else {
+      router.push('/dashboard-old')
+    }
   }
 
-  // Nettoyer le loader et réinitialiser l'état au chargement
+  // Réinitialiser l'état après navigation
   useEffect(() => {
-    // Supprimer le loader s'il existe
-    const loader = document.getElementById('page-transition-loader')
-    if (loader) {
-      loader.style.opacity = '0'
-      loader.style.transition = 'opacity 150ms ease-out'
-      setTimeout(() => loader.remove(), 150)
-    }
-
-    // Réinitialiser l'état de transition
     setIsTransitioning(false)
-
-    // Reset body opacity
-    document.body.style.opacity = '1'
   }, [pathname])
 
   if (isLoading) {
