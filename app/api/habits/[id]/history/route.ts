@@ -42,13 +42,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       // Pour les mauvaises habitudes, récupérer les events
       const { data: events, error } = await supabase
         .from('habit_events')
-        .select('id, event_date, count')
+        .select('*')
         .eq('habit_id', habitId)
         .eq('user_id', user.id)
         .order('event_date', { ascending: false })
         .limit(100)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching events:', error)
+        throw error
+      }
 
       const history = events?.map(event => ({
         id: event.id,
@@ -62,13 +65,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       // Pour les bonnes habitudes, récupérer les logs
       const { data: logs, error } = await supabase
         .from('logs')
-        .select('id, completed_date, count')
+        .select('*')
         .eq('habit_id', habitId)
         .eq('user_id', user.id)
         .order('completed_date', { ascending: false })
         .limit(100)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching logs:', error)
+        throw error
+      }
 
       const history = logs?.map(log => ({
         id: log.id,

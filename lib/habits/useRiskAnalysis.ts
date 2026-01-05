@@ -120,10 +120,16 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
 
   // Compter les craquages d'aujourd'hui pour CETTE habitude uniquement
-  const todayCount = events.filter(e => {
+  const todayEvents = events.filter(e => {
     const eventDate = e.event_date || e.occurred_at?.split('T')[0]
     return eventDate === today
-  }).length
+  })
+
+  // Pour le mode counter, sommer les valeurs count
+  // Pour le mode binaire, compter juste les événements (0 ou 1+)
+  const todayCount = habit.tracking_mode === 'counter'
+    ? todayEvents.reduce((sum, e) => sum + (e.count || 1), 0)
+    : Math.min(todayEvents.length, 1) // Mode binaire: max 1
 
   if (eventsWithTimestamp.length === 0) {
     return {
