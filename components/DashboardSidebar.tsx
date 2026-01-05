@@ -139,7 +139,7 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
 
           {/* Sidebar mobile */}
           <div
-            className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
+            className={`fixed inset-y-0 left-0 z-[9999] w-64 border-r border-white/10 bg-[#050915] md:hidden transition-transform duration-300 flex flex-col ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
               }`}
           >
             <div className="sticky top-0 z-40 bg-[#050915]/95 backdrop-blur border-b border-white/10">
@@ -156,12 +156,24 @@ export default function DashboardSidebar({ mainNav, utilityNav, userEmail, avata
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col gap-6 p-4">
-              <SidebarSearchInput value={navSearch} onChange={setNavSearch} />
-              <NavLinks items={mainNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
-              <div className="border-t border-white/10 pt-4">
-                <NavLinks items={utilityNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
+            <div className="flex-1 overflow-y-auto">
+              <div className="mt-6 flex flex-col gap-6 p-4">
+                <SidebarSearchInput value={navSearch} onChange={setNavSearch} />
+                <NavLinks items={mainNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
+                <div className="border-t border-white/10 pt-4">
+                  <NavLinks items={utilityNav} onNavigate={() => setMobileOpen(false)} searchTerm={navSearch} />
+                </div>
               </div>
+            </div>
+
+            {/* Bouton de déconnexion en bas */}
+            <div className="p-4 border-t border-white/10 bg-[#050915]">
+              <form action="/auth/signout" method="post">
+                <button className="flex w-full items-center gap-3 rounded-2xl bg-[#111827] px-3 py-2 text-left text-sm font-semibold text-white/70 transition hover:bg-[#1f2937] hover:text-white">
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </button>
+              </form>
             </div>
           </div>
         </div>

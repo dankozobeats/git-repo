@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, MoreVertical } from 'lucide-react'
+import { formatTimeSince } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
 import { usePatternDetection } from '@/lib/habits/usePatternDetection'
@@ -265,20 +266,15 @@ export default function DashboardMobileClient({
                         {habit.type === 'bad'
                           ? habit.todayCount > 0
                             ? `${habit.todayCount} craquage${habit.todayCount > 1 ? 's' : ''} aujourd'hui`
-                            : habit.lastActionDate
+                            : habit.lastActionTimestamp
                               ? habit.currentStreak === 0
                                 ? 'Dernier craquage aujourd\'hui'
-                                : `${habit.currentStreak}j sans craquage`
+                                : formatTimeSince(habit.lastActionTimestamp, 'Sans craquage depuis')
                               : 'Aucun craquage'
                           : habit.isDoneToday
                             ? `Série: ${habit.currentStreak}j`
-                            : habit.lastActionDate
-                              ? (() => {
-                                  const today = new Date()
-                                  const lastDate = new Date(habit.lastActionDate)
-                                  const daysSince = Math.floor((today.getTime() - lastDate.getTime()) / (24 * 60 * 60 * 1000))
-                                  return `Pas fait depuis ${daysSince}j`
-                                })()
+                            : habit.lastActionTimestamp
+                              ? formatTimeSince(habit.lastActionTimestamp)
                               : 'Jamais fait'}
                       </p>
                     </div>

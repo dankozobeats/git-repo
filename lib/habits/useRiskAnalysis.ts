@@ -22,6 +22,7 @@ export type RiskHabit = {
   riskLevel: RiskLevel
   message: string
   lastActionDate: string | null
+  lastActionTimestamp: string | null // Timestamp complet pour affichage précis en heures
   currentStreak: number
   actionSuggestion: string
   isDoneToday: boolean // Nouvelle propriété pour tracker si fait aujourd'hui
@@ -109,10 +110,14 @@ function analyzeHabit(
 }
 
 function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabit {
-  const sortedEvents = events
-    .map(e => e.event_date || e.occurred_at?.split('T')[0])
-    .filter((d): d is string => Boolean(d))
-    .sort()
+  // Garder les timestamps complets pour calculs précis
+  const eventsWithTimestamp = events
+    .map(e => ({
+      date: e.event_date || e.occurred_at?.split('T')[0],
+      timestamp: e.occurred_at || (e.event_date ? e.event_date + 'T00:00:00' : null)
+    }))
+    .filter((e): e is { date: string; timestamp: string } => Boolean(e.date && e.timestamp))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
 
   // Compter les craquages d'aujourd'hui pour CETTE habitude uniquement
   const todayCount = events.filter(e => {
@@ -120,7 +125,7 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     return eventDate === today
   }).length
 
-  if (sortedEvents.length === 0) {
+  if (eventsWithTimestamp.length === 0) {
     return {
       id: habit.id,
       name: habit.name,
@@ -128,6 +133,7 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
       riskLevel: 'good',
       message: 'Aucun craquage enregistré',
       lastActionDate: null,
+      lastActionTimestamp: null,
       currentStreak: 0,
       actionSuggestion: 'Maintiens ta vigilance',
       isDoneToday: false,
@@ -137,8 +143,9 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     }
   }
 
-  const lastEvent = sortedEvents[sortedEvents.length - 1]
-  const hoursSinceLastEvent = getHoursDiff(lastEvent, today)
+  const lastEvent = eventsWithTimestamp[eventsWithTimestamp.length - 1]
+  const lastEventDate = lastEvent.date
+  const hoursSinceLastEvent = getHoursDiff(lastEventDate, today)
 
   let riskLevel: RiskLevel = 'good'
   let message = `Dernier craquage: il y a ${Math.floor(hoursSinceLastEvent / 24)} jours`
@@ -166,7 +173,8 @@ function analyzeBadHabit(habit: Habit, events: Event[], today: string): RiskHabi
     type: 'bad',
     riskLevel,
     message,
-    lastActionDate: lastEvent,
+    lastActionDate: lastEventDate,
+    lastActionTimestamp: lastEvent.timestamp,
     currentStreak: daysSinceLastEvent,
     actionSuggestion,
     isDoneToday: todayCount > 0,
@@ -182,12 +190,21 @@ function analyzeGoodHabit(
   events: Event[],
   today: string
 ): RiskHabit {
-  const allDates = [
-    ...logs.map(l => l.completed_date || l.created_at?.split('T')[0]),
-    ...events.map(e => e.event_date || e.occurred_at?.split('T')[0]),
+  // Garder les timestamps complets
+  const allActions = [
+    ...logs.map(l => ({
+      date: l.completed_date || l.created_at?.split('T')[0],
+      timestamp: l.created_at || (l.completed_date ? l.completed_date + 'T00:00:00' : null)
+    })),
+    ...events.map(e => ({
+      date: e.event_date || e.occurred_at?.split('T')[0],
+      timestamp: e.occurred_at || (e.event_date ? e.event_date + 'T00:00:00' : null)
+    })),
   ]
-    .filter((d): d is string => Boolean(d))
-    .sort()
+    .filter((a): a is { date: string; timestamp: string } => Boolean(a.date && a.timestamp))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+
+  const allDates = allActions.map(a => a.date)
 
   // Calculer le compteur du jour (somme des values pour aujourd'hui)
   const todayCount = logs
@@ -197,7 +214,7 @@ function analyzeGoodHabit(
     })
     .reduce((sum, log) => sum + (log.value || 1), 0)
 
-  if (allDates.length === 0) {
+  if (allActions.length === 0) {
     return {
       id: habit.id,
       name: habit.name,
@@ -205,6 +222,7 @@ function analyzeGoodHabit(
       riskLevel: 'warning',
       message: 'Jamais commencé',
       lastActionDate: null,
+      lastActionTimestamp: null,
       currentStreak: 0,
       actionSuggestion: 'Commence aujourd\'hui',
       isDoneToday: false,
@@ -214,7 +232,8 @@ function analyzeGoodHabit(
     }
   }
 
-  const lastDate = allDates[allDates.length - 1]
+  const lastAction = allActions[allActions.length - 1]
+  const lastDate = lastAction.date
   const daysSinceLastAction = getDaysDiff(lastDate, today)
   const isDoneToday = daysSinceLastAction === 0
 
@@ -275,6 +294,7 @@ function analyzeGoodHabit(
     riskLevel,
     message,
     lastActionDate: lastDate,
+    lastActionTimestamp: lastAction.timestamp,
     currentStreak,
     actionSuggestion,
     isDoneToday,
