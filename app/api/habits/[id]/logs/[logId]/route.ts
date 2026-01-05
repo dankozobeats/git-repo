@@ -1,17 +1,17 @@
 /**
- * PATCH /api/habits/[habitId]/logs/[logId] - Modifier un log
- * DELETE /api/habits/[habitId]/logs/[logId] - Supprimer un log
+ * PATCH /api/habits/[id]/logs/[logId] - Modifier un log
+ * DELETE /api/habits/[id]/logs/[logId] - Supprimer un log
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 type RouteContext = {
-  params: Promise<{ habitId: string; logId: string }>
+  params: Promise<{ id: string; logId: string }>
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const { habitId, logId } = await context.params
+  const { id: habitId, logId } = await context.params
   const supabase = await createClient()
 
   const {
@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
-  const { habitId, logId } = await context.params
+  const { id: habitId, logId } = await context.params
   const supabase = await createClient()
 
   const {
