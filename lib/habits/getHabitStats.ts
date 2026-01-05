@@ -43,9 +43,12 @@ export async function getHabitStats(
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
   const isBadHabit = habit.type === 'bad'
+  const isCounter = habit.tracking_mode === 'counter'
 
-  if (isBadHabit) {
-    // Pour les mauvaises habitudes : récupérer les events
+  // Pour les habitudes counter (bonnes ou mauvaises) : utiliser habit_events
+  // Pour les habitudes binaires (bonnes uniquement) : utiliser logs
+  if (isCounter || isBadHabit) {
+    // Récupérer les events
     const { data: events } = await supabase
       .from('habit_events')
       .select('id, event_date, occurred_at')
@@ -99,10 +102,27 @@ export async function getHabitStats(
 
     // Niveau de risque
     let riskLevel: 'good' | 'warning' | 'danger' = 'good'
-    if (todayCount > 0) {
-      riskLevel = 'danger'
-    } else if (currentStreak < 7 && totalCount > 0) {
-      riskLevel = 'warning'
+
+    if (isBadHabit) {
+      // Pour les mauvaises habitudes: craquage = danger
+      if (todayCount > 0) {
+        riskLevel = 'danger'
+      } else if (currentStreak < 7 && totalCount > 0) {
+        riskLevel = 'warning'
+      }
+    } else {
+      // Pour les bonnes habitudes counter: pas fait aujourd'hui = warning/danger
+      if (todayCount === 0) {
+        const daysSinceLastAction = lastActionDate
+          ? Math.floor((new Date().getTime() - new Date(lastActionDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 999
+
+        if (daysSinceLastAction >= 3) {
+          riskLevel = 'danger'
+        } else if (daysSinceLastAction >= 1) {
+          riskLevel = 'warning'
+        }
+      }
     }
 
     return {
