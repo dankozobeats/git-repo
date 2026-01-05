@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import DashboardWrapper from '@/components/dashboard/DashboardWrapper'
+import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -65,6 +66,11 @@ export default async function Home() {
           >
             + Ajouter
           </Link>
+        </div>
+
+        {/* Toggle Dashboard - À la même hauteur que dashboard-old */}
+        <div className="flex justify-center px-4 pt-2">
+          <DashboardViewToggle />
         </div>
 
         {/* Dashboard avec switch Classic/Mobile */}

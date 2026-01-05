@@ -9,7 +9,6 @@
 
 import { useEffect, useMemo } from 'react'
 import DashboardMobileClientNew from './DashboardMobileClientNew'
-import DashboardViewToggle from './DashboardViewToggle'
 import { computeDashboardStats } from '@/lib/habits/computeDashboardStats'
 
 type DashboardWrapperProps = {
@@ -37,15 +36,5 @@ export default function DashboardWrapper({ userId, habits, logs, events }: Dashb
   }, [])
 
   // Afficher le nouveau dashboard (on arrive ici seulement si préférence = "mobile")
-  return (
-    <div className="space-y-4">
-      {/* Toggle pour switcher entre les versions */}
-      <div className="flex justify-center">
-        <DashboardViewToggle />
-      </div>
-
-      {/* Nouveau dashboard mobile */}
-      <DashboardMobileClientNew userId={userId} initialData={initialDashboardData} />
-    </div>
-  )
+  return <DashboardMobileClientNew userId={userId} initialData={initialDashboardData} />
 }
