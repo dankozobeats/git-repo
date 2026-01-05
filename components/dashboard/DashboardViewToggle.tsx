@@ -42,28 +42,26 @@ export default function DashboardViewToggle() {
     setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
 
-    // Transition en fondu
+    // Transition en fondu - Fade out seulement
     setIsTransitioning(true)
-
-    // Ajouter effet de fade out
     document.body.style.opacity = '0'
-    document.body.style.transition = 'opacity 200ms ease-out'
+    document.body.style.transition = 'opacity 150ms ease-out'
 
     setTimeout(() => {
-      // Rediriger avec Next.js router pour navigation optimisée
+      // Rediriger - le fade in sera géré par le useEffect du nouveau dashboard
       if (newVersion === 'mobile') {
         router.push('/dashboard-mobile')
       } else {
         router.push('/dashboard-old')
       }
-
-      // Fade in après navigation
-      setTimeout(() => {
-        document.body.style.opacity = '1'
-        setIsTransitioning(false)
-      }, 50)
-    }, 200)
+    }, 150)
   }
+
+  // Fade in au chargement de la page
+  useEffect(() => {
+    document.body.style.opacity = '1'
+    document.body.style.transition = 'opacity 200ms ease-in'
+  }, [pathname])
 
   if (isLoading) {
     return (
