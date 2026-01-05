@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import DashboardV2Client from '@/components/dashboard/DashboardV2Client'
+import { getLocalDateDaysAgo } from '@/lib/utils/date'
 
 export default async function DashboardAdvanced() {
   const supabase = await createClient()
@@ -31,13 +32,13 @@ export default async function DashboardAdvanced() {
       .from('logs')
       .select('*')
       .eq('user_id', user.id)
-      .gte('completed_date', getDateDaysAgo(30)) // Derniers 30 jours
+      .gte('completed_date', getLocalDateDaysAgo(30)) // Derniers 30 jours
       .order('completed_date', { ascending: false }),
     supabase
       .from('habit_events')
       .select('*')
       .eq('user_id', user.id)
-      .gte('event_date', getDateDaysAgo(30))
+      .gte('event_date', getLocalDateDaysAgo(30))
       .order('event_date', { ascending: false }),
   ])
 
@@ -50,7 +51,7 @@ export default async function DashboardAdvanced() {
       {/* Background gradient */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.15),transparent_50%)]" />
 
-      <div className="relative mx-auto max-w-4xl px-4 py-8 space-y-6">
+      <div className="relative mx-auto max-w-2xl px-4 py-6 space-y-4 md:max-w-none md:px-8 lg:px-12">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -118,9 +119,3 @@ export default async function DashboardAdvanced() {
   )
 }
 
-// Helper function
-function getDateDaysAgo(days: number): string {
-  const date = new Date()
-  date.setDate(date.getDate() - days)
-  return date.toISOString().split('T')[0]
-}

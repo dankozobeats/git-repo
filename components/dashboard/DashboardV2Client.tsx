@@ -4,8 +4,9 @@
  * Dashboard V2 - Composant client qui orchestre l'affichage
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { LayoutGrid, List } from 'lucide-react'
 import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
 import { usePatternDetection } from '@/lib/habits/usePatternDetection'
 import FocusAlert from './FocusAlert'
@@ -34,6 +35,21 @@ export default function DashboardV2Client({
   const router = useRouter()
   const { topRisks, remainingHabits, globalState } = useRiskAnalysis(habits, logs, events)
   const patternInsights = usePatternDetection(habits, logs, events)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  // Charger la préférence depuis localStorage au montage
+  useEffect(() => {
+    const saved = localStorage.getItem('dashboard-advanced-view-mode')
+    if (saved === 'grid' || saved === 'list') {
+      setViewMode(saved)
+    }
+  }, [])
+
+  // Sauvegarder la préférence dans localStorage
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode)
+    localStorage.setItem('dashboard-advanced-view-mode', mode)
+  }
 
   const handleQuickAction = async (
     habitId: string,
@@ -80,10 +96,37 @@ export default function DashboardV2Client({
       {/* Top 3 habitudes à risque */}
       {topRisks.length > 0 ? (
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">
-            Top 3 priorités aujourd'hui
-          </h2>
-          <div className="space-y-3">
+          {/* Header avec toggle */}
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+              Top 3 priorités aujourd'hui
+            </h2>
+            <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                  viewMode === 'grid'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/50 hover:text-white/80'
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Cartes</span>
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                  viewMode === 'list'
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/50 hover:text-white/80'
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Liste</span>
+              </button>
+            </div>
+          </div>
+          <div className={viewMode === 'grid' ? 'grid gap-3 md:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
             {topRisks.map(habit => (
               <RiskHabitCard
                 key={habit.id}
@@ -107,10 +150,10 @@ export default function DashboardV2Client({
       {/* Autres habitudes à faire aujourd'hui */}
       {remainingHabits.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">
-            Autres habitudes à faire
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
+            Autres habitudes ({remainingHabits.length})
           </h2>
-          <div className="space-y-3">
+          <div className={viewMode === 'grid' ? 'grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'}>
             {remainingHabits.map(habit => (
               <RiskHabitCard
                 key={habit.id}

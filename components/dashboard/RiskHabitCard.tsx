@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { AlertTriangle, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import type { RiskHabit } from '@/lib/habits/useRiskAnalysis'
 
 type RiskHabitCardProps = {
@@ -85,6 +86,13 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
                   : `Série de ${habit.currentStreak} jour${habit.currentStreak > 1 ? 's' : ''}`}
               </span>
             </div>
+          )}
+
+          {/* Date/heure de dernière validation */}
+          {habit.lastActionTimestamp && (
+            <p className="mt-2 text-xs text-white/40">
+              {formatDateTime(habit.lastActionTimestamp, 'Dernière validation :')}
+            </p>
           )}
 
           {/* Action suggestion */}
