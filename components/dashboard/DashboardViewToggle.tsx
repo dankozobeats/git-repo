@@ -35,7 +35,14 @@ export default function DashboardViewToggle() {
 
     setVersion(detectedVersion)
     setIsLoading(false)
-  }, [pathname])
+
+    // Prefetch l'autre dashboard pour navigation instantanée
+    if (detectedVersion === 'classic') {
+      router.prefetch('/dashboard-mobile')
+    } else {
+      router.prefetch('/dashboard-old')
+    }
+  }, [pathname, router])
 
   const handleToggle = () => {
     const newVersion: DashboardVersion = version === 'mobile' ? 'classic' : 'mobile'
