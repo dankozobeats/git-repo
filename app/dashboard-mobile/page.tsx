@@ -69,7 +69,7 @@ export default async function Home() {
         </div>
 
         {/* Toggle Dashboard - À la même hauteur que dashboard-old */}
-        <div className="flex justify-center px-4 pt-2">
+        <div className="flex justify-center px-4">
           <DashboardViewToggle />
         </div>
 
