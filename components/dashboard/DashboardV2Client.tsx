@@ -135,81 +135,95 @@ export default function DashboardV2Client({
       {/* Filtres et habitudes */}
       <div className="space-y-4">
         {/* Header avec filtres et toggle vue */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
-            Mes habitudes ({filteredHabits.length})
-          </h2>
-          <div className="flex items-center gap-2">
-            {/* Filtres */}
-            <div className="flex gap-1 overflow-x-auto">
-              <button
-                onClick={() => handleFilterChange('to_do')}
-                className={`flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                  filter === 'to_do'
-                    ? 'bg-blue-500/20 text-blue-200 border border-blue-500/30'
-                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <Filter className="inline h-3 w-3 mr-1" />
-                À faire
-              </button>
-              <button
-                onClick={() => handleFilterChange('validated')}
-                className={`flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                  filter === 'validated'
-                    ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'
-                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                ✓ Validées
-              </button>
-              <button
-                onClick={() => handleFilterChange('not_validated')}
-                className={`flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                  filter === 'not_validated'
-                    ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30'
-                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                ✗ Non validées
-              </button>
-              <button
-                onClick={() => handleFilterChange('all')}
-                className={`flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                  filter === 'all'
-                    ? 'bg-purple-500/20 text-purple-200 border border-purple-500/30'
-                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                Toutes
-              </button>
-            </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
+              Mes habitudes ({filteredHabits.length})
+            </h2>
 
-            {/* Toggle vue */}
-            <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+            {/* Toggle vue - Desktop only */}
+            <div className="hidden sm:flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
               <button
                 onClick={() => handleViewModeChange('grid')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   viewMode === 'grid'
                     ? 'bg-white/10 text-white'
                     : 'text-white/50 hover:text-white/80'
                 }`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Cartes</span>
+                Cartes
               </button>
               <button
                 onClick={() => handleViewModeChange('list')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   viewMode === 'list'
                     ? 'bg-white/10 text-white'
                     : 'text-white/50 hover:text-white/80'
                 }`}
               >
                 <List className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Liste</span>
+                Liste
               </button>
             </div>
+          </div>
+
+          {/* Filtres - Pills style moderne */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <button
+              onClick={() => handleFilterChange('to_do')}
+              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                filter === 'to_do'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:scale-105'
+              }`}
+            >
+              <span className="mr-1.5">🎯</span>
+              À faire
+              <span className="ml-1.5 opacity-60">
+                ({habits.filter(h => h.riskLevel === 'critical' || h.riskLevel === 'warning').length})
+              </span>
+            </button>
+            <button
+              onClick={() => handleFilterChange('validated')}
+              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                filter === 'validated'
+                  ? 'bg-green-600 text-white shadow-lg shadow-green-600/30 scale-105'
+                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:scale-105'
+              }`}
+            >
+              <span className="mr-1.5">✅</span>
+              Validées
+              <span className="ml-1.5 opacity-60">
+                ({allHabits.filter(h => h.type === 'good' ? h.isDoneToday : h.todayCount === 0).length})
+              </span>
+            </button>
+            <button
+              onClick={() => handleFilterChange('not_validated')}
+              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                filter === 'not_validated'
+                  ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/30 scale-105'
+                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:scale-105'
+              }`}
+            >
+              <span className="mr-1.5">⏳</span>
+              Non faites
+              <span className="ml-1.5 opacity-60">
+                ({allHabits.filter(h => h.type === 'good' ? !h.isDoneToday : h.todayCount > 0).length})
+              </span>
+            </button>
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                filter === 'all'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-105'
+                  : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:scale-105'
+              }`}
+            >
+              <span className="mr-1.5">📋</span>
+              Toutes
+              <span className="ml-1.5 opacity-60">({allHabits.length})</span>
+            </button>
           </div>
         </div>
 
