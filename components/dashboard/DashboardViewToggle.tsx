@@ -98,8 +98,8 @@ export default function DashboardViewToggle() {
       {/* Description */}
       <p className="mt-2 text-center text-xs text-white/50">
         {version === 'classic'
-          ? 'Toutes les habitudes avec statistiques complètes'
-          : 'Priorités intelligentes et focus sur l\'essentiel'}
+          ? 'Vue complète avec toutes les habitudes'
+          : 'Analyse intelligente et priorisation automatique'}
       </p>
     </div>
   )
