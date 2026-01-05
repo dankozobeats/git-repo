@@ -20,7 +20,7 @@ export default function DashboardViewToggle() {
     // Détecter la version depuis l'URL ou localStorage
     const isOnOldDashboard = pathname === '/dashboard-old'
     const isOnMobileDashboard = pathname === '/dashboard-mobile'
-    const saved = localStorage.getItem('dashboard_version') as DashboardVersion | null
+    const saved = localStorage.getItem('dashboard-version') as DashboardVersion | null
 
     let detectedVersion: DashboardVersion
     if (isOnOldDashboard) {
@@ -38,7 +38,7 @@ export default function DashboardViewToggle() {
   const handleToggle = () => {
     const newVersion: DashboardVersion = version === 'mobile' ? 'classic' : 'mobile'
     setVersion(newVersion)
-    localStorage.setItem('dashboard_version', newVersion)
+    localStorage.setItem('dashboard-version', newVersion)
 
     // Rediriger avec transition fluide
     if (newVersion === 'mobile') {

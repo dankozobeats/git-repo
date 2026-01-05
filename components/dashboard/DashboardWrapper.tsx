@@ -35,14 +35,28 @@ export default function DashboardWrapper({ userId, habits, logs, events }: Dashb
   // Charger la préférence au montage
   useEffect(() => {
     const saved = localStorage.getItem('dashboard-version') as DashboardVersion | null
-    setVersion(saved || 'classic') // Par défaut = classic
+    const preferredVersion = saved || 'classic' // Par défaut = classic
+
+    // Si la préférence est "classic", rediriger vers dashboard-old
+    if (preferredVersion === 'classic') {
+      window.location.href = '/dashboard-old'
+      return
+    }
+
+    setVersion(preferredVersion)
     setIsLoading(false)
   }, [])
 
   // Sauvegarder la préférence quand elle change
   const handleToggle = (newVersion: DashboardVersion) => {
-    setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
+
+    // Rediriger selon la version choisie
+    if (newVersion === 'classic') {
+      window.location.href = '/dashboard-old'
+    } else {
+      setVersion(newVersion)
+    }
   }
 
   if (isLoading) {
