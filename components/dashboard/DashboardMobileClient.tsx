@@ -143,6 +143,7 @@ export default function DashboardMobileClient({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
             Priorités du jour
           </h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {topRisks.map((habit, index) => {
             const isLoading = loadingHabit === habit.id
             const riskConfig = {
@@ -241,6 +242,7 @@ export default function DashboardMobileClient({
               </div>
             )
           })}
+          </div>
         </div>
       )}
 
@@ -250,7 +252,7 @@ export default function DashboardMobileClient({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
             Autres habitudes ({remainingHabits.length})
           </h2>
-          <div className="space-y-2">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {remainingHabits.map(habit => {
               const isLoading = loadingHabit === habit.id
               return (
