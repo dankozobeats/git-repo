@@ -12,10 +12,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Filter, Loader2, Info, Check, Plus } from 'lucide-react'
 import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useDashboard } from '@/lib/habits/useDashboard'
+import HabitQuickViewModal from './HabitQuickViewModal'
 
 type FilterType = 'all' | 'validated' | 'not_validated' | 'to_do'
 
@@ -30,6 +31,8 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
   const [filter, setFilter] = useState<FilterType>('to_do')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [loadingHabit, setLoadingHabit] = useState<string | null>(null)
+  const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   // Charger les préférences depuis localStorage
   useEffect(() => {
@@ -204,6 +207,10 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
                   habit={habit}
                   isLoading={loadingHabit === habit.id}
                   onValidate={() => handleQuickValidate(habit.id, habit.type)}
+                  onOpenQuickView={() => setQuickViewHabit({ id: habit.id, name: habit.name })}
+                  onOpenMenu={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
+                  isMenuOpen={openMenuId === habit.id}
+                  onCloseMenu={() => setOpenMenuId(null)}
                 />
               ))}
             </div>
@@ -221,6 +228,10 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
                   habit={habit}
                   isLoading={loadingHabit === habit.id}
                   onValidate={() => handleQuickValidate(habit.id, habit.type)}
+                  onOpenQuickView={() => setQuickViewHabit({ id: habit.id, name: habit.name })}
+                  onOpenMenu={() => setOpenMenuId(openMenuId === habit.id ? null : habit.id)}
+                  isMenuOpen={openMenuId === habit.id}
+                  onCloseMenu={() => setOpenMenuId(null)}
                 />
               ))}
             </div>
@@ -234,6 +245,15 @@ export default function DashboardMobileClientNew({ userId }: DashboardMobileClie
           ✅ Stats serveur - Source: /api/dashboard | Cache: SWR 30s
         </p>
       </div>
+
+      {/* Quick View Modal */}
+      {quickViewHabit && (
+        <HabitQuickViewModal
+          habitId={quickViewHabit.id}
+          habitName={quickViewHabit.name}
+          onClose={() => setQuickViewHabit(null)}
+        />
+      )}
     </div>
   )
 }
@@ -243,10 +263,18 @@ function HabitCard({
   habit,
   isLoading,
   onValidate,
+  onOpenQuickView,
+  onOpenMenu,
+  isMenuOpen,
+  onCloseMenu,
 }: {
   habit: any
   isLoading: boolean
   onValidate: () => void
+  onOpenQuickView: () => void
+  onOpenMenu: () => void
+  isMenuOpen: boolean
+  onCloseMenu: () => void
 }) {
   const isBadHabit = habit.type === 'bad'
   const isDone = isBadHabit ? habit.todayCount === 0 : habit.todayCount > 0
@@ -320,19 +348,82 @@ function HabitCard({
                 </p>
               )}
             </div>
-            <button
-              onClick={onValidate}
-              disabled={isLoading || (isBadHabit ? false : isDone)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                isBadHabit
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : isDone
-                    ? 'bg-green-600'
-                    : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {isLoading ? '...' : isBadHabit ? '+ Craquage' : isDone ? '✓' : 'Valider'}
-            </button>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {/* Bouton Valider/Craquage */}
+              <button
+                onClick={onValidate}
+                disabled={isLoading || (isBadHabit ? false : isDone)}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-50 ${
+                  isBadHabit
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : isDone
+                      ? 'bg-green-600'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+                title={isBadHabit ? 'Signaler un craquage' : isDone ? 'Validé' : 'Valider'}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isBadHabit ? (
+                  <Plus className="h-4 w-4" />
+                ) : isDone ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </button>
+
+              {/* Bouton Info (Vue rapide) */}
+              <button
+                onClick={onOpenQuickView}
+                className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/70 transition hover:bg-white/20"
+                title="Vue rapide"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+
+              {/* Bouton Menu (3 points) */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenMenu()
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/70 transition hover:bg-white/20"
+                  title="Options"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+
+                {/* Menu contextuel */}
+                {isMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={onCloseMenu}
+                    />
+                    <div className="absolute right-0 top-10 z-20 w-40 rounded-lg border border-white/10 bg-[#0d0f17] p-1 shadow-xl">
+                      <Link
+                        href={`/habits/${habit.id}`}
+                        className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
+                        onClick={onCloseMenu}
+                      >
+                        Voir détails
+                      </Link>
+                      <Link
+                        href={`/habits/${habit.id}/edit`}
+                        className="block rounded px-3 py-2 text-xs text-white/90 transition hover:bg-white/10"
+                        onClick={onCloseMenu}
+                      >
+                        Modifier
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
