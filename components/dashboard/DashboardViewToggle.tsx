@@ -42,25 +42,46 @@ export default function DashboardViewToggle() {
     setVersion(newVersion)
     localStorage.setItem('dashboard-version', newVersion)
 
-    // Transition en fondu - Fade out seulement
+    // Afficher le loader
     setIsTransitioning(true)
-    document.body.style.opacity = '0'
-    document.body.style.transition = 'opacity 150ms ease-out'
 
+    // Créer overlay de chargement
+    const loader = document.createElement('div')
+    loader.id = 'page-transition-loader'
+    loader.className = 'fixed inset-0 z-50 flex items-center justify-center bg-[#01030a]/95 backdrop-blur-sm'
+    loader.innerHTML = `
+      <div class="flex flex-col items-center gap-4">
+        <div class="h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-blue-500"></div>
+        <p class="text-sm text-white/60">Chargement...</p>
+      </div>
+    `
+    document.body.appendChild(loader)
+
+    // Petite pause pour animation puis navigation
     setTimeout(() => {
-      // Rediriger - le fade in sera géré par le useEffect du nouveau dashboard
       if (newVersion === 'mobile') {
         router.push('/dashboard-mobile')
       } else {
         router.push('/dashboard-old')
       }
-    }, 150)
+    }, 100)
   }
 
-  // Fade in au chargement de la page
+  // Nettoyer le loader et réinitialiser l'état au chargement
   useEffect(() => {
+    // Supprimer le loader s'il existe
+    const loader = document.getElementById('page-transition-loader')
+    if (loader) {
+      loader.style.opacity = '0'
+      loader.style.transition = 'opacity 150ms ease-out'
+      setTimeout(() => loader.remove(), 150)
+    }
+
+    // Réinitialiser l'état de transition
+    setIsTransitioning(false)
+
+    // Reset body opacity
     document.body.style.opacity = '1'
-    document.body.style.transition = 'opacity 200ms ease-in'
   }, [pathname])
 
   if (isLoading) {
