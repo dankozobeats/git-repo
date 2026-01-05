@@ -103,7 +103,7 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
           </p>
 
           {/* Quick actions */}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {habit.type === 'good' && (
               <>
                 <button
@@ -115,7 +115,7 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
                 </button>
                 <button
                   onClick={() => setShowQuickView(true)}
-                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20 sm:flex-shrink-0"
                   title="Vue rapide"
                 >
                   <Info className="h-4 w-4" />
@@ -128,20 +128,20 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
                 <button
                   onClick={() => handleAction('substitute')}
                   disabled={loading}
-                  className="rounded-xl bg-blue-500/20 px-4 py-2 text-sm font-medium text-blue-200 transition hover:bg-blue-500/30 disabled:opacity-50"
+                  className="w-full rounded-xl bg-blue-500/20 px-4 py-2 text-sm font-medium text-blue-200 transition hover:bg-blue-500/30 disabled:opacity-50 sm:flex-1"
                 >
                   Action de substitution
                 </button>
                 <button
                   onClick={() => handleAction('relapse')}
                   disabled={loading}
-                  className="rounded-xl bg-red-500/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/30 disabled:opacity-50"
+                  className="w-full rounded-xl bg-red-500/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/30 disabled:opacity-50 sm:flex-1"
                 >
                   J'ai craqué
                 </button>
                 <button
                   onClick={() => setShowQuickView(true)}
-                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20 sm:flex-shrink-0"
                   title="Vue rapide"
                 >
                   <Info className="h-4 w-4" />
@@ -160,7 +160,7 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
                 </button>
                 <button
                   onClick={() => setShowQuickView(true)}
-                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20 sm:flex-shrink-0"
                   title="Vue rapide"
                 >
                   <Info className="h-4 w-4" />

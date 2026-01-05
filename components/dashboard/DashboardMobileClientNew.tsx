@@ -545,10 +545,10 @@ function HabitCard({
               {isMenuOpen && (
                 <>
                   <div
-                    className="fixed inset-0 z-10"
+                    className="fixed inset-0 z-[100]"
                     onClick={onCloseMenu}
                   />
-                  <div className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-white/10 bg-[#0d0f17] backdrop-blur-xl p-1.5 shadow-2xl">
+                  <div className="absolute right-0 top-12 z-[101] w-44 rounded-xl border border-white/10 bg-[#0d0f17] backdrop-blur-xl p-1.5 shadow-2xl">
                     <Link
                       href={`/habits/${habit.id}`}
                       className="block rounded-lg px-3 py-2.5 text-sm text-white/90 transition hover:bg-white/10"

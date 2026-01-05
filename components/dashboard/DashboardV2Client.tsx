@@ -229,7 +229,7 @@ export default function DashboardV2Client({
 
         {/* Top 3 priorités */}
         {displayedTopRisks.length > 0 ? (
-          <div className={viewMode === 'grid' ? 'grid gap-3 md:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
             {displayedTopRisks.map(habit => (
               <RiskHabitCard
                 key={habit.id}
@@ -266,7 +266,7 @@ export default function DashboardV2Client({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
             Autres habitudes ({displayedRemainingHabits.length})
           </h2>
-          <div className={viewMode === 'grid' ? 'grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'}>
             {displayedRemainingHabits.map(habit => (
               <RiskHabitCard
                 key={habit.id}
