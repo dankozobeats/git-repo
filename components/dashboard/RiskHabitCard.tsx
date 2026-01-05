@@ -5,8 +5,9 @@
  */
 
 import { useState } from 'react'
-import { AlertTriangle, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { AlertTriangle, AlertCircle, CheckCircle, Clock, Info } from 'lucide-react'
 import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
+import HabitQuickViewModal from './HabitQuickViewModal'
 import type { RiskHabit } from '@/lib/habits/useRiskAnalysis'
 
 type RiskHabitCardProps = {
@@ -16,6 +17,7 @@ type RiskHabitCardProps = {
 
 export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardProps) {
   const [loading, setLoading] = useState(false)
+  const [showQuickView, setShowQuickView] = useState(false)
 
   const config = {
     critical: {
@@ -103,13 +105,22 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
           {/* Quick actions */}
           <div className="mt-4 flex flex-wrap gap-2">
             {habit.type === 'good' && (
-              <button
-                onClick={() => handleAction('validate')}
-                disabled={loading || habit.isDoneToday}
-                className="rounded-xl bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
-              >
-                {habit.isDoneToday ? '✓ Fait aujourd\'hui' : '✓ Valider aujourd\'hui'}
-              </button>
+              <>
+                <button
+                  onClick={() => handleAction('validate')}
+                  disabled={loading || habit.isDoneToday}
+                  className="flex-1 rounded-xl bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
+                >
+                  {habit.isDoneToday ? '✓ Fait aujourd\'hui' : '✓ Valider aujourd\'hui'}
+                </button>
+                <button
+                  onClick={() => setShowQuickView(true)}
+                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                  title="Vue rapide"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </>
             )}
 
             {habit.type === 'bad' && habit.riskLevel === 'critical' && (
@@ -128,21 +139,47 @@ export default function RiskHabitCard({ habit, onQuickAction }: RiskHabitCardPro
                 >
                   J'ai craqué
                 </button>
+                <button
+                  onClick={() => setShowQuickView(true)}
+                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                  title="Vue rapide"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
               </>
             )}
 
             {habit.type === 'bad' && habit.riskLevel !== 'critical' && (
-              <button
-                onClick={() => handleAction('relapse')}
-                disabled={loading}
-                className="rounded-xl bg-orange-500/20 px-4 py-2 text-sm font-medium text-orange-200 transition hover:bg-orange-500/30 disabled:opacity-50"
-              >
-                Signaler un craquage
-              </button>
+              <>
+                <button
+                  onClick={() => handleAction('relapse')}
+                  disabled={loading}
+                  className="flex-1 rounded-xl bg-orange-500/20 px-4 py-2 text-sm font-medium text-orange-200 transition hover:bg-orange-500/30 disabled:opacity-50"
+                >
+                  Signaler un craquage
+                </button>
+                <button
+                  onClick={() => setShowQuickView(true)}
+                  className="rounded-xl bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                  title="Vue rapide"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
+
+      {/* Modal Vue Rapide */}
+      {showQuickView && (
+        <HabitQuickViewModal
+          habitId={habit.id}
+          habitName={habit.name}
+          isOpen={true}
+          onClose={() => setShowQuickView(false)}
+        />
+      )}
     </div>
   )
 }

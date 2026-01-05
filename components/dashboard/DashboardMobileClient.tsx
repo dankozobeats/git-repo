@@ -7,11 +7,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoreVertical, LayoutGrid, List, Info } from 'lucide-react'
 import { formatTimeSince, formatDateTime } from '@/lib/utils/date'
 import Link from 'next/link'
 import { useRiskAnalysis } from '@/lib/habits/useRiskAnalysis'
 import { usePatternDetection } from '@/lib/habits/usePatternDetection'
+import HabitQuickViewModal from './HabitQuickViewModal'
 import type { Database } from '@/types/database'
 
 type Habit = Database['public']['Tables']['habits']['Row']
@@ -38,6 +39,7 @@ export default function DashboardMobileClient({
   const [loadingHabit, setLoadingHabit] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
 
   // Charger la préférence depuis localStorage au montage
   useEffect(() => {
@@ -270,23 +272,41 @@ export default function DashboardMobileClient({
                 {/* Actions rapides */}
                 <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                   {habit.type === 'good' && (
-                    <button
-                      onClick={() => handleQuickAction(habit.id, 'validate')}
-                      disabled={isLoading}
-                      className="flex-1 rounded-lg bg-emerald-500/20 py-2 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
-                    >
-                      ✓ Valider
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleQuickAction(habit.id, 'validate')}
+                        disabled={isLoading}
+                        className="flex-1 rounded-lg bg-emerald-500/20 py-2 text-xs font-medium text-emerald-200 transition active:scale-95 disabled:opacity-50"
+                      >
+                        ✓ Valider
+                      </button>
+                      <button
+                        onClick={() => setQuickViewHabit({ id: habit.id, name: habit.name })}
+                        className="rounded-lg bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                        title="Vue rapide"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </>
                   )}
 
                   {habit.type === 'bad' && (
-                    <button
-                      onClick={() => handleQuickAction(habit.id, 'relapse')}
-                      disabled={isLoading}
-                      className="flex-1 rounded-lg bg-red-500/20 py-2 text-xs font-medium text-red-200 transition active:scale-95 disabled:opacity-50"
-                    >
-                      J'ai craqué
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleQuickAction(habit.id, 'relapse')}
+                        disabled={isLoading}
+                        className="flex-1 rounded-lg bg-red-500/20 py-2 text-xs font-medium text-red-200 transition active:scale-95 disabled:opacity-50"
+                      >
+                        J'ai craqué
+                      </button>
+                      <button
+                        onClick={() => setQuickViewHabit({ id: habit.id, name: habit.name })}
+                        className="rounded-lg bg-white/10 px-3 py-2 text-white/70 transition hover:bg-white/20"
+                        title="Vue rapide"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -356,6 +376,14 @@ export default function DashboardMobileClient({
                           ⚠️
                         </button>
                       )}
+
+                      <button
+                        onClick={() => setQuickViewHabit({ id: habit.id, name: habit.name })}
+                        className="rounded-lg bg-white/10 p-1.5 text-white/60 transition hover:bg-white/20 hover:text-white"
+                        title="Vue rapide"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
 
                       {/* Menu contextuel */}
                       <div className="relative">
@@ -476,6 +504,16 @@ export default function DashboardMobileClient({
             Continue comme ça, tu gères bien.
           </p>
         </div>
+      )}
+
+      {/* Modal Vue Rapide */}
+      {quickViewHabit && (
+        <HabitQuickViewModal
+          habitId={quickViewHabit.id}
+          habitName={quickViewHabit.name}
+          isOpen={true}
+          onClose={() => setQuickViewHabit(null)}
+        />
       )}
     </div>
   )
