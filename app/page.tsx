@@ -45,7 +45,7 @@ export default async function Home() {
   const events = eventsRes.data || []
 
   return (
-    <main className="min-h-screen bg-[#01030a] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[#01030a] text-white">
       {/* Background gradient */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.1),transparent_50%)]" />
 

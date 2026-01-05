@@ -39,7 +39,7 @@ export default function DashboardMobileClient({
   const [showPatterns, setShowPatterns] = useState(false)
   const [loadingHabit, setLoadingHabit] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
   const [filter, setFilter] = useState<FilterType>('to_do')
 
@@ -282,7 +282,7 @@ export default function DashboardMobileClient({
       {/* Top 3 priorités - Version compacte */}
       {displayedTopRisks.length > 0 && (
         <div className="space-y-3">
-          <div className={viewMode === 'grid' ? 'grid gap-3 md:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3' : 'space-y-3'}>
           {displayedTopRisks.map((habit, index) => {
             const isLoading = loadingHabit === habit.id
             const riskConfig = {
@@ -414,7 +414,7 @@ export default function DashboardMobileClient({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-white/50">
             Autres habitudes ({displayedRemainingHabits.length})
           </h2>
-          <div className={viewMode === 'grid' ? 'grid gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'}>
             {displayedRemainingHabits.map(habit => {
               const isLoading = loadingHabit === habit.id
               return (
