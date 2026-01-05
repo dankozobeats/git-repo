@@ -22,6 +22,7 @@ type Log = {
   habit_id: string
   user_id: string
   completed_date: string
+  value: number | null
   created_at: string
 }
 
@@ -48,7 +49,11 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
     // Today count
     const todayCount = isBadHabit
       ? habitEvents.filter(e => e.event_date === today).length
-      : habitLogs.filter(l => l.completed_date === today).length
+      : habit.tracking_mode === 'counter'
+        ? habitLogs
+            .filter(l => l.completed_date === today)
+            .reduce((sum, log) => sum + (log.value || 0), 0)
+        : habitLogs.filter(l => l.completed_date === today).length
 
     // Last 7 days
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -59,7 +64,11 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
 
     const last7DaysCount = isBadHabit
       ? habitEvents.filter(e => last7Days.includes(e.event_date)).length
-      : habitLogs.filter(l => last7Days.includes(l.completed_date)).length
+      : habit.tracking_mode === 'counter'
+        ? habitLogs
+            .filter(l => last7Days.includes(l.completed_date))
+            .reduce((sum, log) => sum + (log.value || 0), 0)
+        : habitLogs.filter(l => last7Days.includes(l.completed_date)).length
 
     // Last 30 days for completion rate
     const last30Days = Array.from({ length: 30 }, (_, i) => {
@@ -70,12 +79,20 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
 
     const last30DaysCount = isBadHabit
       ? habitEvents.filter(e => last30Days.includes(e.event_date)).length
-      : habitLogs.filter(l => last30Days.includes(l.completed_date)).length
+      : habit.tracking_mode === 'counter'
+        ? habitLogs
+            .filter(l => last30Days.includes(l.completed_date))
+            .reduce((sum, log) => sum + (log.value || 0), 0)
+        : habitLogs.filter(l => last30Days.includes(l.completed_date)).length
 
     const monthCompletionRate = Math.round((last30DaysCount / 30) * 100)
 
     // Total count
-    const totalCount = isBadHabit ? habitEvents.length : habitLogs.length
+    const totalCount = isBadHabit
+      ? habitEvents.length
+      : habit.tracking_mode === 'counter'
+        ? habitLogs.reduce((sum, log) => sum + (log.value || 0), 0)
+        : habitLogs.length
 
     // Current streak
     let currentStreak = 0
