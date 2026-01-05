@@ -53,7 +53,7 @@ export default async function Home() {
       {/* Container responsive: mobile max-w-2xl, desktop pleine largeur avec padding */}
       <div className="relative mx-auto max-w-2xl px-4 py-6 space-y-4 md:max-w-none md:px-8 lg:px-12">
         {/* Toggle Dashboard - À la même hauteur que dashboard-old */}
-        <div className="flex justify-center px-4">
+        <div className="flex justify-center px-4 pt-12">
           <DashboardViewToggle />
         </div>
 

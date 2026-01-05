@@ -217,7 +217,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
       <DashboardPreferenceSync />
       <div className="mx-auto max-w-full space-y-6 px-0 py-6 sm:space-y-8 sm:px-6 md:max-w-6xl md:px-10 md:py-10">
         {/* Toggle Dashboard - Toujours visible, même hauteur que dashboard-mobile */}
-        <div className="flex justify-center px-4">
+        <div className="flex justify-center px-4 pt-12">
           <DashboardViewToggle />
         </div>
 
