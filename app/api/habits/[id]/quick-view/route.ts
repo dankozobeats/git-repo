@@ -39,13 +39,13 @@ export async function GET(
 
     const todayISO = getTodayDateISO()
 
-    // Récupérer calendrier et stats
+    // Récupérer calendrier et stats (365 jours pour permettre la navigation)
     const { calendarData, todayCount } = await getHabitCalendar({
       client: supabase,
       habitId: id,
       trackingMode: habit.tracking_mode,
       todayISO,
-      rangeInDays: 28,
+      rangeInDays: 365,
     })
 
     const stats = computeHabitStats({

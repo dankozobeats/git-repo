@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatDateTime } from '@/lib/utils/date'
 
@@ -57,6 +57,7 @@ export default function HabitQuickViewModal({
   const [data, setData] = useState<HabitData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   useEffect(() => {
     if (!isOpen) return
@@ -163,86 +164,21 @@ export default function HabitQuickViewModal({
               </div>
 
               {/* Calendrier visuel */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50">
-                  Historique visuel
-                </h3>
-                <div className="space-y-2">
-                  {/* En-têtes des jours */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {['LUN.', 'MAR.', 'MER.', 'JEU.', 'VEN.', 'SAM.', 'DIM.'].map((day, idx) => (
-                      <div key={idx} className="text-center text-[10px] font-semibold text-white/40">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Calendrier par semaines */}
-                  <div className="space-y-2">
-                    {Array.from({ length: 4 }).map((_, weekIdx) => (
-                      <div key={weekIdx} className="grid grid-cols-7 gap-2">
-                        {data.calendar.slice(weekIdx * 7, (weekIdx + 1) * 7).map((day, dayIdx) => {
-                          const date = new Date(day.date)
-                          const dayNum = date.getDate()
-                          const hasValue = day.value > 0
-
-                          // Couleurs : Vert = fait/pas craqué, Rouge = craqué, Gris = manqué
-                          let bgColor = '#1a1a1a' // Gris foncé par défaut (manqué)
-                          let textColor = '#666666'
-
-                          if (hasValue) {
-                            if (isBadHabit) {
-                              // Mauvaise habitude : rouge = craqué
-                              bgColor = '#dc2626' // Rouge
-                              textColor = '#ffffff'
-                            } else {
-                              // Bonne habitude : vert = fait
-                              bgColor = '#16a34a' // Vert
-                              textColor = '#ffffff'
-                            }
-                          }
-
-                          return (
-                            <div
-                              key={dayIdx}
-                              className={`relative flex h-12 items-center justify-center rounded-lg text-sm font-semibold transition ${
-                                day.isToday ? 'ring-2 ring-white' : ''
-                              }`}
-                              style={{
-                                backgroundColor: bgColor,
-                                color: textColor,
-                              }}
-                              title={`${day.date}: ${hasValue ? (isBadHabit ? 'Craqué' : 'Fait') : 'Manqué'}`}
-                            >
-                              {dayNum}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Légende */}
-                  <div className="flex items-center justify-center gap-4 pt-2 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-4 w-4 rounded bg-[#16a34a]" />
-                      <span className="text-white/60">
-                        {isBadHabit ? 'Pas craqué' : 'Fait'}
-                      </span>
-                    </div>
-                    {isBadHabit && (
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-4 w-4 rounded bg-[#dc2626]" />
-                        <span className="text-white/60">Craqué</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-4 w-4 rounded bg-[#1a1a1a]" />
-                      <span className="text-white/60">Manqué</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MonthCalendar
+                calendar={data.calendar}
+                isBadHabit={isBadHabit}
+                currentMonth={currentMonth}
+                onPrevMonth={() => {
+                  const prev = new Date(currentMonth)
+                  prev.setMonth(prev.getMonth() - 1)
+                  setCurrentMonth(prev)
+                }}
+                onNextMonth={() => {
+                  const next = new Date(currentMonth)
+                  next.setMonth(next.getMonth() + 1)
+                  setCurrentMonth(next)
+                }}
+              />
 
               {/* Coach IA */}
               <div className="space-y-3">
@@ -281,6 +217,175 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
       <p className="mt-1 text-xl font-bold" style={{ color }}>
         {value}
       </p>
+    </div>
+  )
+}
+
+type MonthCalendarProps = {
+  calendar: CalendarDay[]
+  isBadHabit: boolean
+  currentMonth: Date
+  onPrevMonth: () => void
+  onNextMonth: () => void
+}
+
+function MonthCalendar({ calendar, isBadHabit, currentMonth, onPrevMonth, onNextMonth }: MonthCalendarProps) {
+  const today = new Date()
+
+  // Créer un Map pour accès rapide aux données du calendrier
+  const calendarMap = new Map(calendar.map(day => [day.date, day]))
+
+  // Obtenir le premier jour du mois
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+  const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+
+  // Obtenir le jour de la semaine du premier jour (0 = dimanche, 1 = lundi, etc.)
+  let firstDayWeekday = firstDayOfMonth.getDay()
+  // Convertir pour que lundi = 0, dimanche = 6
+  firstDayWeekday = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1
+
+  // Créer un tableau de tous les jours du mois
+  const daysInMonth = lastDayOfMonth.getDate()
+  const calendarDays: (CalendarDay | null)[] = []
+
+  // Ajouter des jours vides avant le premier jour
+  for (let i = 0; i < firstDayWeekday; i++) {
+    calendarDays.push(null)
+  }
+
+  // Ajouter tous les jours du mois
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+    const dateStr = date.toISOString().split('T')[0]
+    const dayData = calendarMap.get(dateStr)
+
+    const isToday =
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+
+    calendarDays.push({
+      date: dateStr,
+      value: dayData?.value || 0,
+      isToday,
+    })
+  }
+
+  // Créer les semaines
+  const weeks: (CalendarDay | null)[][] = []
+  for (let i = 0; i < calendarDays.length; i += 7) {
+    weeks.push(calendarDays.slice(i, i + 7))
+  }
+
+  const monthName = currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+
+  return (
+    <div className="space-y-3">
+      {/* Header avec navigation */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50">
+          Historique visuel
+        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onPrevMonth}
+            className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white"
+            title="Mois précédent"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-[140px] text-center text-sm font-medium text-white capitalize">
+            {monthName}
+          </span>
+          <button
+            onClick={onNextMonth}
+            className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white"
+            title="Mois suivant"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {/* En-têtes des jours */}
+        <div className="grid grid-cols-7 gap-2">
+          {['LUN.', 'MAR.', 'MER.', 'JEU.', 'VEN.', 'SAM.', 'DIM.'].map((day, idx) => (
+            <div key={idx} className="text-center text-[10px] font-semibold text-white/40">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendrier par semaines */}
+        <div className="space-y-2">
+          {weeks.map((week, weekIdx) => (
+            <div key={weekIdx} className="grid grid-cols-7 gap-2">
+              {week.map((day, dayIdx) => {
+                if (!day) {
+                  return <div key={dayIdx} className="h-12" />
+                }
+
+                const date = new Date(day.date)
+                const dayNum = date.getDate()
+                const hasValue = day.value > 0
+
+                // Couleurs : Vert = fait/pas craqué, Rouge = craqué, Gris = manqué
+                let bgColor = '#1a1a1a' // Gris foncé par défaut (manqué)
+                let textColor = '#666666'
+
+                if (hasValue) {
+                  if (isBadHabit) {
+                    // Mauvaise habitude : rouge = craqué
+                    bgColor = '#dc2626' // Rouge
+                    textColor = '#ffffff'
+                  } else {
+                    // Bonne habitude : vert = fait
+                    bgColor = '#16a34a' // Vert
+                    textColor = '#ffffff'
+                  }
+                }
+
+                return (
+                  <div
+                    key={dayIdx}
+                    className={`relative flex h-12 items-center justify-center rounded-lg text-sm font-semibold transition ${
+                      day.isToday ? 'ring-2 ring-white' : ''
+                    }`}
+                    style={{
+                      backgroundColor: bgColor,
+                      color: textColor,
+                    }}
+                    title={`${day.date}: ${hasValue ? (isBadHabit ? 'Craqué' : 'Fait') : 'Manqué'}`}
+                  >
+                    {dayNum}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Légende */}
+        <div className="flex items-center justify-center gap-4 pt-2 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="h-4 w-4 rounded bg-[#16a34a]" />
+            <span className="text-white/60">
+              {isBadHabit ? 'Pas craqué' : 'Fait'}
+            </span>
+          </div>
+          {isBadHabit && (
+            <div className="flex items-center gap-1.5">
+              <div className="h-4 w-4 rounded bg-[#dc2626]" />
+              <span className="text-white/60">Craqué</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <div className="h-4 w-4 rounded bg-[#1a1a1a]" />
+            <span className="text-white/60">Manqué</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
