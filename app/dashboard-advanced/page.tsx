@@ -47,24 +47,24 @@ export default async function DashboardAdvanced() {
   const events = eventsRes.data || []
 
   return (
-    <main className="relative min-h-screen bg-[#01030a] text-white">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#01030a] text-white">
       {/* Background gradient */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.15),transparent_50%)]" />
 
       <div className="relative mx-auto max-w-2xl px-4 py-6 space-y-4 md:max-w-none md:px-8 lg:px-12">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.4em] text-white/50">
               Dashboard Advanced
             </p>
-            <h1 className="mt-2 text-3xl font-bold">
+            <h1 className="mt-2 text-2xl font-bold sm:text-3xl">
               Analyse comportementale approfondie
             </h1>
           </div>
           <Link
             href="/"
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10"
+            className="flex-shrink-0 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10"
           >
             ← Dashboard quotidien
           </Link>
