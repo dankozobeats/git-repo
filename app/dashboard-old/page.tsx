@@ -225,9 +225,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
                 <p className="mt-2 text-sm text-[#A0A0A0]">{heroSubtitle}</p>
               </div>
               <div className="flex w-full flex-col gap-3 md:w-auto md:min-w-[280px]">
-                {/* Toggle Dashboard - Bien visible */}
-                <DashboardViewToggle />
-
                 <Link
                   href="/habits/new"
                   className="rounded-2xl bg-[#FF4D4D] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#e04343]"
@@ -261,6 +258,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
             />
           </section>
         )}
+
+        {/* Toggle Dashboard - Toujours visible */}
+        <div className="flex justify-center px-4">
+          <DashboardViewToggle />
+        </div>
 
         {habitDashboardSection}
 
