@@ -17,7 +17,7 @@ export async function POST(
 
   const { data: habit } = await supabase
     .from('habits')
-    .select('id, type')
+    .select('id, type, tracking_mode')
     .eq('id', id)
     .eq('user_id', user.id)
     .single()
@@ -26,11 +26,28 @@ export async function POST(
     return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
   }
 
-  // Les events sont pour les mauvaises habitudes (craquages)
-  // Pas de restriction sur tracking_mode
-
   const now = new Date()
   const today = getLocalDate()
+
+  // Pour le mode binaire, vérifier s'il existe déjà un event aujourd'hui
+  if (habit.tracking_mode !== 'counter') {
+    const { data: existingEvent } = await supabase
+      .from('habit_events')
+      .select('id')
+      .eq('habit_id', id)
+      .eq('user_id', user.id)
+      .eq('event_date', today)
+      .maybeSingle()
+
+    if (existingEvent) {
+      // Retourner l'event existant sans en créer un nouveau
+      return NextResponse.json({
+        ...existingEvent,
+        count: 1,
+        message: 'Craquage déjà enregistré pour aujourd\'hui'
+      })
+    }
+  }
 
   const { data, error } = await supabase
     .from('habit_events')
@@ -38,7 +55,8 @@ export async function POST(
       habit_id: id,
       user_id: user.id,
       event_date: today,
-      occurred_at: now.toISOString()
+      occurred_at: now.toISOString(),
+      count: habit.tracking_mode === 'counter' ? 1 : null
     })
     .select()
     .single()
