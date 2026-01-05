@@ -5,8 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import DashboardMobileClient from '@/components/dashboard/DashboardMobileClient'
-import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle'
+import DashboardWrapper from '@/components/dashboard/DashboardWrapper'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -68,18 +67,13 @@ export default async function Home() {
           </Link>
         </div>
 
-        {/* Toggle Dashboard - Bien visible */}
-        <div className="flex justify-center pt-2">
-          <DashboardViewToggle />
-        </div>
-
-        {/* Client component avec priorités + patterns */}
+        {/* Dashboard avec switch Classic/Mobile */}
         {habits.length > 0 ? (
-          <DashboardMobileClient
+          <DashboardWrapper
+            userId={user.id}
             habits={habits}
             logs={logs}
             events={events}
-            userId={user.id}
           />
         ) : (
           <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
