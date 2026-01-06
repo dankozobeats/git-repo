@@ -6,7 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import DashboardV2Client from '@/components/dashboard/DashboardV2Client'
+import DashboardAdvancedMobile from '@/components/dashboard/DashboardAdvancedMobile'
 import { getLocalDateDaysAgo } from '@/lib/utils/date'
 
 export default async function DashboardAdvanced() {
@@ -71,7 +71,7 @@ export default async function DashboardAdvanced() {
         </div>
 
         {/* Client component with all the logic */}
-        <DashboardV2Client
+        <DashboardAdvancedMobile
           habits={habits}
           logs={logs}
           events={events}
