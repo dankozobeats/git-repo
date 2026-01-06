@@ -163,7 +163,17 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
 
     try {
       const res = await fetch(`/api/habits/${habitId}/check-in`, { method: 'POST' })
-      if (!res.ok) throw new Error('Validation failed')
+      const data = await res.json()
+
+      if (!res.ok) {
+        // Gérer le cas où le goal est atteint (erreur 400)
+        if (res.status === 400 && data.goalReached) {
+          alert(`✅ Goal quotidien déjà atteint! (${data.count}/${data.counterRequired})`)
+        } else {
+          throw new Error(data.error || 'Validation failed')
+        }
+        return
+      }
 
       await mutate()
       router.refresh()

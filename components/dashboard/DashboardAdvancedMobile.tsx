@@ -157,7 +157,7 @@ export default function DashboardAdvancedMobile({
           body: JSON.stringify({ date: new Date().toISOString().split('T')[0] }),
         })
       } else {
-        await fetch(`/api/habits/${habitId}/check-in`, {
+        const res = await fetch(`/api/habits/${habitId}/check-in`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -165,10 +165,23 @@ export default function DashboardAdvancedMobile({
             value: 1,
           }),
         })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          // Gérer le cas où le goal est atteint
+          if (res.status === 400 && data.goalReached) {
+            alert(`✅ Goal quotidien déjà atteint! (${data.count}/${data.counterRequired})`)
+          } else {
+            throw new Error(data.error || 'Validation failed')
+          }
+          return
+        }
       }
       router.refresh()
     } catch (error) {
       console.error('Erreur action rapide:', error)
+      alert('Impossible de valider l\'habitude')
     }
   }
 

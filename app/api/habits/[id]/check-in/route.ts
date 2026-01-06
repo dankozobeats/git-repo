@@ -71,6 +71,40 @@ export async function POST(
   const counterRequired = resolveCounterRequirement(habit.tracking_mode, habit.daily_goal_value)
 
   if (isCounter) {
+    // AUDIT FIX: Vérifier le count actuel AVANT d'insérer
+    const {
+      count: currentEventCount,
+      error: preCheckError,
+    } = await supabase
+      .from('habit_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('habit_id', habitId)
+      .eq('user_id', user.id)
+      .eq('event_date', completedDate)
+
+    if (preCheckError) {
+      console.error('[check-in error]', preCheckError)
+      return NextResponse.json(
+        { error: 'Impossible de vérifier le compteur' },
+        { status: 500 }
+      )
+    }
+
+    const currentCount = currentEventCount ?? 0
+
+    // AUDIT FIX: Bloquer si le goal quotidien est déjà atteint
+    if (currentCount >= counterRequired) {
+      return NextResponse.json({
+        success: false,
+        error: 'Goal quotidien déjà atteint',
+        count: currentCount,
+        goalReached: true,
+        counterRequired,
+        remaining: 0,
+      }, { status: 400 })
+    }
+
+    // Insérer seulement si le goal n'est pas atteint
     const { error: insertError } = await supabase.from('habit_events').insert({
       habit_id: habitId,
       user_id: user.id,
@@ -81,11 +115,12 @@ export async function POST(
     if (insertError) {
       console.error('[check-in error]', insertError)
       return NextResponse.json(
-        { error: 'Impossible d’enregistrer le check-in' },
+        { error: 'Impossible d'enregistrer le check-in' },
         { status: 500 }
       )
     }
 
+    // Récupérer le nouveau count après insertion
     const {
       count: eventCount,
       error: countError,
