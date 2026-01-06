@@ -415,7 +415,8 @@ function HabitCard({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border transition-all duration-200 ${
+      onClick={() => router.push(`/habits/${habit.id}`)}
+      className={`group relative overflow-hidden rounded-2xl border transition-all duration-200 cursor-pointer ${
         habit.riskLevel === 'danger'
           ? 'border-red-500/30 bg-gradient-to-br from-red-500/10 to-red-500/5 shadow-lg shadow-red-500/10'
           : habit.riskLevel === 'warning'
@@ -435,8 +436,7 @@ function HabitCard({
         {/* Header: Icône + Titre + Badge */}
         <div className="flex items-start gap-3 mb-3">
           <div
-            onClick={() => router.push(`/habits/${habit.id}`)}
-            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl shadow-md transition-all duration-200 cursor-pointer hover:scale-110 hover:shadow-lg"
+            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl shadow-md transition-all duration-200"
             style={{ backgroundColor: habit.color + '30' }}
           >
             <span className="text-2xl">{habit.icon || '🎯'}</span>
@@ -445,12 +445,9 @@ function HabitCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <Link
-                  href={`/habits/${habit.id}`}
-                  className="block text-base font-bold text-white hover:text-blue-400 transition-colors leading-tight"
-                >
+                <h3 className="block text-base font-bold text-white leading-tight">
                   {habit.name}
-                </Link>
+                </h3>
 
                 {/* Progress bar pour counter habits */}
                 {habit.tracking_mode === 'counter' && habit.daily_goal_value && (
