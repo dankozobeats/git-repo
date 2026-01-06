@@ -416,7 +416,9 @@ function HabitCard({
   return (
     <div
       onClick={() => router.push(`/habits/${habit.id}`)}
-      className={`group relative overflow-hidden rounded-2xl border transition-all duration-200 cursor-pointer ${
+      className={`group relative rounded-2xl border transition-all duration-200 cursor-pointer overflow-visible ${
+        isMenuOpen ? 'z-[102]' : 'z-0'
+      } ${
         habit.riskLevel === 'danger'
           ? 'border-red-500/30 bg-gradient-to-br from-red-500/10 to-red-500/5 shadow-lg shadow-red-500/10'
           : habit.riskLevel === 'warning'
