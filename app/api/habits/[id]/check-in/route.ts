@@ -60,12 +60,55 @@ export async function POST(
 
   const completedDate = getToday()
   const isCounter = habit.tracking_mode === "counter"
+  const usesEvents = habit.type === "bad" || isCounter
   const counterRequired = resolveCounterRequirement(
     habit.tracking_mode,
     habit.daily_goal_value
   )
 
-  if (isCounter) {
+  if (usesEvents) {
+    if (!isCounter) {
+      const { data: existingEvent } = await supabase
+        .from("habit_events")
+        .select("id")
+        .eq("habit_id", habitId)
+        .eq("user_id", user.id)
+        .eq("event_date", completedDate)
+        .maybeSingle()
+
+      if (existingEvent) {
+        return NextResponse.json({
+          success: true,
+          count: 1,
+          goalReached: true,
+          counterRequired: 1,
+          remaining: 0,
+        })
+      }
+
+      const { error: insertError } = await supabase.from("habit_events").insert({
+        habit_id: habitId,
+        user_id: user.id,
+        event_date: completedDate,
+        occurred_at: new Date().toISOString(),
+      })
+
+      if (insertError) {
+        return NextResponse.json(
+          { error: "Impossible d enregistrer le check-in" },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: 1,
+        goalReached: true,
+        counterRequired: 1,
+        remaining: 0,
+      })
+    }
+
     const { count: currentCount, error: preCheckError } = await supabase
       .from("habit_events")
       .select("id", { count: "exact", head: true })

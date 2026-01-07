@@ -41,21 +41,32 @@ export function usePatternDetection(
     const patterns: Pattern[] = []
     const badHabits = habits.filter(h => h.type === 'bad')
     const goodHabits = habits.filter(h => h.type === 'good')
+    const badHabitIds = new Set(badHabits.map(h => h.id))
+    const legacyBadLogs = logs
+      .filter(l => badHabitIds.has(l.habit_id))
+      .map(l => ({
+        id: l.id,
+        habit_id: l.habit_id,
+        user_id: l.user_id,
+        event_date: l.completed_date,
+        occurred_at: l.created_at || (l.completed_date ? `${l.completed_date}T00:00:00` : null),
+      })) as Event[]
+    const badEvents = [...events, ...legacyBadLogs]
 
     // 1. PATTERNS TEMPORELS - Jours de la semaine à risque
-    const dayPattern = detectDayOfWeekPattern(events, badHabits)
+    const dayPattern = detectDayOfWeekPattern(badEvents, badHabits)
     if (dayPattern) patterns.push(dayPattern)
 
     // 2. PATTERNS DE CASCADE - Effet domino entre habitudes
-    const cascadePatterns = detectCascadePatterns(events, badHabits)
+    const cascadePatterns = detectCascadePatterns(badEvents, badHabits)
     patterns.push(...cascadePatterns)
 
     // 3. PATTERNS DE DÉCLENCHEURS - Bonnes habitudes manquées → rechutes
-    const triggerPatterns = detectTriggerPatterns(logs, events, goodHabits, badHabits)
+    const triggerPatterns = detectTriggerPatterns(logs, badEvents, goodHabits, badHabits)
     patterns.push(...triggerPatterns)
 
     // 4. PATTERNS CYCLIQUES - Fréquence régulière de rechute
-    const cyclePattern = detectCyclicPattern(events, badHabits)
+    const cyclePattern = detectCyclicPattern(badEvents, badHabits)
     if (cyclePattern) patterns.push(cyclePattern)
 
     // Trier par sévérité et confiance
@@ -67,8 +78,8 @@ export function usePatternDetection(
     })
 
     // Statistiques globales
-    const mostDangerousDay = getMostDangerousDay(events)
-    const averageRelapseCycle = getAverageRelapseCycle(events)
+    const mostDangerousDay = getMostDangerousDay(badEvents)
+    const averageRelapseCycle = getAverageRelapseCycle(badEvents)
 
     return {
       patterns: sortedPatterns.slice(0, 4), // Top 4 patterns

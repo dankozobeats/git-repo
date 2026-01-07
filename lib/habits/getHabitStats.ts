@@ -57,24 +57,43 @@ export async function getHabitStats(
       .order('event_date', { ascending: false })
 
     const eventsArray = events || []
+    const logActions: Array<{ date: string; timestamp: string }> = []
+
+    if (isBadHabit) {
+      const { data: logs } = await supabase
+        .from('logs')
+        .select('completed_date, created_at, value')
+        .eq('habit_id', habitId)
+        .eq('user_id', userId)
+        .order('completed_date', { ascending: false })
+
+      ;(logs || []).forEach(log => {
+        logActions.push({
+          date: log.completed_date,
+          timestamp: log.created_at || `${log.completed_date}T00:00:00`,
+        })
+      })
+    }
+
+    const mergedDates = [...eventsArray.map(e => e.event_date), ...logActions.map(l => l.date)]
 
     // Compteur aujourd'hui
-    const todayEvents = eventsArray.filter(e => e.event_date === today)
+    const todayEvents = mergedDates.filter(date => date === today)
     const todayCount = habit.tracking_mode === 'counter'
       ? todayEvents.length
       : Math.min(todayEvents.length, 1) // Binary: max 1
 
     // Compteur 7 derniers jours
-    const last7DaysCount = eventsArray.filter(
-      e => e.event_date >= sevenDaysAgo && e.event_date <= today
+    const last7DaysCount = mergedDates.filter(
+      date => date >= sevenDaysAgo && date <= today
     ).length
 
     // Total
-    const totalCount = eventsArray.length
+    const totalCount = mergedDates.length
 
     // Streak : jours consécutifs SANS craquage (pour bad habits)
     let currentStreak = 0
-    const sortedDates = [...new Set(eventsArray.map(e => e.event_date))].sort().reverse()
+    const sortedDates = [...new Set(mergedDates)].sort().reverse()
 
     let checkDate = new Date()
     while (currentStreak < 365) {
@@ -89,16 +108,20 @@ export async function getHabitStats(
 
     // Taux de complétion du mois : % de jours sans craquage
     const daysWithEvents = new Set(
-      eventsArray.filter(e => e.event_date >= monthStart && e.event_date <= today).map(e => e.event_date)
+      mergedDates.filter(date => date >= monthStart && date <= today)
     ).size
     const daysElapsed = new Date().getDate()
     const monthCompletionRate = daysElapsed > 0 ? ((daysElapsed - daysWithEvents) / daysElapsed) * 100 : 100
 
     // Dernier craquage
     const lastActionDate = sortedDates.length > 0 ? sortedDates[0] : null
-    const lastActionTimestamp = eventsArray.length > 0
-      ? eventsArray.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))[0].occurred_at
-      : null
+    const lastActionTimestamp = [
+      ...eventsArray.map(e => e.occurred_at),
+      ...logActions.map(l => l.timestamp),
+    ]
+      .filter(Boolean)
+      .sort()
+      .reverse()[0] || null
 
     // Niveau de risque
     let riskLevel: 'good' | 'warning' | 'danger' = 'good'

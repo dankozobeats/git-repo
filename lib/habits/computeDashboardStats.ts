@@ -41,15 +41,23 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
 
   const habitsWithStats = habits.map(habit => {
     const isBadHabit = habit.type === 'bad'
-    const usesEvents = habit.tracking_mode === 'counter'
+    const usesEvents = isBadHabit || habit.tracking_mode === 'counter'
 
     // Logs et events pour cette habitude
     const habitLogs = logs.filter(l => l.habit_id === habit.id)
     const habitEvents = events.filter(e => e.habit_id === habit.id)
+    const badLogDates = isBadHabit ? habitLogs.map(l => l.completed_date) : []
+    const eventDates = usesEvents
+      ? (isBadHabit ? [...habitEvents.map(e => e.event_date), ...badLogDates] : habitEvents.map(e => e.event_date))
+      : habitLogs.map(l => l.completed_date)
+    const sortedEventDates = [...eventDates].sort().reverse()
+    const actionTimestamps = usesEvents
+      ? (isBadHabit ? [...habitEvents.map(e => e.occurred_at), ...habitLogs.map(l => l.created_at)] : habitEvents.map(e => e.occurred_at))
+      : habitLogs.map(l => l.created_at)
 
     // Today count
     const todayCount = usesEvents
-      ? habitEvents.filter(e => e.event_date === today).length
+      ? habitEvents.filter(e => e.event_date === today).length + badLogDates.filter(d => d === today).length
       : habitLogs.filter(l => l.completed_date === today).length
 
     // Last 7 days
@@ -60,7 +68,8 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
     })
 
     const last7DaysCount = usesEvents
-      ? habitEvents.filter(e => last7Days.includes(e.event_date)).length
+      ? habitEvents.filter(e => last7Days.includes(e.event_date)).length +
+        badLogDates.filter(d => last7Days.includes(d)).length
       : habitLogs.filter(l => last7Days.includes(l.completed_date)).length
 
     // Last 30 days for completion rate
@@ -71,21 +80,20 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
     })
 
     const last30DaysCount = usesEvents
-      ? habitEvents.filter(e => last30Days.includes(e.event_date)).length
+      ? habitEvents.filter(e => last30Days.includes(e.event_date)).length +
+        badLogDates.filter(d => last30Days.includes(d)).length
       : habitLogs.filter(l => last30Days.includes(l.completed_date)).length
 
     const monthCompletionRate = Math.round((last30DaysCount / 30) * 100)
 
     // Total count
-    const totalCount = usesEvents ? habitEvents.length : habitLogs.length
+    const totalCount = usesEvents ? habitEvents.length + badLogDates.length : habitLogs.length
 
     // Current streak
     let currentStreak = 0
     if (isBadHabit) {
       // Pour bad habit: jours consécutifs SANS craquage
-      const eventDates = (usesEvents ? habitEvents.map(e => e.event_date) : habitLogs.map(l => l.completed_date))
-        .sort()
-        .reverse()
+      const eventDates = sortedEventDates
       let checkDate = new Date()
 
       while (true) {
@@ -97,9 +105,7 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
       }
     } else {
       // Pour good habit: jours consécutifs avec validation
-      const logDates = (usesEvents ? habitEvents.map(e => e.event_date) : habitLogs.map(l => l.completed_date))
-        .sort()
-        .reverse()
+      const logDates = sortedEventDates
       let checkDate = new Date()
 
       while (true) {
@@ -112,13 +118,9 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
     }
 
     // Last action
-    const lastActionDate = usesEvents
-      ? (habitEvents[0]?.event_date || null)
-      : (habitLogs[0]?.completed_date || null)
+    const lastActionDate = sortedEventDates[0] || null
 
-    const lastActionTimestamp = usesEvents
-      ? (habitEvents[0]?.occurred_at || null)
-      : (habitLogs[0]?.created_at || null)
+    const lastActionTimestamp = actionTimestamps.filter(Boolean).sort().reverse()[0] || null
 
     // Risk level
     let riskLevel: 'good' | 'warning' | 'danger' = 'good'

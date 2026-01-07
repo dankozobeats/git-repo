@@ -35,11 +35,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    // Récupérer les logs ou events selon tracking_mode
+    // Récupérer les logs et/ou events selon type/mode pour éviter les trous
+    const isBadHabit = habit.type === 'bad'
     const isCounter = habit.tracking_mode === 'counter'
+    const history: Array<{ id: string; date: string; time?: string | null; value: number; type: 'log' | 'event' }> = []
 
-    if (isCounter) {
-      // Habitudes en mode compteur utilisent habit_events
+    if (isBadHabit || isCounter) {
       const { data: events, error } = await supabase
         .from('habit_events')
         .select('*')
@@ -53,17 +54,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
         throw error
       }
 
-      const history = events?.map(event => ({
-        id: event.id,
-        date: event.event_date,
-        time: event.occurred_at,
-        value: 1, // habit_events doesn't have a count column - each event = 1 occurrence
-        type: 'event' as const,
-      })) || []
+      ;(events || []).forEach(event => {
+        history.push({
+          id: event.id,
+          date: event.event_date,
+          time: event.occurred_at,
+          value: 1,
+          type: 'event',
+        })
+      })
+    }
 
-      return NextResponse.json(history)
-    } else {
-      // Pour les bonnes habitudes, récupérer les logs
+    if (isBadHabit || !isCounter) {
       const { data: logs, error } = await supabase
         .from('logs')
         .select('*')
@@ -77,16 +79,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
         throw error
       }
 
-      const history = logs?.map(log => ({
-        id: log.id,
-        date: log.completed_date,
-        time: log.created_at,
-        value: log.value || 1,
-        type: 'log' as const,
-      })) || []
-
-      return NextResponse.json(history)
+      ;(logs || []).forEach(log => {
+        history.push({
+          id: log.id,
+          date: log.completed_date,
+          time: log.created_at,
+          value: log.value || 1,
+          type: 'log',
+        })
+      })
     }
+
+    const sorted = history
+      .sort((a, b) => {
+        const timeA = a.time ? new Date(a.time).getTime() : new Date(a.date + 'T00:00:00').getTime()
+        const timeB = b.time ? new Date(b.time).getTime() : new Date(b.date + 'T00:00:00').getTime()
+        return timeB - timeA
+      })
+      .slice(0, 100)
+
+    return NextResponse.json(sorted)
   } catch (error) {
     console.error('Error fetching history:', error)
     return NextResponse.json(

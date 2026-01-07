@@ -103,7 +103,17 @@ function analyzeHabit(
   const habitEvents = events.filter(e => e.habit_id === habit.id)
 
   if (habit.type === 'bad') {
-    return analyzeBadHabit(habit, habitEvents, today)
+    const mergedEvents = [
+      ...habitEvents,
+      ...habitLogs.map(log => ({
+        id: log.id,
+        habit_id: log.habit_id,
+        user_id: log.user_id,
+        event_date: log.completed_date,
+        occurred_at: log.created_at || `${log.completed_date}T00:00:00`,
+      })),
+    ] as Event[]
+    return analyzeBadHabit(habit, mergedEvents, today)
   } else {
     return analyzeGoodHabit(habit, habitLogs, habitEvents, today)
   }

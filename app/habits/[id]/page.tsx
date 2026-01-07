@@ -38,6 +38,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
   const { calendarData, todayCount } = await getHabitCalendar({
     client: supabase,
     habitId: id,
+    habitType: habit.type,
     trackingMode: habit.tracking_mode,
     todayISO,
     rangeInDays: 365, // Plus de données pour le calendrier mensuel

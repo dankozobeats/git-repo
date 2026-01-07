@@ -43,6 +43,7 @@ export async function GET(
     const { calendarData, todayCount } = await getHabitCalendar({
       client: supabase,
       habitId: id,
+      habitType: habit.type,
       trackingMode: habit.tracking_mode,
       todayISO,
       rangeInDays: 365,

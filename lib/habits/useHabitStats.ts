@@ -166,14 +166,23 @@ function buildStats(habits: HabitRow[], logs: LogRow[], events: EventRow[], peri
     const date = normalizeDate(log.completed_date, log.created_at)
     if (!date) return
 
-    const amount = typeof log.value === 'number' ? Math.max(1, log.value) : 1
-    goodByDay.set(date, (goodByDay.get(date) ?? 0) + amount)
-    allDates.add(date)
+    const isBadHabit = habit.type === 'bad'
+    const amount = isBadHabit ? 1 : typeof log.value === 'number' ? Math.max(1, log.value) : 1
 
-    if (!logDatesByHabit.has(log.habit_id)) {
-      logDatesByHabit.set(log.habit_id, new Set())
+    if (isBadHabit) {
+      badByDay.set(date, (badByDay.get(date) ?? 0) + amount)
+      if (!eventDatesByHabit.has(log.habit_id)) {
+        eventDatesByHabit.set(log.habit_id, new Set())
+      }
+      eventDatesByHabit.get(log.habit_id)!.add(date)
+    } else {
+      goodByDay.set(date, (goodByDay.get(date) ?? 0) + amount)
+      if (!logDatesByHabit.has(log.habit_id)) {
+        logDatesByHabit.set(log.habit_id, new Set())
+      }
+      logDatesByHabit.get(log.habit_id)!.add(date)
     }
-    logDatesByHabit.get(log.habit_id)!.add(date)
+    allDates.add(date)
 
     const entry =
       habitTotals.get(log.habit_id) ??

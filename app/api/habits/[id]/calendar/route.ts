@@ -32,36 +32,38 @@ export async function GET(
     return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
   }
 
-  // Récupérer les données selon le mode
-  let calendarData: Record<string, number> = {}
+  // Récupérer les données selon le mode/type
+  const calendarData: Record<string, number> = {}
+  const isBadHabit = habit.type === 'bad'
+  const isCounter = habit.tracking_mode === 'counter'
+  const startDateISO = startDate.toISOString().split('T')[0]
 
-  if (habit.tracking_mode === 'counter') {
+  if (isBadHabit || isCounter) {
     const { data: events } = await supabase
       .from('habit_events')
       .select('event_date')
       .eq('habit_id', id)
-      .gte('event_date', startDate.toISOString().split('T')[0])
+      .gte('event_date', startDateISO)
       .order('event_date', { ascending: true })
 
-    calendarData = (events || []).reduce((acc, event) => {
+    ;(events || []).forEach(event => {
       const date = event.event_date
-      if (!acc[date]) acc[date] = 0
-      acc[date]++
-      return acc
-    }, {} as Record<string, number>)
+      calendarData[date] = (calendarData[date] ?? 0) + 1
+    })
+  }
 
-  } else {
+  if (isBadHabit || !isCounter) {
     const { data: logs } = await supabase
       .from('logs')
       .select('completed_date')
       .eq('habit_id', id)
-      .gte('completed_date', startDate.toISOString().split('T')[0])
+      .gte('completed_date', startDateISO)
       .order('completed_date', { ascending: true })
 
-    calendarData = (logs || []).reduce((acc, log) => {
-      acc[log.completed_date] = 1
-      return acc
-    }, {} as Record<string, number>)
+    ;(logs || []).forEach(log => {
+      const date = log.completed_date
+      calendarData[date] = (calendarData[date] ?? 0) + 1
+    })
   }
 
   return NextResponse.json({
