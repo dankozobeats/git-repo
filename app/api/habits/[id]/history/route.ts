@@ -35,11 +35,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    // Récupérer les logs (bonnes habitudes) ou events (mauvaises habitudes)
-    const isBadHabit = habit.type === 'bad'
+    // Récupérer les logs ou events selon tracking_mode
+    const isCounter = habit.tracking_mode === 'counter'
 
-    if (isBadHabit) {
-      // Pour les mauvaises habitudes, récupérer les events
+    if (isCounter) {
+      // Habitudes en mode compteur utilisent habit_events
       const { data: events, error } = await supabase
         .from('habit_events')
         .select('*')
@@ -56,6 +56,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const history = events?.map(event => ({
         id: event.id,
         date: event.event_date,
+        time: event.occurred_at,
         value: 1, // habit_events doesn't have a count column - each event = 1 occurrence
         type: 'event' as const,
       })) || []
@@ -79,7 +80,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const history = logs?.map(log => ({
         id: log.id,
         date: log.completed_date,
-        value: log.count || 1,
+        time: log.created_at,
+        value: log.value || 1,
         type: 'log' as const,
       })) || []
 

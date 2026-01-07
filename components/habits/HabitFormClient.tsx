@@ -35,7 +35,6 @@ type HabitFormClientProps = {
     daily_goal_value: number | null
     daily_goal_type: 'minimum' | 'maximum' | null
     category_id: string | null
-    is_suspended: boolean | null
   }
   categories?: Category[]
 }
@@ -88,7 +87,6 @@ export default function HabitFormClient({
   )
   const [dailyGoalValue, setDailyGoalValue] = useState(initialHabit?.daily_goal_value || 3)
   const [categoryId, setCategoryId] = useState(initialHabit?.category_id || '')
-  const [isSuspended, setIsSuspended] = useState(initialHabit?.is_suspended || false)
 
   // Categories + Coach
   const [categories, setCategories] = useState<Category[]>(initialCategories)
@@ -183,8 +181,6 @@ export default function HabitFormClient({
       router.push(`/?highlight=${data.id}#habit-card-${data.id}`)
       router.refresh()
     } else if (mode === 'edit' && initialHabit) {
-      habitData.is_suspended = isSuspended
-
       const { error } = await supabase.from('habits').update(habitData).eq('id', initialHabit.id)
       if (error) {
         console.error('Error updating habit:', error)
@@ -192,7 +188,7 @@ export default function HabitFormClient({
         return
       }
 
-      router.push(`/habits/${initialHabit.id}`)
+      router.push(`/dashboard-mobile?highlight=${initialHabit.id}`)
       router.refresh()
     }
   }, [
@@ -206,7 +202,6 @@ export default function HabitFormClient({
     trackingMode,
     dailyGoalValue,
     categoryId,
-    isSuspended,
     router,
   ])
 
@@ -246,11 +241,9 @@ export default function HabitFormClient({
             habitType={habitType}
             categoryId={categoryId}
             categories={categories}
-            isSuspended={isSuspended}
             onTrackingModeChange={setTrackingMode}
             onDailyGoalValueChange={setDailyGoalValue}
             onCategoryIdChange={setCategoryId}
-            onSuspendedChange={setIsSuspended}
           />
         )}
 

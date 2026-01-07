@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .from('logs')
       .update({
         completed_date: date,
-        count: value || 1,
+        value: value || 1,
       })
       .eq('id', logId)
       .eq('user_id', user.id)

@@ -44,7 +44,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .from('habit_events')
       .update({
         event_date: date,
-        count: value || 1,
       })
       .eq('id', eventId)
       .eq('user_id', user.id)

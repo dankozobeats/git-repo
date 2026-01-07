@@ -7,10 +7,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Trash2, Edit2, Calendar, X, Check } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 type HistoryEntry = {
   id: string
   date: string
+  time?: string | null
   value: number
   type: 'log' | 'event'
 }
@@ -28,6 +30,7 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDate, setEditDate] = useState('')
   const [editValue, setEditValue] = useState(1)
+  const { showToast, ToastComponent } = useToast()
 
   const isBadHabit = habitType === 'bad'
 
@@ -65,7 +68,7 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
       }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
-      alert('Erreur lors de la suppression')
+      showToast('Erreur lors de la suppression', 'error')
     }
   }
 
@@ -96,17 +99,30 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
         }),
       })
 
-      if (res.ok) {
-        const updated = await res.json()
-        setEntries(prev =>
-          prev.map(e => (e.id === entry.id ? { ...e, date: editDate, value: editValue } : e))
-        )
-        cancelEdit()
-        router.refresh()
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Modification échouée')
       }
+
+      const updated = await res.json()
+      const nextValue = trackingMode === 'counter' ? editValue : 1
+      setEntries(prev =>
+        prev.map(e =>
+          e.id === entry.id
+            ? {
+                ...e,
+                date: updated?.completed_date ?? updated?.event_date ?? editDate,
+                value: typeof updated?.value === 'number' ? updated.value : nextValue,
+              }
+            : e
+        )
+      )
+      cancelEdit()
+      router.refresh()
+      showToast('Modification enregistrée', 'success')
     } catch (error) {
       console.error('Erreur lors de la modification:', error)
-      alert('Erreur lors de la modification')
+      showToast('Erreur lors de la modification', 'error')
     }
   }
 
@@ -116,6 +132,16 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+    })
+  }
+
+  function formatTime(dateTime?: string | null) {
+    if (!dateTime) return null
+    const date = new Date(dateTime)
+    if (Number.isNaN(date.getTime())) return null
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
     })
   }
 
@@ -210,13 +236,16 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
                     >
                       {isBadHabit ? '🔥' : '✅'}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {formatDate(entry.date)}
-                      </p>
-                      {trackingMode === 'counter' && entry.value > 1 && (
-                        <p className="text-xs text-white/50">{entry.value}×</p>
-                      )}
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {formatDate(entry.date)}
+                    </p>
+                    {formatTime(entry.time) && (
+                      <p className="text-xs text-white/50">{formatTime(entry.time)}</p>
+                    )}
+                    {trackingMode === 'counter' && entry.value > 1 && (
+                      <p className="text-xs text-white/50">{entry.value}×</p>
+                    )}
                     </div>
                   </div>
 
@@ -242,6 +271,7 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
           )
         })}
       </div>
+      {ToastComponent}
     </div>
   )
 }

@@ -11,7 +11,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, ChevronUp, MoreVertical, Loader2, Info, Check, Plus, TrendingUp, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useDashboard } from '@/lib/habits/useDashboard'
@@ -29,6 +29,7 @@ type DashboardMobileClientNewProps = {
 
 export default function DashboardMobileClientNew({ userId, initialData }: DashboardMobileClientNewProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { habits, summary, isLoading, isError, mutate } = useDashboard(initialData)
 
   const [filter, setFilter] = useState<FilterType>('to_do')
@@ -37,6 +38,7 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
   const [quickViewHabit, setQuickViewHabit] = useState<{ id: string; name: string } | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showPatterns, setShowPatterns] = useState(false)
+  const [highlightHabitId, setHighlightHabitId] = useState<string | null>(null)
 
   // Handler pour supprimer une habitude
   const handleDelete = async (habitId: string, habitName: string) => {
@@ -65,6 +67,30 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
       setFilter(savedFilter)
     }
   }, [])
+
+  useEffect(() => {
+    const highlight = searchParams.get('highlight')
+    if (!highlight) return
+
+    setFilter('all')
+    setHighlightHabitId(highlight)
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!highlightHabitId) return
+    const targetId = `habit-card-${highlightHabitId}`
+    const timeout = window.setTimeout(() => {
+      const target = document.getElementById(targetId)
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 100)
+    const clear = window.setTimeout(() => setHighlightHabitId(null), 4500)
+    return () => {
+      window.clearTimeout(timeout)
+      window.clearTimeout(clear)
+    }
+  }, [highlightHabitId])
 
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode)
@@ -259,6 +285,7 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
                 {criticalHabits.map(habit => (
                   <HabitCard
                     key={habit.id}
+                    isHighlighted={highlightHabitId === habit.id}
                     habit={habit}
                     isLoading={loadingHabit === habit.id}
                     onValidate={() => handleQuickValidate(habit.id, habit.type)}
@@ -284,6 +311,7 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
                 {remainingHabits.map(habit => (
                   <HabitCard
                     key={habit.id}
+                    isHighlighted={highlightHabitId === habit.id}
                     habit={habit}
                     isLoading={loadingHabit === habit.id}
                     onValidate={() => handleQuickValidate(habit.id, habit.type)}
@@ -366,6 +394,7 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
 function HabitCard({
   habit,
   isLoading,
+  isHighlighted,
   onValidate,
   onOpenQuickView,
   onOpenMenu,
@@ -375,6 +404,7 @@ function HabitCard({
 }: {
   habit: any
   isLoading: boolean
+  isHighlighted: boolean
   onValidate: () => void
   onOpenQuickView: () => void
   onOpenMenu: () => void
@@ -415,10 +445,11 @@ function HabitCard({
 
   return (
     <div
+      id={`habit-card-${habit.id}`}
       onClick={() => router.push(`/habits/${habit.id}`)}
       className={`group relative rounded-2xl border transition-all duration-200 cursor-pointer overflow-visible ${
         isMenuOpen ? 'z-[102]' : 'z-0'
-      } ${
+      } ${isHighlighted ? 'ring-2 ring-[#C084FC] shadow-[0_0_0_4px_rgba(192,132,252,0.2)]' : ''} ${
         habit.riskLevel === 'danger'
           ? 'border-red-500/30 bg-gradient-to-br from-red-500/10 to-red-500/5 shadow-lg shadow-red-500/10'
           : habit.riskLevel === 'warning'

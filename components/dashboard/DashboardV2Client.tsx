@@ -181,7 +181,7 @@ export default function DashboardV2Client({
               <span className="mr-1.5">🎯</span>
               À faire
               <span className="ml-1.5 opacity-60">
-                ({habits.filter(h => h.riskLevel === 'critical' || h.riskLevel === 'warning').length})
+                ({allHabits.filter(h => h.riskLevel === "critical" || h.riskLevel === "warning").length})
               </span>
             </button>
             <button
