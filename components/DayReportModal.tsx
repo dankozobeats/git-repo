@@ -35,6 +35,18 @@ export function DayReportModal({ date, isOpen, onClose }: DayReportModalProps) {
     }
   }, [isOpen, date])
 
+  // Fonction exposée pour rafraîchir manuellement
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (isOpen && date) {
+        fetchReport()
+      }
+    }
+
+    window.addEventListener('dayReportRefresh', handleRefresh)
+    return () => window.removeEventListener('dayReportRefresh', handleRefresh)
+  }, [isOpen, date])
+
   async function fetchReport() {
     setIsLoading(true)
     try {

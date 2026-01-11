@@ -4,7 +4,7 @@
 
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getTodayDateISO, isFutureDate } from '@/lib/date-utils'
+import { formatDateKey, getTodayDateISO, isFutureDate } from '@/lib/date-utils'
 
 interface WeeklyCalendarProps {
   habitType: 'good' | 'bad'
@@ -38,7 +38,7 @@ export function WeeklyCalendar({
       for (let d = 0; d < 7; d++) {
         const date = new Date(weekStart)
         date.setDate(weekStart.getDate() + d)
-        const dateStr = date.toISOString().split('T')[0]
+        const dateStr = formatDateKey(date)
 
         days.push({
           date: dateStr,

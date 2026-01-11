@@ -24,12 +24,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   try {
     const body = await request.json()
-    const { date, value } = body
+    const { date, time } = body
 
     // Vérifier que l'event appartient à l'utilisateur
     const { data: existingEvent } = await supabase
       .from('habit_events')
-      .select('id')
+      .select('id, occurred_at')
       .eq('id', eventId)
       .eq('user_id', user.id)
       .eq('habit_id', habitId)
@@ -39,11 +39,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
+    // Construire le timestamp occurred_at
+    let occurredAt = existingEvent.occurred_at
+    if (time) {
+      occurredAt = new Date(`${date}T${time}:00`).toISOString()
+    } else if (date) {
+      // Si on change la date mais pas l'heure, garder l'heure existante
+      const existingTime = new Date(existingEvent.occurred_at).toTimeString().slice(0, 8)
+      occurredAt = new Date(`${date}T${existingTime}`).toISOString()
+    }
+
     // Mettre à jour l'event
     const { data, error } = await supabase
       .from('habit_events')
       .update({
         event_date: date,
+        occurred_at: occurredAt,
       })
       .eq('id', eventId)
       .eq('user_id', user.id)

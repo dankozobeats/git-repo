@@ -25,6 +25,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const body = await request.json()
     const { date, value } = body
+    // Note: time parameter is ignored for logs table (no timestamp column)
 
     // Vérifier que le log appartient à l'utilisateur
     const { data: existingLog } = await supabase

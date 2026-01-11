@@ -66,6 +66,9 @@ const mainNav: SidebarNavItem[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/dashboard-advanced', label: 'Analyse comportementale', icon: 'stats' },
   { href: '/habits/stats', label: 'Stats détaillées', icon: 'stats' },
+  { href: '/reports/strategic', label: 'Rapport stratégique', icon: 'stats' },
+  { href: '/reports/temporal', label: 'Rapport temporel', icon: 'stats' },
+  { href: '/reports/ai', label: 'Rapport IA', icon: 'stats' },
   { href: '/reports/history', label: 'Historique', icon: 'history' },
 
   // Section Actions & Outils

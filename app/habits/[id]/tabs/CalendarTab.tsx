@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { WeeklyCalendar } from '@/components/WeeklyCalendar'
 import { DayReportModal } from '@/components/DayReportModal'
 import type { HabitCalendarMap } from '@/lib/habits/computeHabitStats'
+import { formatDateKey } from '@/lib/date-utils'
 
 type CalendarTabProps = {
   habitType: 'good' | 'bad'
@@ -53,7 +54,7 @@ export default function CalendarTab({
   // Tous les jours du mois
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateKey(date)
 
     const isToday =
       date.getDate() === today.getDate() &&

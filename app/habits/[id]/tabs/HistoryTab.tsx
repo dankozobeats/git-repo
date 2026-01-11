@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Edit2, Calendar, X, Check } from 'lucide-react'
+import { Trash2, Edit2, Calendar, X, Check, Plus } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 
 type HistoryEntry = {
@@ -29,7 +29,12 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
   const [isLoading, setIsLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
   const [editValue, setEditValue] = useState(1)
+  const [isCreating, setIsCreating] = useState(false)
+  const [newDate, setNewDate] = useState('')
+  const [newTime, setNewTime] = useState('')
+  const [newValue, setNewValue] = useState(1)
   const { showToast, ToastComponent } = useToast()
 
   const isBadHabit = habitType === 'bad'
@@ -65,6 +70,9 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
       if (res.ok) {
         setEntries(prev => prev.filter(e => e.id !== entry.id))
         router.refresh()
+
+        // Déclencher le rafraîchissement du modal DayReport s'il est ouvert
+        window.dispatchEvent(new Event('dayReportRefresh'))
       }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
@@ -75,12 +83,15 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
   function startEdit(entry: HistoryEntry) {
     setEditingId(entry.id)
     setEditDate(entry.date)
+    // Extraire l'heure au format HH:MM pour l'input
+    setEditTime(extractTimeForInput(entry.time))
     setEditValue(entry.value)
   }
 
   function cancelEdit() {
     setEditingId(null)
     setEditDate('')
+    setEditTime('')
     setEditValue(1)
   }
 
@@ -95,6 +106,7 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: editDate,
+          time: editTime || undefined,
           value: trackingMode === 'counter' ? editValue : 1,
         }),
       })
@@ -119,10 +131,70 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
       )
       cancelEdit()
       router.refresh()
+
+      // Déclencher le rafraîchissement du modal DayReport s'il est ouvert
+      window.dispatchEvent(new Event('dayReportRefresh'))
+
       showToast('Modification enregistrée', 'success')
     } catch (error) {
       console.error('Erreur lors de la modification:', error)
       showToast('Erreur lors de la modification', 'error')
+    }
+  }
+
+  function startCreate() {
+    setIsCreating(true)
+    // Par défaut, la date d'hier
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    setNewDate(yesterday.toISOString().split('T')[0])
+    // Par défaut, l'heure actuelle
+    const now = new Date()
+    setNewTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)
+    setNewValue(1)
+  }
+
+  function cancelCreate() {
+    setIsCreating(false)
+    setNewDate('')
+    setNewTime('')
+    setNewValue(1)
+  }
+
+  async function saveCreate() {
+    if (!newDate) {
+      showToast('Veuillez sélectionner une date', 'error')
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/habits/${habitId}/manual-entry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: newDate,
+          time: newTime || undefined,
+          value: trackingMode === 'counter' ? newValue : 1,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Création échouée')
+      }
+
+      // Recharger l'historique
+      await fetchHistory()
+      cancelCreate()
+      router.refresh()
+
+      // Déclencher le rafraîchissement du modal DayReport s'il est ouvert
+      window.dispatchEvent(new Event('dayReportRefresh'))
+
+      showToast('Entrée ajoutée avec succès', 'success')
+    } catch (error) {
+      console.error('Erreur lors de la création:', error)
+      showToast(error instanceof Error ? error.message : 'Erreur lors de la création', 'error')
     }
   }
 
@@ -143,6 +215,16 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  function extractTimeForInput(dateTime?: string | null): string {
+    if (!dateTime) return ''
+    const date = new Date(dateTime)
+    if (Number.isNaN(date.getTime())) return ''
+    // Format HH:MM pour l'input time
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
   }
 
   if (isLoading) {
@@ -168,8 +250,80 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
         <h2 className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
           📚 Historique complet
         </h2>
-        <p className="text-xs text-white/40">{entries.length} entrée{entries.length > 1 ? 's' : ''}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-white/40">{entries.length} entrée{entries.length > 1 ? 's' : ''}</p>
+          {!isCreating && (
+            <button
+              onClick={startCreate}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Ajouter
+            </button>
+          )}
+        </div>
       </div>
+
+      {isCreating && (
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-white">Ajouter une entrée manuelle</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-4 w-4 text-white/40" />
+              <input
+                type="date"
+                value={newDate}
+                onChange={e => setNewDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-blue-500/50 focus:outline-none"
+              />
+            </div>
+
+            {/* Heure uniquement pour bad habits et counters (qui utilisent habit_events) */}
+            {(isBadHabit || trackingMode === 'counter') && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-white/60">Heure:</span>
+                <input
+                  type="time"
+                  value={newTime}
+                  onChange={e => setNewTime(e.target.value)}
+                  className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-blue-500/50 focus:outline-none"
+                />
+              </div>
+            )}
+
+            {trackingMode === 'counter' && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-white/60">Valeur:</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={newValue}
+                  onChange={e => setNewValue(parseInt(e.target.value) || 1)}
+                  className="w-24 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-blue-500/50 focus:outline-none"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={saveCreate}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                <Check className="h-4 w-4" />
+                Ajouter
+              </button>
+              <button
+                onClick={cancelCreate}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <X className="h-4 w-4" />
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         {entries.map(entry => {
@@ -192,6 +346,19 @@ export default function HistoryTab({ habitId, habitType, trackingMode }: History
                       className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
                     />
                   </div>
+
+                  {/* Heure uniquement pour bad habits et counters (qui utilisent habit_events) */}
+                  {(isBadHabit || trackingMode === 'counter') && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-white/60">Heure:</span>
+                      <input
+                        type="time"
+                        value={editTime}
+                        onChange={e => setEditTime(e.target.value)}
+                        className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:border-white/40 focus:outline-none"
+                      />
+                    </div>
+                  )}
 
                   {trackingMode === 'counter' && (
                     <div className="flex items-center gap-3">
