@@ -14,6 +14,7 @@ import DashboardHeroExtras from '@/components/DashboardHeroExtras'
 import DashboardToggle from '@/components/dashboard/DashboardToggle'
 import DashboardPreferenceSync from '@/components/dashboard/DashboardPreferenceSync'
 import DashboardViewToggle from '@/components/dashboard/DashboardViewToggle'
+import FocusedHabitWidget from '@/components/dashboard/FocusedHabitWidget'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 type HabitRow = Database['public']['Tables']['habits']['Row'] & {
@@ -263,6 +264,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
             />
           </section>
         )}
+
+        {/* Widget Mode Focus */}
+        <section className="px-4 md:px-0">
+          <FocusedHabitWidget />
+        </section>
 
         {habitDashboardSection}
 

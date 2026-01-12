@@ -633,6 +633,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
             streak={habit.current_streak ?? 0}
             totalLogs={habit.total_logs ?? undefined}
             totalCraquages={habit.total_craquages ?? undefined}
+            isFocused={habit.is_focused ?? false}
             onHabitValidated={onHabitValidated}
           />
         </div>
@@ -710,6 +711,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
           streak={habit.current_streak ?? 0}
           totalLogs={habit.total_logs ?? undefined}
           totalCraquages={habit.total_craquages ?? undefined}
+          isFocused={habit.is_focused ?? false}
           onHabitValidated={onHabitValidated}
         />
       </div>

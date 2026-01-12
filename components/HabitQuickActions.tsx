@@ -5,7 +5,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreVertical, ExternalLink } from 'lucide-react'
+import { MoreVertical, ExternalLink, Target } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Portal } from '@radix-ui/react-portal'
 import HabitValidateButton from '@/components/HabitValidateButton'
@@ -20,6 +20,7 @@ type HabitQuickActionsProps = {
   streak?: number
   totalLogs?: number
   totalCraquages?: number
+  isFocused?: boolean
   onHabitValidated?: (message: string, variant?: 'success' | 'error') => void
 }
 
@@ -34,6 +35,7 @@ export default function HabitQuickActions({
   streak = 0,
   totalLogs = 0,
   totalCraquages = 0,
+  isFocused = false,
   onHabitValidated,
 }: HabitQuickActionsProps) {
   const router = useRouter()
@@ -42,6 +44,7 @@ export default function HabitQuickActions({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [isFocusToggling, setIsFocusToggling] = useState(false)
 
   // Empêche le scroll arrière-plan lorsque le modal d'aperçu est ouvert.
   useEffect(() => {
@@ -113,6 +116,33 @@ export default function HabitQuickActions({
     }
   }
 
+  // Toggle focus mode for this habit
+  const handleToggleFocus = async () => {
+    if (isFocusToggling) return
+    setIsFocusToggling(true)
+    try {
+      const res = await fetch(`/api/habits/${habitId}/focus`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+
+      // Dispatch custom event to refresh focus widget
+      window.dispatchEvent(new CustomEvent('focusModeChanged'))
+
+      // Refresh the page
+      startTransition(() => router.refresh())
+
+      // Show success message
+      if (data.message) {
+        onHabitValidated?.(data.message, 'success')
+      }
+    } catch (error) {
+      console.error('Failed to toggle focus:', error)
+      onHabitValidated?.('Impossible de changer le mode focus', 'error')
+    } finally {
+      setIsFocusToggling(false)
+    }
+  }
+
   // Rend le bouton principal (check-in) et un menu Radix pour les actions secondaires.
   return (
     <>
@@ -120,6 +150,24 @@ export default function HabitQuickActions({
   data-prevent-toggle="true"
       className="ml-auto flex items-center justify-end gap-2 sm:gap-3 min-w-[64px]"
 >
+        {/* Focus button */}
+        <button
+          type="button"
+          data-prevent-toggle="true"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleToggleFocus()
+          }}
+          disabled={isFocusToggling}
+          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+            isFocused
+              ? 'border-purple-500/60 bg-purple-500/30 text-purple-200 hover:bg-purple-500/40'
+              : 'border-white/15 bg-white/5 text-white/50 hover:border-white/40 hover:text-white'
+          } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40`}
+          title={isFocused ? 'Retirer du mode Focus' : 'Activer le mode Focus'}
+        >
+          <Target className="h-5 w-5" />
+        </button>
 
         {/* Compact validation CTA keeps a consistent touch target without dominating the row. */}
         <HabitValidateButton

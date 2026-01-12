@@ -12,9 +12,11 @@ import CalendarTab from './tabs/CalendarTab'
 import CoachTab from './tabs/CoachTab'
 import SettingsTab from './tabs/SettingsTab'
 import HistoryTab from './tabs/HistoryTab'
+import NotesTab from './tabs/NotesTab'
+import TasksTab from './tabs/TasksTab'
 import type { HabitCalendarMap, HabitStats } from '@/lib/habits/computeHabitStats'
 
-type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'settings'
+type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'notes' | 'tasks' | 'settings'
 
 type Reminder = {
   id: string
@@ -175,6 +177,14 @@ export default function HabitDetailClient({
           habitType={habit.type}
           trackingMode={habit.tracking_mode ?? 'binary'}
         />
+      )}
+
+      {activeTab === 'notes' && (
+        <NotesTab habit={{ id: habit.id, name: habit.name }} />
+      )}
+
+      {activeTab === 'tasks' && (
+        <TasksTab habit={{ id: habit.id, name: habit.name }} />
       )}
 
       {activeTab === 'settings' && (

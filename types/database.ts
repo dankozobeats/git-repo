@@ -20,6 +20,7 @@ export type Database = {
           goal_type: 'daily' | 'weekly' | 'monthly' | null
           goal_description: string | null
           category_id: string | null
+          is_focused: boolean
         }
         Insert: {
           id?: string
@@ -37,6 +38,7 @@ export type Database = {
           goal_type?: 'daily' | 'weekly' | 'monthly' | null
           goal_description?: string | null
           category_id?: string | null
+          is_focused?: boolean
         }
       }
       logs: {

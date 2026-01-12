@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import { Check, Sparkles } from 'lucide-react'
+import { Sparkles, Target } from 'lucide-react'
 import type { Database } from '@/types/database'
 
 export type HabitWithMeta = Database['public']['Tables']['habits']['Row'] & {
@@ -35,6 +35,7 @@ export default function HabitCard({ habit, onActionComplete, hideWhenCompleted =
   const [count, setCount] = useState(Math.max(0, habit.todayCount))
   const [, startTransition] = useTransition()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isFocusToggling, setIsFocusToggling] = useState(false)
   const target = resolveTarget(habit)
   const progressRatio = Math.min(1, count / target)
   const isComplete = count >= target
@@ -61,6 +62,34 @@ export default function HabitCard({ habit, onActionComplete, hideWhenCompleted =
       console.error('HabitCard action failed', error)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleFocus = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isFocusToggling) return
+    setIsFocusToggling(true)
+    try {
+      const res = await fetch(`/api/habits/${habit.id}/focus`, { method: 'POST' })
+      if (!res.ok) {
+        throw new Error(await res.text())
+      }
+      const data = await res.json()
+
+      // Dispatch custom event to refresh focus widget
+      window.dispatchEvent(new CustomEvent('focusModeChanged'))
+
+      // Refresh the page to update the habit card
+      startTransition(() => router.refresh())
+
+      // Show success message
+      if (data.message) {
+        console.log(data.message)
+      }
+    } catch (error) {
+      console.error('Failed to toggle focus:', error)
+    } finally {
+      setIsFocusToggling(false)
     }
   }
 
@@ -104,8 +133,23 @@ export default function HabitCard({ habit, onActionComplete, hideWhenCompleted =
           </div>
         </div>
       </div>
-      <div className="flex min-w-[64px] items-center justify-end gap-3">
-        {/* Anchor the actions on the right with consistent spacing. */}
+      <div className="flex min-w-[64px] items-center justify-end gap-2">
+        {/* Focus button */}
+        <button
+          type="button"
+          onClick={handleToggleFocus}
+          disabled={isFocusToggling}
+          className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+            habit.is_focused
+              ? 'border-purple-500/60 bg-purple-500/30 text-purple-200 hover:bg-purple-500/40'
+              : 'border-white/20 bg-white/10 text-white/50 hover:bg-white/20 hover:text-white'
+          } focus-visible:ring-2 focus-visible:ring-purple-400/40`}
+          title={habit.is_focused ? 'Retirer du mode Focus' : 'Activer le mode Focus'}
+        >
+          <Target className="h-4 w-4" />
+        </button>
+
+        {/* Check-in button */}
         <button
           type="button"
           onClick={handleCheckIn}

@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { ArrowLeft, MoreVertical } from 'lucide-react'
 import { useState } from 'react'
 
-type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'settings'
+type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'notes' | 'tasks' | 'settings'
 
 type HabitDetailHeaderProps = {
   habit: {
@@ -38,6 +38,8 @@ export default function HabitDetailHeader({
     { id: 'calendar', label: 'Calendrier', icon: '📅' },
     { id: 'coach', label: 'Coach', icon: '🧠' },
     { id: 'history', label: 'Historique', icon: '📚' },
+    { id: 'notes', label: 'Notes', icon: '📝' },
+    { id: 'tasks', label: 'Tâches', icon: '✅' },
     { id: 'settings', label: 'Config', icon: '⚙️' },
   ]
 
