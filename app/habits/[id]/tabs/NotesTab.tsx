@@ -1,6 +1,6 @@
 'use client'
 
-import HabitNotesPanel from '@/components/notes/HabitNotesPanel'
+import HabitNotesPanelSimple from '@/components/notes/HabitNotesPanelSimple'
 
 interface NotesTabProps {
   habit: {
@@ -12,7 +12,7 @@ interface NotesTabProps {
 export default function NotesTab({ habit }: NotesTabProps) {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
-      <HabitNotesPanel habitId={habit.id} habitName={habit.name} />
+      <HabitNotesPanelSimple habitId={habit.id} habitName={habit.name} />
     </div>
   )
 }
