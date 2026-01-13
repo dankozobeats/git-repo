@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Save, Plus, X, Video as VideoIcon, Image as ImageIcon } from 'lucide-react'
-import ReactPlayer from 'react-player'
 
 interface Media {
   id: string
@@ -70,14 +69,19 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
           {media.map((item) => (
             <div key={item.id} className="group relative">
               {item.type === 'video' ? (
-                <div className="overflow-hidden rounded-lg border border-white/10 bg-black">
-                  <ReactPlayer
-                    url={item.url}
-                    controls
-                    width="100%"
-                    height="400px"
-                    light
-                  />
+                <div className="overflow-hidden rounded-lg border border-white/10 bg-black p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <VideoIcon className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm text-white/60">Vidéo</span>
+                  </div>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate text-sm text-blue-400 hover:underline"
+                  >
+                    {item.url}
+                  </a>
                 </div>
               ) : (
                 <img

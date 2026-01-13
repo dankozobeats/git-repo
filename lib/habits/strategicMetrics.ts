@@ -2,9 +2,34 @@
  * Fonctions de calcul pour le rapport stratégique
  */
 
-import type { HabitStatsData } from './useHabitStats'
-import type { PatternDetectionData } from './usePatternDetection'
-import type { RiskAnalysisData } from './useRiskAnalysis'
+import type { PatternInsights } from './usePatternDetection'
+import type { RiskHabit } from './useRiskAnalysis'
+
+// Type pour les stats d'habitudes
+export type HabitStatsData = {
+  totalGood: number
+  totalBad: number
+  topHabits: Array<{
+    id: string
+    name: string
+    type: 'good' | 'bad'
+    total: number
+    streak: number
+    icon: string | null
+  }>
+}
+
+// Type pour les données d'analyse de risque
+type RiskAnalysisData = {
+  topRisks: RiskHabit[]
+  remainingHabits: RiskHabit[]
+  globalState: {
+    riskLevel: 'critical' | 'warning' | 'good'
+    spiralDetected: boolean
+    message: string
+    recentRelapses: number
+  }
+}
 
 export type HealthScore = {
   score: number // 0-100
@@ -57,7 +82,7 @@ export type Prediction = {
  */
 export function calculateHealthScore(
   stats: HabitStatsData,
-  patterns: PatternDetectionData,
+  patterns: PatternInsights,
   risks: RiskAnalysisData
 ): HealthScore {
   const breakdown = {
@@ -227,7 +252,7 @@ export function identifyVictories(
  * Identifie les top 3 défis
  */
 export function identifyChallenges(
-  patterns: PatternDetectionData,
+  patterns: PatternInsights,
   risks: RiskAnalysisData
 ): Challenge[] {
   const challenges: Challenge[] = []
@@ -293,7 +318,7 @@ export function identifyChallenges(
 /**
  * Génère des prédictions pour les 7 prochains jours
  */
-export function generatePredictions(patterns: PatternDetectionData): Prediction[] {
+export function generatePredictions(patterns: PatternInsights): Prediction[] {
   const predictions: Prediction[] = []
   const today = new Date()
 

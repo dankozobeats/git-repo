@@ -43,11 +43,12 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js nécessite unsafe-eval/inline
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com", // Next.js nécessite unsafe-eval/inline
               "style-src 'self' 'unsafe-inline'", // Tailwind nécessite unsafe-inline
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co https://ai.automationpro.cloud wss://*.supabase.co",
+              "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com", // Autoriser iframes vidéos
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",

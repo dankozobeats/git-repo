@@ -19,16 +19,33 @@ function getYouTubeId(url: string): string | null {
 }
 
 // Détecter le type de vidéo
-function getVideoType(url: string): 'youtube' | 'tiktok' | 'vimeo' | 'other' {
+function getVideoType(url: string): 'youtube' | 'tiktok' | 'vimeo' | 'instagram' | 'other' {
   if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube'
   if (url.includes('tiktok.com')) return 'tiktok'
   if (url.includes('vimeo.com')) return 'vimeo'
+  if (url.includes('instagram.com')) return 'instagram'
   return 'other'
 }
 
 // Extraire l'ID Vimeo
 function getVimeoId(url: string): string | null {
   const regex = /vimeo\.com\/(?:video\/)?(\d+)/
+  const match = url.match(regex)
+  return match ? match[1] : null
+}
+
+// Extraire l'ID TikTok
+function getTikTokId(url: string): string | null {
+  // Formats: tiktok.com/@user/video/1234567890 ou vm.tiktok.com/xxxxx
+  const regex = /tiktok\.com\/(?:@[\w.-]+\/video\/|v\/)?(\d+)|vm\.tiktok\.com\/([\w]+)/
+  const match = url.match(regex)
+  return match ? (match[1] || match[2]) : null
+}
+
+// Extraire l'ID Instagram
+function getInstagramId(url: string): string | null {
+  // Formats: instagram.com/p/xxxxx ou instagram.com/reel/xxxxx
+  const regex = /instagram\.com\/(?:p|reel|tv)\/([\w-]+)/
   const match = url.match(regex)
   return match ? match[1] : null
 }
@@ -61,14 +78,31 @@ export default function SimpleNoteViewer({ text, media }: SimpleNoteViewerProps)
       if (!videoId) return <p className="text-red-400">URL YouTube invalide</p>
 
       return (
-        <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black" style={{ paddingTop: '56.25%' }}>
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="absolute inset-0 h-full w-full"
-            title="YouTube video"
-          />
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black" style={{ paddingTop: '56.25%' }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="absolute inset-0 h-full w-full"
+              title="YouTube video"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
+            />
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+            <p className="mb-2 text-xs text-white/60">Si la vidéo ne s'affiche pas:</p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-blue-400 hover:underline"
+            >
+              <span>🔗</span>
+              <span className="truncate">{url}</span>
+            </a>
+          </div>
         </div>
       )
     }
@@ -78,25 +112,102 @@ export default function SimpleNoteViewer({ text, media }: SimpleNoteViewerProps)
       if (!videoId) return <p className="text-red-400">URL Vimeo invalide</p>
 
       return (
-        <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black" style={{ paddingTop: '56.25%' }}>
-          <iframe
-            src={`https://player.vimeo.com/video/${videoId}`}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            className="absolute inset-0 h-full w-full"
-            title="Vimeo video"
-          />
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black" style={{ paddingTop: '56.25%' }}>
+            <iframe
+              src={`https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0`}
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 h-full w-full"
+              title="Vimeo video"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
+            />
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+            <p className="mb-2 text-xs text-white/60">Si la vidéo ne s'affiche pas:</p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-blue-400 hover:underline"
+            >
+              <span>🔗</span>
+              <span className="truncate">{url}</span>
+            </a>
+          </div>
         </div>
       )
     }
 
     if (type === 'tiktok') {
+      const videoId = getTikTokId(url)
+
+      // TikTok embed fonctionne avec blockquote + script, mais difficile en React
+      // On affiche un lien direct avec preview
       return (
-        <div className="rounded-lg border border-white/10 bg-black p-4 text-center">
-          <p className="mb-2 text-white/60">📱 Vidéo TikTok</p>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-            Voir sur TikTok
-          </a>
+        <div className="space-y-3">
+          <div className="rounded-lg border border-pink-500/30 bg-gradient-to-br from-pink-500/10 to-purple-500/10 p-6 text-center">
+            <div className="mb-4 text-5xl">📱</div>
+            <p className="mb-3 text-lg font-semibold text-white">Vidéo TikTok</p>
+            <p className="mb-4 text-sm text-white/60">
+              Les vidéos TikTok ne peuvent pas être intégrées directement
+            </p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-pink-600 px-6 py-3 font-semibold text-white transition hover:bg-pink-700"
+            >
+              <span>🎵</span>
+              <span>Voir sur TikTok</span>
+            </a>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-blue-400 hover:underline"
+            >
+              <span>🔗</span>
+              <span className="truncate">{url}</span>
+            </a>
+          </div>
+        </div>
+      )
+    }
+
+    if (type === 'instagram') {
+      const postId = getInstagramId(url)
+      if (!postId) return <p className="text-red-400">URL Instagram invalide</p>
+
+      return (
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black" style={{ paddingTop: '125%', maxWidth: '540px', margin: '0 auto' }}>
+            <iframe
+              src={`https://www.instagram.com/p/${postId}/embed/`}
+              allowFullScreen
+              className="absolute inset-0 h-full w-full"
+              title="Instagram post"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
+            />
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+            <p className="mb-2 text-xs text-white/60">Si le post ne s'affiche pas:</p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-blue-400 hover:underline"
+            >
+              <span>🔗</span>
+              <span className="truncate">{url}</span>
+            </a>
+          </div>
         </div>
       )
     }

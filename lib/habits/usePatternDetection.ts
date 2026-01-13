@@ -23,6 +23,7 @@ export type Pattern = {
   confidence: number // 0-100
   icon: string
   relatedHabits: string[] // IDs des habitudes concernées
+  recommendation?: string // Action recommandée (optionnel)
 }
 
 export type PatternInsights = {
