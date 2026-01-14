@@ -64,8 +64,9 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
 
     const reader = new FileReader()
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setMedia((prev) => [...prev, { id: Date.now().toString(), type: 'image', url: reader.result }])
+      const result = reader.result
+      if (typeof result === 'string') {
+        setMedia((prev) => [...prev, { id: Date.now().toString(), type: 'image', url: result }])
       }
     }
     reader.readAsDataURL(file)
