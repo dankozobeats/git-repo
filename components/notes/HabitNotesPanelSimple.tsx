@@ -16,7 +16,6 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
     notes,
     isLoading,
     error,
-    loadNoteBlocks,
     createNote,
     updateNote,
     deleteNote,
@@ -27,7 +26,6 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [newNoteTitle, setNewNoteTitle] = useState('')
-  const [loadingNoteId, setLoadingNoteId] = useState<string | null>(null)
 
   const handleCreateNote = async () => {
     if (!newNoteTitle.trim()) return
@@ -39,7 +37,6 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
       // Ouvrir la nouvelle note en édition
       if (newNote) {
         setEditingId(newNote.id)
-        await loadNoteBlocks(newNote.id)
       }
     } catch (err) {
       console.error('Failed to create note:', err)
@@ -47,55 +44,33 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
     }
   }
 
-  const handleViewNote = async (noteId: string) => {
+  const handleViewNote = (noteId: string) => {
     if (viewingId === noteId) {
       setViewingId(null)
-      setLoadingNoteId(null)
     } else {
-      setLoadingNoteId(noteId)
       setViewingId(noteId)
       setEditingId(null)
-      try {
-        // Toujours recharger les données au cas où le composant a été remonté
-        await loadNoteBlocks(noteId)
-      } finally {
-        setLoadingNoteId(null)
-      }
     }
   }
 
-  const handleEditNote = async (noteId: string) => {
+  const handleEditNote = (noteId: string) => {
     if (editingId === noteId) {
       setEditingId(null)
-      setLoadingNoteId(null)
     } else {
-      setLoadingNoteId(noteId)
       setEditingId(noteId)
       setViewingId(null)
-      try {
-        await loadNoteBlocks(noteId)
-      } finally {
-        setLoadingNoteId(null)
-      }
     }
   }
 
   const handleSaveNote = async (noteId: string, text: string, media: any[], tasks: any[]) => {
-    console.log('💾 Sauvegarde de la note:', {
-      noteId,
-      text,
-      media,
-      tasks,
-    })
     try {
       await updateNote(noteId, {
         content_text: text,
         media: media,
         tasks: tasks,
       } as any)
-      console.log('✅ Note sauvegardée avec succès')
     } catch (err) {
-      console.error('❌ Failed to save note:', err)
+      console.error('Failed to save note:', err)
       throw err
     }
   }
@@ -205,7 +180,10 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
           const isEditing = editingId === note.id
           const isViewing = viewingId === note.id
           const isOpen = isEditing || isViewing
-          const hasContent = (note as any).content_text !== undefined || (note as any).media !== undefined || (note as any).tasks !== undefined
+          const hasContent =
+            ((note as any).content_text && (note as any).content_text.trim() !== '') ||
+            ((note as any).media && (note as any).media.length > 0) ||
+            ((note as any).tasks && (note as any).tasks.length > 0)
 
           return (
             <div
@@ -294,11 +272,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
               {/* Note viewer (read-only mode) */}
               {viewingId === note.id && (
                 <div className="p-4">
-                  {loadingNoteId === note.id ? (
-                    <div className="flex items-center justify-center py-8 text-white/50">
-                      Chargement de la note...
-                    </div>
-                  ) : hasContent ? (
+                  {hasContent ? (
                     <SimpleNoteViewer
                       text={(note as any).content_text || ''}
                       media={(note as any).media || []}
@@ -316,18 +290,12 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
               {/* Note editor */}
               {isEditing && (
                 <div className="p-4">
-                  {loadingNoteId === note.id ? (
-                    <div className="flex items-center justify-center py-8 text-white/50">
-                      Chargement de la note...
-                    </div>
-                  ) : (
-                    <SimpleNoteEditor
-                      initialText={(note as any).content_text || ''}
-                      initialMedia={(note as any).media || []}
-                      initialTasks={(note as any).tasks || []}
-                      onSave={(text, media, tasks) => handleSaveNote(note.id, text, media, tasks)}
-                    />
-                  )}
+                  <SimpleNoteEditor
+                    initialText={(note as any).content_text || ''}
+                    initialMedia={(note as any).media || []}
+                    initialTasks={(note as any).tasks || []}
+                    onSave={(text, media, tasks) => handleSaveNote(note.id, text, media, tasks)}
+                  />
                 </div>
               )}
             </div>

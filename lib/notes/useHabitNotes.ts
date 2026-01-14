@@ -4,92 +4,44 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { HabitNote } from '@/types/notes'
 
-// Type pour les métadonnées légères (sans les blocks)
-type NoteMetadata = Omit<HabitNote, 'blocks' | 'media_metadata'> & {
-  blocks?: HabitNote['blocks']
-  media_metadata?: HabitNote['media_metadata']
+// Type complet incluant les nouveaux champs
+type NoteData = HabitNote & {
+  content_text?: string
+  media?: any[]
+  tasks?: any[]
 }
 
 export function useHabitNotes(habitId: string) {
-  const [notes, setNotes] = useState<NoteMetadata[]>([])
+  const [notes, setNotes] = useState<NoteData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
 
-  // Chargement initial : SEULEMENT les métadonnées (pas les blocks)
-  // Pour garder la liste rapide à charger
-  const fetchNotesMetadata = useCallback(async () => {
+  // Chargement de TOUTES les données d'un coup (pas de lazy loading)
+  const fetchNotes = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
       const supabase = createClient()
 
+      // Charger TOUT d'un coup pour éviter les problèmes de synchronisation
       const { data, error: fetchError } = await supabase
         .from('habit_notes')
-        .select('id, habit_id, user_id, title, is_pinned, created_at, updated_at')
+        .select('*')
         .eq('habit_id', habitId)
         .order('is_pinned', { ascending: false })
         .order('updated_at', { ascending: false })
 
       if (fetchError) throw fetchError
 
-      setNotes((data || []) as NoteMetadata[])
+      setNotes((data || []) as NoteData[])
     } catch (err) {
-      console.error('Error fetching notes metadata:', err)
+      console.error('Error fetching notes:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch notes')
     } finally {
       setIsLoading(false)
     }
   }, [habitId])
-
-  // Chargement lazy des blocks SEULEMENT quand on ouvre la note
-  // Cela évite de charger des données lourdes inutilement
-  const loadNoteBlocks = useCallback(async (noteId: string) => {
-    try {
-      const supabase = createClient()
-
-      const { data, error: fetchError } = await supabase
-        .from('habit_notes')
-        .select('blocks, media_metadata, content_text, media, tasks')
-        .eq('id', noteId)
-        .single()
-
-      if (fetchError) throw fetchError
-
-      console.log('📥 Données chargées depuis Supabase:', {
-        noteId,
-        hasContentText: !!data.content_text,
-        hasMedia: !!data.media,
-        hasTasks: !!data.tasks,
-        content_text: data.content_text,
-        media: data.media,
-        tasks: data.tasks,
-      })
-
-      if (data) {
-        setNotes((prev) =>
-          prev.map((note) =>
-            note.id === noteId
-              ? {
-                  ...note,
-                  blocks: data.blocks as any,
-                  media_metadata: data.media_metadata as any,
-                  content_text: data.content_text as any,
-                  media: data.media as any,
-                  tasks: data.tasks as any,
-                }
-              : note
-          )
-        )
-      }
-
-      setActiveNoteId(noteId)
-    } catch (err) {
-      console.error('Error loading note blocks:', err)
-      throw err
-    }
-  }, [])
 
   // Créer une nouvelle note
   const createNote = useCallback(
@@ -110,20 +62,23 @@ export function useHabitNotes(habitId: string) {
             title,
             blocks: [],
             media_metadata: {},
+            content_text: '',
+            media: [],
+            tasks: [],
           })
           .select()
           .single()
 
         if (createError) throw createError
 
-        await fetchNotesMetadata()
+        await fetchNotes()
         return data
       } catch (err) {
         console.error('Error creating note:', err)
         throw err
       }
     },
-    [habitId, fetchNotesMetadata]
+    [habitId, fetchNotes]
   )
 
   // Mettre à jour une note
@@ -173,15 +128,12 @@ export function useHabitNotes(habitId: string) {
         if (deleteError) throw deleteError
 
         setNotes((prev) => prev.filter((note) => note.id !== noteId))
-        if (activeNoteId === noteId) {
-          setActiveNoteId(null)
-        }
       } catch (err) {
         console.error('Error deleting note:', err)
         throw err
       }
     },
-    [activeNoteId]
+    []
   )
 
   // Toggle pin status
@@ -191,25 +143,23 @@ export function useHabitNotes(habitId: string) {
       if (!note) return
 
       await updateNote(noteId, { is_pinned: !note.is_pinned })
-      await fetchNotesMetadata() // Refresh to re-sort
+      await fetchNotes() // Refresh to re-sort
     },
-    [notes, updateNote, fetchNotesMetadata]
+    [notes, updateNote, fetchNotes]
   )
 
   useEffect(() => {
-    fetchNotesMetadata()
-  }, [fetchNotesMetadata])
+    fetchNotes()
+  }, [fetchNotes])
 
   return {
     notes,
     isLoading,
     error,
-    activeNoteId,
-    loadNoteBlocks,
     createNote,
     updateNote,
     deleteNote,
     togglePin,
-    refetch: fetchNotesMetadata,
+    refetch: fetchNotes,
   }
 }
