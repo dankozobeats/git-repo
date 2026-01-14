@@ -109,14 +109,21 @@ IMPORTANT:
 
     let aiInsights
     try {
+      // Première tentative : parse direct
       aiInsights = JSON.parse(cleanedResponse)
+
+      // Vérifier si on a un double-JSON (JSON stringifié dans une string)
+      if (typeof aiInsights === 'string') {
+        aiInsights = JSON.parse(aiInsights)
+      }
     } catch (parseError) {
       console.error('JSON parse error:', parseError)
       console.error('AI Response:', aiResponse)
+      console.error('Cleaned Response:', cleanedResponse)
 
       // Fallback avec des données exemple si le parsing échoue
       aiInsights = {
-        summary: cleanedResponse.substring(0, 200) + '...',
+        summary: "L'analyse IA n'a pas pu générer un rapport structuré. Veuillez réessayer.",
         deepInsights: [
           {
             title: 'Analyse en cours',
