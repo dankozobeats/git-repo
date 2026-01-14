@@ -347,7 +347,7 @@ export default function AgendaClient() {
     return (
       <div
         key={`${item.entry_type}-${item.id}`}
-        className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-3 text-sm text-white/80 sm:flex-row sm:items-center sm:justify-between"
+        className="group/item flex flex-col gap-2 rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-3 text-sm text-white/80 backdrop-blur transition-all duration-300 hover:scale-[1.02] hover:border-white/20 hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-center gap-3">
           <span className="text-xl">{item.habit_icon || (isAgenda ? '📌' : '•')}</span>
@@ -412,49 +412,60 @@ export default function AgendaClient() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="group rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all hover:border-white/20">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-white/50">Agenda global</p>
-              <h1 className="text-3xl font-semibold text-white">Vue d ensemble</h1>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-purple-400" />
+                <p className="text-xs uppercase tracking-[0.35em] text-white/50">Agenda global</p>
+              </div>
+              <h1 className="bg-gradient-to-r from-white to-white/70 bg-clip-text text-3xl font-bold text-transparent">
+                Vue d'ensemble
+              </h1>
             </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide sm:pb-0">
             {VIEW_OPTIONS.map((option) => {
               const Icon = option.icon
+              const isActive = view === option.id
               return (
                 <button
                   key={option.id}
                   onClick={() => setView(option.id)}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
-                    view === option.id
-                      ? 'border-white/40 bg-white/10 text-white'
-                      : 'border-white/10 bg-black/30 text-white/60 hover:border-white/30 hover:text-white'
+                  className={`group/btn relative flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
+                    isActive
+                      ? 'border-purple-400/50 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white shadow-lg shadow-purple-500/20'
+                      : 'border-white/10 bg-black/30 text-white/60 hover:scale-105 hover:border-white/30 hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-4 w-4 transition-transform ${isActive ? 'scale-110' : 'group-hover/btn:rotate-12'}`} />
                   {option.label}
+                  {isActive && (
+                    <div className="absolute inset-0 -z-10 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 blur-xl" />
+                  )}
                 </button>
               )
             })}
             <button
               onClick={() => setShowGood((prev) => !prev)}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
+              className={`relative flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
                 showGood
-                  ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-100'
-                  : 'border-white/10 bg-black/30 text-white/60 hover:border-white/30 hover:text-white'
+                  ? 'border-emerald-400/60 bg-gradient-to-r from-emerald-500/20 to-green-500/10 text-emerald-100 shadow-lg shadow-emerald-500/20'
+                  : 'border-white/10 bg-black/30 text-white/60 hover:scale-105 hover:border-emerald-400/30 hover:text-emerald-300'
               }`}
             >
+              <span className={`h-2 w-2 rounded-full ${showGood ? 'bg-emerald-400 animate-pulse' : 'bg-white/30'}`} />
               Bonnes
             </button>
             <button
               onClick={() => setShowBad((prev) => !prev)}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
+              className={`relative flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
                 showBad
-                  ? 'border-rose-400/60 bg-rose-500/10 text-rose-100'
-                  : 'border-white/10 bg-black/30 text-white/60 hover:border-white/30 hover:text-white'
+                  ? 'border-rose-400/60 bg-gradient-to-r from-rose-500/20 to-red-500/10 text-rose-100 shadow-lg shadow-rose-500/20'
+                  : 'border-white/10 bg-black/30 text-white/60 hover:scale-105 hover:border-rose-400/30 hover:text-rose-300'
               }`}
             >
+              <span className={`h-2 w-2 rounded-full ${showBad ? 'bg-rose-400 animate-pulse' : 'bg-white/30'}`} />
               Mauvaises
             </button>
             <button
@@ -477,12 +488,13 @@ export default function AgendaClient() {
             </button>
             <button
               onClick={() => setIsCompactView((prev) => !prev)}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
+              className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-all duration-300 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em] ${
                 isCompactView
-                  ? 'border-sky-400/60 bg-sky-500/10 text-sky-100'
-                  : 'border-white/10 bg-black/30 text-white/60 hover:border-white/30 hover:text-white'
+                  ? 'border-sky-400/60 bg-gradient-to-r from-sky-500/20 to-blue-500/10 text-sky-100 shadow-lg shadow-sky-500/20'
+                  : 'border-white/10 bg-black/30 text-white/60 hover:scale-105 hover:border-sky-400/30 hover:text-sky-300'
               }`}
             >
+              <Rows3 className="h-3 w-3" />
               Compact
             </button>
             {showGood && showBad && (
@@ -497,28 +509,33 @@ export default function AgendaClient() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handlePrevious}
-              className="rounded-full border border-white/10 bg-black/30 p-2 text-white/70 transition hover:border-white/30 hover:text-white"
+              className="group/nav rounded-full border border-white/10 bg-black/30 p-2 text-white/70 transition-all duration-300 hover:scale-110 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white hover:shadow-lg hover:shadow-purple-500/20"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover/nav:-translate-x-0.5" />
             </button>
             <button
               onClick={handleNext}
-              className="rounded-full border border-white/10 bg-black/30 p-2 text-white/70 transition hover:border-white/30 hover:text-white"
+              className="group/nav rounded-full border border-white/10 bg-black/30 p-2 text-white/70 transition-all duration-300 hover:scale-110 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white hover:shadow-lg hover:shadow-purple-500/20"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 transition-transform group-hover/nav:translate-x-0.5" />
             </button>
             <button
               onClick={handleToday}
-              className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]"
+              className="rounded-full border border-white/10 bg-gradient-to-r from-black/30 to-black/20 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 transition-all duration-300 hover:scale-105 hover:border-white/30 hover:from-white/10 hover:to-white/5 hover:text-white sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]"
             >
-              Aujourd hui
+              <span className="relative">
+                Aujourd'hui
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
             </button>
             <button
               onClick={() => openCreate(selectedDate || todayKey)}
-              className="flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-100 transition hover:border-sky-300/70 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em]"
+              className="group/create relative flex items-center gap-2 overflow-hidden rounded-full border border-sky-400/40 bg-gradient-to-r from-sky-500/20 to-blue-500/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-100 shadow-lg shadow-sky-500/20 transition-all duration-300 hover:scale-105 hover:border-sky-300/70 hover:shadow-xl hover:shadow-sky-500/30 sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.25em]"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 transition-transform group-hover/create:rotate-90" />
               Rendez-vous
+              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-sky-400/0 via-sky-400/20 to-sky-400/0 opacity-0 transition-opacity group-hover/create:opacity-100" />
             </button>
           </div>
           <p className="text-sm text-white/70">{formatRangeLabel(view, range.start, range.end)}</p>
@@ -532,8 +549,14 @@ export default function AgendaClient() {
       )}
 
       {isLoading ? (
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-6 text-white/50">
-          Chargement de l agenda...
+        <div className="flex items-center justify-center rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-transparent p-12 backdrop-blur-xl">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-purple-500" />
+              <Calendar className="absolute inset-0 m-auto h-6 w-6 animate-pulse text-purple-400" />
+            </div>
+            <p className="animate-pulse text-sm font-medium text-white/60">Chargement de l'agenda...</p>
+          </div>
         </div>
       ) : (
         <>
