@@ -79,15 +79,34 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
     }
   }
 
-  const handleSaveNote = async (noteId: string, text: string, media: any[]) => {
+  const handleSaveNote = async (noteId: string, text: string, media: any[], tasks: any[]) => {
     try {
       await updateNote(noteId, {
         content_text: text,
         media: media,
+        tasks: tasks,
       } as any)
     } catch (err) {
       console.error('Failed to save note:', err)
       throw err
+    }
+  }
+
+  const handleToggleTask = async (noteId: string, taskId: string) => {
+    const note = notes.find(n => n.id === noteId)
+    if (!note) return
+
+    const tasks = (note as any).tasks || []
+    const updatedTasks = tasks.map((t: any) =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    )
+
+    try {
+      await updateNote(noteId, {
+        tasks: updatedTasks,
+      } as any)
+    } catch (err) {
+      console.error('Failed to toggle task:', err)
     }
   }
 
@@ -178,7 +197,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
           const isEditing = editingId === note.id
           const isViewing = viewingId === note.id
           const isOpen = isEditing || isViewing
-          const hasContent = (note as any).content_text !== undefined || (note as any).media !== undefined
+          const hasContent = (note as any).content_text !== undefined || (note as any).media !== undefined || (note as any).tasks !== undefined
 
           return (
             <div
@@ -275,6 +294,8 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
                     <SimpleNoteViewer
                       text={(note as any).content_text || ''}
                       media={(note as any).media || []}
+                      tasks={(note as any).tasks || []}
+                      onToggleTask={(taskId) => handleToggleTask(note.id, taskId)}
                     />
                   ) : (
                     <div className="flex items-center justify-center py-8 text-white/50">
@@ -295,7 +316,8 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
                     <SimpleNoteEditor
                       initialText={(note as any).content_text || ''}
                       initialMedia={(note as any).media || []}
-                      onSave={(text, media) => handleSaveNote(note.id, text, media)}
+                      initialTasks={(note as any).tasks || []}
+                      onSave={(text, media, tasks) => handleSaveNote(note.id, text, media, tasks)}
                     />
                   )}
                 </div>

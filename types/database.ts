@@ -93,6 +93,36 @@ export type Database = {
           color?: string | null
         }
       }
+      agenda_items: {
+        Row: {
+          id: string
+          user_id: string
+          habit_id: string | null
+          title: string
+          description: string | null
+          scheduled_date: string
+          scheduled_time: string | null
+          reminder_enabled: boolean
+          reminder_offset_minutes: number | null
+          is_completed: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          habit_id?: string | null
+          title: string
+          description?: string | null
+          scheduled_date: string
+          scheduled_time?: string | null
+          reminder_enabled?: boolean
+          reminder_offset_minutes?: number | null
+          is_completed?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }

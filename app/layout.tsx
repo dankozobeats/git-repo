@@ -70,6 +70,7 @@ const mainNav: SidebarNavItem[] = [
   { href: '/reports/temporal', label: 'Rapport temporel', icon: 'stats' },
   { href: '/reports/ai', label: 'Rapport IA', icon: 'stats' },
   { href: '/reports/history', label: 'Historique', icon: 'history' },
+  { href: '/agenda', label: 'Agenda global', icon: 'agenda' },
 
   // Section Actions & Outils
   { href: '/habits/new', label: 'Nouvelle habitude', icon: 'target' },

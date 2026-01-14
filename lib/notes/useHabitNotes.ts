@@ -51,7 +51,7 @@ export function useHabitNotes(habitId: string) {
 
       const { data, error: fetchError } = await supabase
         .from('habit_notes')
-        .select('blocks, media_metadata')
+        .select('blocks, media_metadata, content_text, media, tasks')
         .eq('id', noteId)
         .single()
 
@@ -65,6 +65,9 @@ export function useHabitNotes(habitId: string) {
                   ...note,
                   blocks: data.blocks as any,
                   media_metadata: data.media_metadata as any,
+                  content_text: data.content_text as any,
+                  media: data.media as any,
+                  tasks: data.tasks as any,
                 }
               : note
           )
