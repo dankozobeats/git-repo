@@ -56,6 +56,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
       setViewingId(noteId)
       setEditingId(null)
       try {
+        // Toujours recharger les données au cas où le composant a été remonté
         await loadNoteBlocks(noteId)
       } finally {
         setLoadingNoteId(null)
@@ -80,14 +81,21 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
   }
 
   const handleSaveNote = async (noteId: string, text: string, media: any[], tasks: any[]) => {
+    console.log('💾 Sauvegarde de la note:', {
+      noteId,
+      text,
+      media,
+      tasks,
+    })
     try {
       await updateNote(noteId, {
         content_text: text,
         media: media,
         tasks: tasks,
       } as any)
+      console.log('✅ Note sauvegardée avec succès')
     } catch (err) {
-      console.error('Failed to save note:', err)
+      console.error('❌ Failed to save note:', err)
       throw err
     }
   }

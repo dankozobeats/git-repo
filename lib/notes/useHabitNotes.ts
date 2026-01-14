@@ -57,6 +57,16 @@ export function useHabitNotes(habitId: string) {
 
       if (fetchError) throw fetchError
 
+      console.log('📥 Données chargées depuis Supabase:', {
+        noteId,
+        hasContentText: !!data.content_text,
+        hasMedia: !!data.media,
+        hasTasks: !!data.tasks,
+        content_text: data.content_text,
+        media: data.media,
+        tasks: data.tasks,
+      })
+
       if (data) {
         setNotes((prev) =>
           prev.map((note) =>
