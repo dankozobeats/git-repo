@@ -294,12 +294,14 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
                   </blockquote>
                 ),
                 hr: () => <hr className="border-white/10 my-4" />,
-                code: ({ inline, children }) =>
-                  inline ? (
-                    <code className="rounded bg-white/10 px-1 py-0.5 text-sm">{children}</code>
+                code: ({ node, ...props }) => {
+                  const isInline = !props.className
+                  return isInline ? (
+                    <code className="rounded bg-white/10 px-1 py-0.5 text-sm" {...props} />
                   ) : (
-                    <code className="block rounded-lg bg-black/60 p-3 text-sm">{children}</code>
-                  ),
+                    <code className="block rounded-lg bg-black/60 p-3 text-sm" {...props} />
+                  )
+                },
                 pre: ({ children }) => (
                   <pre className="overflow-x-auto rounded-lg bg-black/60 p-3">{children}</pre>
                 ),
