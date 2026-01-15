@@ -262,10 +262,10 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
   const hasMoreTasks = taskItems.length > previewTasks.length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Texte */}
       {text && (
-        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white/80">Notes</h3>
             {isTextTruncated && (
@@ -277,7 +277,7 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
               </button>
             )}
           </div>
-          <div className="prose prose-invert max-w-none text-white/90">
+          <div className="prose prose-invert max-w-none break-words text-white/90 prose-sm sm:prose">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -297,13 +297,24 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
                 code: ({ node, ...props }) => {
                   const isInline = !props.className
                   return isInline ? (
-                    <code className="rounded bg-white/10 px-1 py-0.5 text-sm" {...props} />
+                    <code className="rounded bg-white/10 px-1 py-0.5 text-xs sm:text-sm" {...props} />
                   ) : (
-                    <code className="block rounded-lg bg-black/60 p-3 text-sm" {...props} />
+                    <code className="block rounded-lg bg-black/60 p-3 text-xs sm:text-sm" {...props} />
                   )
                 },
+                table: ({ children }) => (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-xs sm:text-sm">{children}</table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th className="border border-white/10 bg-white/5 px-2 py-1 text-left">{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td className="border border-white/10 px-2 py-1 align-top">{children}</td>
+                ),
                 pre: ({ children }) => (
-                  <pre className="overflow-x-auto rounded-lg bg-black/60 p-3">{children}</pre>
+                  <pre className="overflow-x-auto rounded-lg bg-black/60 p-3 text-xs sm:text-sm">{children}</pre>
                 ),
               }}
             >
@@ -315,7 +326,7 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
 
       {/* Médias */}
       {mediaItems.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white/80">
               Médias ({mediaItems.length})
@@ -350,7 +361,7 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
                     <img
                       src={item.url}
                       alt="Image"
-                      className="h-48 w-full object-cover"
+                      className="h-40 w-full object-cover sm:h-48"
                       loading="lazy"
                     />
                   </button>
@@ -376,7 +387,7 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
 
       {/* Tâches */}
       {taskItems.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white/80">
               Tâches ({taskItems.filter(t => t.completed).length}/{taskItems.length})
@@ -394,13 +405,13 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
             {(isTasksOpen ? taskItems : previewTasks).map((task) => (
               <div
                 key={task.id}
-                className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
+                className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs sm:text-sm transition hover:bg-white/10"
               >
                 <input
                   type="checkbox"
                   checked={task.completed}
                   onChange={() => onToggleTask?.(task.id)}
-                  className="h-5 w-5 cursor-pointer rounded border-white/20 bg-white/10 text-green-600 focus:ring-2 focus:ring-green-500"
+                  className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/10 text-green-600 focus:ring-2 focus:ring-green-500 sm:h-5 sm:w-5"
                 />
                 <span className={`flex-1 text-sm ${task.completed ? 'text-white/40 line-through' : 'text-white'}`}>
                   {task.title}
@@ -420,10 +431,10 @@ export default function SimpleNoteViewer({ text, media, tasks, onToggleTask }: S
 
       {activeImageUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 sm:p-6"
           onClick={() => setActiveImageUrl(null)}
         >
-          <div className="relative max-h-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
+          <div className="relative max-h-full w-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
             <button
               onClick={() => setActiveImageUrl(null)}
               className="absolute -right-2 -top-2 rounded-full bg-white/10 px-3 py-1 text-sm text-white hover:bg-white/20"

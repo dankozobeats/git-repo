@@ -110,14 +110,14 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Écris tes notes ici... Tu peux utiliser du Markdown basique."
-          className="w-full min-h-[300px] rounded-lg border border-white/10 bg-black/30 p-4 text-white placeholder-white/40 focus:border-purple-500 focus:outline-none"
+          className="w-full min-h-[240px] rounded-lg border border-white/10 bg-black/30 p-3 text-white placeholder-white/40 focus:border-purple-500 focus:outline-none sm:min-h-[300px] sm:p-4"
         />
       </div>
 
       {/* Médias */}
       {media.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-white/60">Médias attachés</h3>
+          <h3 className="text-xs font-medium text-white/60 sm:text-sm">Médias attachés</h3>
           {media.map((item) => (
             <div key={item.id} className="group relative">
               {item.type === 'video' ? (
@@ -144,7 +144,7 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
               )}
               <button
                 onClick={() => removeMedia(item.id)}
-                className="absolute right-2 top-2 rounded-lg bg-red-500 p-2 text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute right-2 top-2 rounded-lg bg-red-500 p-2 text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -155,25 +155,25 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
 
       {/* Tâches */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-white/60">Tâches à faire</h3>
+        <h3 className="text-xs font-medium text-white/60 sm:text-sm">Tâches à faire</h3>
 
         {/* Liste des tâches */}
         {tasks.length > 0 && (
           <div className="space-y-2">
             {tasks.map((task) => (
-              <div key={task.id} className="group flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
+              <div key={task.id} className="group flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs sm:text-sm">
                 <input
                   type="checkbox"
                   checked={task.completed}
                   onChange={() => toggleTask(task.id)}
-                  className="h-5 w-5 cursor-pointer rounded border-white/20 bg-white/10 text-green-600 focus:ring-2 focus:ring-green-500"
+                  className="h-4 w-4 cursor-pointer rounded border-white/20 bg-white/10 text-green-600 focus:ring-2 focus:ring-green-500 sm:h-5 sm:w-5"
                 />
                 <span className={`flex-1 text-sm ${task.completed ? 'text-white/40 line-through' : 'text-white'}`}>
                   {task.title}
                 </span>
                 <button
                   onClick={() => removeTask(task.id)}
-                  className="opacity-0 transition group-hover:opacity-100"
+                  className="opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <X className="h-4 w-4 text-red-400 hover:text-red-300" />
                 </button>
@@ -183,7 +183,7 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
         )}
 
         {/* Ajouter une tâche */}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             type="text"
             value={newTaskTitle}
@@ -194,7 +194,7 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
           />
           <button
             onClick={addTask}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700 sm:w-auto"
           >
             <CheckSquare className="h-4 w-4" />
             Ajouter
@@ -203,10 +203,10 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <button
           onClick={addVideo}
-          className="flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-xs text-white/80 transition hover:bg-white/10 sm:w-auto sm:text-sm"
         >
           <VideoIcon className="h-4 w-4" />
           Ajouter une vidéo
@@ -214,7 +214,7 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
 
         <button
           onClick={addImage}
-          className="flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-xs text-white/80 transition hover:bg-white/10 sm:w-auto sm:text-sm"
         >
           <ImageIcon className="h-4 w-4" />
           Image (URL)
@@ -222,7 +222,7 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
 
         <button
           onClick={addLocalImage}
-          className="flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-xs text-white/80 transition hover:bg-white/10 sm:w-auto sm:text-sm"
         >
           <ImageIcon className="h-4 w-4" />
           Image locale
@@ -231,7 +231,7 @@ export default function SimpleNoteEditor({ initialText = '', initialMedia = [], 
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="ml-auto flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-2 font-medium text-white transition hover:bg-purple-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-6 py-2 text-sm font-medium text-white transition hover:bg-purple-700 disabled:opacity-50 sm:ml-auto sm:w-auto"
         >
           <Save className="h-4 w-4" />
           {isSaving ? 'Sauvegarde...' : 'Sauvegarder'}

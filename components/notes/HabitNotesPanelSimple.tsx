@@ -123,9 +123,9 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Notes</h2>
+          <h2 className="text-xl font-bold text-white sm:text-2xl">Notes</h2>
           <p className="mt-1 text-sm text-white/60">
             {notes.length === 0
               ? 'Aucune note pour cette habitude'
@@ -135,7 +135,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
 
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition hover:bg-purple-700"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 sm:w-auto sm:text-base"
         >
           <Plus className="h-5 w-5" />
           Nouvelle note
@@ -145,7 +145,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
       {/* Create new note */}
       {isCreating && (
         <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="text"
               value={newNoteTitle}
@@ -155,21 +155,23 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleCreateNote()}
             />
-            <button
-              onClick={handleCreateNote}
-              className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition hover:bg-purple-700"
-            >
-              Créer
-            </button>
-            <button
-              onClick={() => {
-                setIsCreating(false)
-                setNewNoteTitle('')
-              }}
-              className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2 sm:flex-none">
+              <button
+                onClick={handleCreateNote}
+                className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition hover:bg-purple-700 sm:flex-none"
+              >
+                Créer
+              </button>
+              <button
+                onClick={() => {
+                  setIsCreating(false)
+                  setNewNoteTitle('')
+                }}
+                className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -191,9 +193,9 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
               className="overflow-hidden rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm"
             >
               {/* Note header */}
-              <div className="flex items-center justify-between border-b border-white/10 p-4">
+              <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div
-                  className="flex flex-1 cursor-pointer items-center gap-3"
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
                   onClick={() => {
                     if (isOpen) {
                       setViewingId(null)
@@ -209,8 +211,8 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
                     <ChevronRight className="h-5 w-5 text-white/40" />
                   )}
                   <FileText className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <h3 className="font-semibold text-white">{note.title}</h3>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-white">{note.title}</h3>
                     <p className="text-xs text-white/50">
                       Modifiée {new Date(note.updated_at).toLocaleDateString('fr-FR')}
                     </p>
@@ -222,10 +224,13 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
                   )}
                 </div>
 
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <button
                     onClick={() => togglePin(note.id)}
-                    className={`rounded-lg p-2 transition ${
+                    className={`rounded-lg p-1.5 transition sm:p-2 ${
                       note.is_pinned
                         ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'
                         : 'text-white/50 hover:bg-white/10 hover:text-white'
@@ -237,7 +242,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
 
                   <button
                     onClick={() => handleViewNote(note.id)}
-                    className={`rounded-lg p-2 transition ${
+                    className={`rounded-lg p-1.5 transition sm:p-2 ${
                       viewingId === note.id
                         ? 'bg-blue-500/20 text-blue-300'
                         : 'text-white/50 hover:bg-white/10 hover:text-white'
@@ -249,7 +254,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
 
                   <button
                     onClick={() => handleEditNote(note.id)}
-                    className={`rounded-lg p-2 transition ${
+                    className={`rounded-lg p-1.5 transition sm:p-2 ${
                       isEditing
                         ? 'bg-purple-500/20 text-purple-300'
                         : 'text-white/50 hover:bg-white/10 hover:text-white'
@@ -261,7 +266,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
 
                   <button
                     onClick={() => handleDeleteNote(note.id)}
-                    className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/20"
+                    className="rounded-lg p-1.5 text-red-400 transition hover:bg-red-500/20 sm:p-2"
                     title="Supprimer"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -271,7 +276,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
 
               {/* Note viewer (read-only mode) */}
               {viewingId === note.id && (
-                <div className="p-4">
+                <div className="p-3 sm:p-4">
                   {hasContent ? (
                     <SimpleNoteViewer
                       text={(note as any).content_text || ''}
@@ -289,7 +294,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
 
               {/* Note editor */}
               {isEditing && (
-                <div className="p-4">
+                <div className="p-3 sm:p-4">
                   <SimpleNoteEditor
                     initialText={(note as any).content_text || ''}
                     initialMedia={(note as any).media || []}
@@ -311,7 +316,7 @@ export default function HabitNotesPanelSimple({ habitId }: HabitNotesPanelProps)
             </p>
             <button
               onClick={() => setIsCreating(true)}
-              className="mt-6 flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition hover:bg-purple-700"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition hover:bg-purple-700 sm:w-auto"
             >
               <Plus className="h-5 w-5" />
               Créer ma première note
