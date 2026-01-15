@@ -64,6 +64,7 @@ export const metadata: Metadata = {
 const mainNav: SidebarNavItem[] = [
   // Section Vision & Pilotage
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/trackables', label: 'Trackables (Nouveau)', icon: 'target' },
   { href: '/dashboard-advanced', label: 'Analyse comportementale', icon: 'stats' },
   { href: '/habits/stats', label: 'Stats détaillées', icon: 'stats' },
   { href: '/reports/strategic', label: 'Rapport stratégique', icon: 'stats' },
