@@ -45,7 +45,7 @@ export function useAIInsights() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const generateInsights = useCallback(async () => {
+  const generateInsights = useCallback(async (personality: string = 'balanced') => {
     setIsLoading(true)
     setError(null)
 
@@ -55,6 +55,7 @@ export function useAIInsights() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ personality }),
       })
 
       if (!response.ok) {

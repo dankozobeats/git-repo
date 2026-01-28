@@ -20,11 +20,10 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch (error) {
-            // En cas d'erreur lors de la mise à jour des cookies (souvent en read-only mode)
-            // on log mais on ne bloque pas l'application
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[Supabase] Cookie set error (expected in some contexts):', error);
-            }
+            // Dans Next.js App Router, on ne peut pas modifier les cookies dans les RSC.
+            // Cette erreur est attendue et gérée par @supabase/ssr.
+            // On ne loggue que si ce n'est pas l'erreur spécifique de "Server Action/Route Handler"
+            // ou si on est vraiment en train de débugger quelque chose de complexe.
           }
         },
       },

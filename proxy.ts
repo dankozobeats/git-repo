@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
 ].filter(Boolean) as string[];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, origin } = request.nextUrl;
 
   // 1. Protection CSRF pour les requêtes mutantes (POST, PUT, DELETE, PATCH)
@@ -19,19 +19,19 @@ export function middleware(request: NextRequest) {
     // En développement, autoriser tous les localhost (3000, 3001, etc.)
     const isDevelopment = process.env.NODE_ENV === 'development';
     const isLocalhost = requestOrigin?.startsWith('http://localhost:') ||
-                        requestOrigin?.startsWith('http://127.0.0.1:');
+      requestOrigin?.startsWith('http://127.0.0.1:');
 
     // Vérifier que la requête vient d'une origine autorisée
     const isValidOrigin = (isDevelopment && isLocalhost) ||
-                          (requestOrigin && ALLOWED_ORIGINS.some(allowed =>
-                            requestOrigin.startsWith(allowed)
-                          ));
+      (requestOrigin && ALLOWED_ORIGINS.some(allowed =>
+        requestOrigin.startsWith(allowed)
+      ));
 
     const isValidReferer = (isDevelopment && (referer?.startsWith('http://localhost:') ||
-                                              referer?.startsWith('http://127.0.0.1:'))) ||
-                          (referer && ALLOWED_ORIGINS.some(allowed =>
-                            referer.startsWith(allowed)
-                          ));
+      referer?.startsWith('http://127.0.0.1:'))) ||
+      (referer && ALLOWED_ORIGINS.some(allowed =>
+        referer.startsWith(allowed)
+      ));
 
     // Pour les routes API, vérifier l'origine ou le referer
     if (pathname.startsWith('/api/')) {

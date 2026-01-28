@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { askAI } from '@/lib/ai'
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient()
 
   const {
@@ -19,8 +19,10 @@ export async function POST() {
   }
 
   try {
+    const { personality = 'balanced' } = await request.json().catch(() => ({}))
+
     // Récupérer les données utilisateur
-    const [habitsRes, logsRes, eventsRes] = await Promise.all([
+    const [habitsRes, logsRes, eventsRes, trackablesRes, trackableEventsRes, lastReportsRes] = await Promise.all([
       supabase
         .from('habits')
         .select('*')
@@ -31,75 +33,104 @@ export async function POST() {
         .select('*')
         .eq('user_id', user.id)
         .order('completed_date', { ascending: false })
-        .limit(200),
+        .limit(100),
       supabase
         .from('habit_events')
         .select('*')
         .eq('user_id', user.id)
         .order('event_date', { ascending: false })
-        .limit(200),
+        .limit(100),
+      supabase
+        .from('trackables')
+        .select('*')
+        .eq('user_id', user.id)
+        .is('archived_at', null),
+      supabase
+        .from('trackable_events')
+        .select('*, trackable:trackables(name, type)')
+        .eq('user_id', user.id)
+        .order('occurred_at', { ascending: false })
+        .limit(100),
+      supabase
+        .from('ai_reports')
+        .select('report, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
     ])
 
     const habits = habitsRes.data || []
     const logs = logsRes.data || []
     const events = eventsRes.data || []
+    const trackables = trackablesRes.data || []
+    const trackableEvents = trackableEventsRes.data || []
+    const lastReport = lastReportsRes.data?.[0]
 
     // Préparer le contexte pour l'IA
-    const context = prepareContextForAI(habits, logs, events)
+    const context = prepareContextForAI(habits, logs, events, trackables, trackableEvents, lastReport)
+
+    // Personality definition
+    const personalityPrompts: Record<string, string> = {
+      balanced: "Tu es un coach expert en changement de comportement et psychologie des habitudes, factuel et direct.",
+      hardcore: "Tu es un sergent instructeur impitoyable. Sois dur, sarcastique, et ne tolère aucune excuse. Pousse l'utilisateur dans ses retranchements.",
+      supportive: "Tu es un mentor bienveillant et empathique. Encourage l'utilisateur, célèbre les petites victoires et propose des solutions douces.",
+      scientist: "Tu es un analyste de données comportementales froid et chirurgical. Utilise des termes techniques, base-toi sur les statistiques et les corrélations.",
+    }
+
+    const systemContext = personalityPrompts[personality] || personalityPrompts.balanced
 
     // Préparer le prompt pour l'IA
-    const prompt = `Tu es un coach expert en changement de comportement et psychologie des habitudes. Analyse les données suivantes et génère un rapport détaillé et personnalisé.
+    const prompt = `${systemContext} Analyse les données suivantes et génère un rapport JSON structuré.
 
-DONNÉES UTILISATEUR:
+DONNÉES UTILISATEUR ET CONTEXTE:
 ${context}
+
+Mode de personnalité demandé : ${personality}
 
 Génère un rapport JSON avec cette structure exacte:
 {
-  "summary": "Résumé en 2-3 phrases de la situation globale",
+  "summary": "Résumé en 2-3 phrases adapté à ta personnalité",
   "deepInsights": [
     {
-      "title": "Titre de l'insight",
-      "description": "Explication détaillée",
+      "title": "Titre percutant",
+      "description": "Analyse fine incluant triggers/contextes",
       "severity": "high|medium|low",
       "category": "pattern|trigger|motivation|progress"
     }
   ],
   "recommendations": [
     {
-      "title": "Titre de la recommandation",
-      "description": "Explication de pourquoi c'est important",
-      "action": "Action concrète à faire",
+      "title": "Action ciblée",
+      "description": "Pourquoi ça va marcher",
+      "action": "Consigne précise",
       "priority": "high|medium|low",
-      "estimatedImpact": "Impact attendu"
+      "estimatedImpact": "Bénéfice attendu"
     }
   ],
   "predictions": {
-    "in30Days": "Prédiction à 30 jours si continue comme ça",
-    "in60Days": "Prédiction à 60 jours",
-    "in90Days": "Prédiction à 90 jours"
+    "in30Days": "Vision à 30j",
+    "in60Days": "Vision à 60j",
+    "in90Days": "Vision à 90j"
   },
   "whatIf": [
     {
-      "scenario": "Si tu fais X...",
-      "outcome": "Alors Y va se passer",
-      "confidence": 75
+      "scenario": "Si tu changes X...",
+      "outcome": "Résultat Y probable",
+      "confidence": 85
     }
   ],
-  "motivationalMessage": "Message personnalisé encourageant"
+  "motivationalMessage": "Message de fin dans ton style propre"
 }
 
 IMPORTANT:
-- Sois spécifique aux données de l'utilisateur
-- Utilise des chiffres concrets
-- Sois encourageant mais honnête
-- Donne des actions ultra-concrètes
-- Réponds UNIQUEMENT avec du JSON valide, sans markdown ni \`\`\`json`
+- Réponds UNIQUEMENT avec du JSON valide.
+- Inclus des références aux notes et déclencheurs fournis dans le contexte.
+- Compare avec le rapport précédent si présent dans le contexte.`
 
-    // Appeler l'IA avec votre système existant
+    // Appeler l'IA
     const aiResponse = await askAI(prompt, user.id)
 
     // Parser la réponse JSON
-    // Nettoyer la réponse au cas où il y aurait du markdown
     let cleanedResponse = aiResponse.trim()
     if (cleanedResponse.startsWith('```json')) {
       cleanedResponse = cleanedResponse.replace(/^```json\n?/, '').replace(/\n?```$/, '')
@@ -109,53 +140,28 @@ IMPORTANT:
 
     let aiInsights
     try {
-      // Première tentative : parse direct
       aiInsights = JSON.parse(cleanedResponse)
-
-      // Vérifier si on a un double-JSON (JSON stringifié dans une string)
       if (typeof aiInsights === 'string') {
         aiInsights = JSON.parse(aiInsights)
       }
     } catch (parseError) {
-      console.error('JSON parse error:', parseError)
-      console.error('AI Response:', aiResponse)
-      console.error('Cleaned Response:', cleanedResponse)
-
-      // Fallback avec des données exemple si le parsing échoue
+      console.error('JSON parse error, falling back to basic result')
       aiInsights = {
-        summary: "L'analyse IA n'a pas pu générer un rapport structuré. Veuillez réessayer.",
-        deepInsights: [
-          {
-            title: 'Analyse en cours',
-            description: 'L\'IA a généré une réponse mais le format n\'est pas encore optimisé. Voici un extrait: ' + cleanedResponse.substring(0, 150),
-            severity: 'medium',
-            category: 'progress'
-          }
-        ],
-        recommendations: [
-          {
-            title: 'Continuez vos efforts',
-            description: 'Vos données sont en cours d\'analyse',
-            action: 'Réessayez la génération dans quelques instants',
-            priority: 'medium',
-            estimatedImpact: 'Amélioration de la qualité des insights'
-          }
-        ],
-        predictions: {
-          in30Days: 'Analyse en cours...',
-          in60Days: 'Analyse en cours...',
-          in90Days: 'Analyse en cours...'
-        },
-        whatIf: [
-          {
-            scenario: 'Si vous réessayez',
-            outcome: 'L\'IA pourra générer un rapport plus détaillé',
-            confidence: 80
-          }
-        ],
-        motivationalMessage: 'Vos données sont riches et l\'analyse est en cours. Réessayez pour obtenir un rapport complet!'
+        summary: "Désolé, j'ai eu un problème de formatage. Voici mon analyse brute : " + cleanedResponse.substring(0, 500),
+        deepInsights: [],
+        recommendations: [],
+        predictions: { in30Days: "?", in60Days: "?", in90Days: "?" },
+        whatIf: [],
+        motivationalMessage: "Réessaie dans un instant."
       }
     }
+
+    // Persister aussi ce type de rapport pour la mémoire future
+    await supabase.from('ai_reports').insert({
+      user_id: user.id,
+      period: 'augmented',
+      report: aiInsights.summary + "\n\nInsights: " + aiInsights.deepInsights.map((i: any) => i.title).join(', '),
+    })
 
     return NextResponse.json(aiInsights)
   } catch (error) {
@@ -170,70 +176,67 @@ IMPORTANT:
   }
 }
 
-function prepareContextForAI(habits: any[], logs: any[], events: any[]) {
-  // Calculer des stats agrégées
-  const goodHabits = habits.filter(h => h.type === 'good')
-  const badHabits = habits.filter(h => h.type === 'bad')
-
+function prepareContextForAI(
+  habits: any[],
+  logs: any[],
+  events: any[],
+  trackables: any[],
+  trackableEvents: any[],
+  lastReport?: any
+) {
   const last30Days = new Date()
   last30Days.setDate(last30Days.getDate() - 30)
   const last30DaysStr = last30Days.toISOString().split('T')[0]
 
   const recentLogs = logs.filter(l => l.completed_date >= last30DaysStr)
   const recentEvents = events.filter(e => e.event_date >= last30DaysStr)
+  const recentTE = trackableEvents.filter(te => te.occurred_at >= last30DaysStr)
 
-  // Compter bonnes vs mauvaises actions
-  let goodActions = 0
-  let badActions = 0
+  // Memoire
+  const memoryText = lastReport
+    ? `Dernière analyse (${new Date(lastReport.created_at).toLocaleDateString()}): ${lastReport.report.substring(0, 300)}`
+    : 'Première analyse pour cet utilisateur.'
 
-  recentLogs.forEach(log => {
-    const habit = habits.find(h => h.id === log.habit_id)
-    if (habit?.type === 'bad') badActions++
+  // Habitudes et Trackables
+  const goodHabits = habits.filter(h => h.type === 'good')
+  const badHabits = habits.filter(h => h.type === 'bad')
+  const states = trackables.filter(t => t.type === 'state')
+
+  // Statistiques simples
+  let goodActions = recentLogs.filter(l => habits.find(h => h.id === l.habit_id)?.type !== 'bad').length
+  let badActions = recentLogs.filter(l => habits.find(h => h.id === l.habit_id)?.type === 'bad').length
+  badActions += recentEvents.length
+
+  // Inclure les trackables moderns dans le compte
+  recentTE.forEach(te => {
+    if (te.trackable?.type === 'bad' || te.trackable?.type === 'state') badActions++
     else goodActions++
   })
 
-  recentEvents.forEach(event => {
-    const habit = habits.find(h => h.id === event.habit_id)
-    if (habit?.type === 'bad') badActions++
-    else goodActions++
-  })
-
-  // Analyser les streaks
-  const habitStreaks = habits.map(h => ({
-    name: h.name,
-    type: h.type,
-    tracking_mode: h.tracking_mode,
-  }))
-
-  // Analyser patterns temporels
-  const hourlyActivity: Record<number, number> = {}
-  events.forEach(e => {
-    if (e.occurred_at) {
-      const hour = new Date(e.occurred_at).getHours()
-      hourlyActivity[hour] = (hourlyActivity[hour] || 0) + 1
-    }
-  })
-
-  const mostActiveHours = Object.entries(hourlyActivity)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([hour]) => `${hour}h`)
+  // Détails qualitatifs (Notes & Contextes)
+  const qualitativeData = [
+    ...recentLogs.filter(l => l.notes).map(l => `- Note sur ${habits.find(h => h.id === l.habit_id)?.name}: "${l.notes}"`),
+    ...recentTE.filter(te => te.meta_json?.notes || te.meta_json?.trigger || te.meta_json?.context).map(te => {
+      const m = te.meta_json
+      return `- ${te.trackable?.name}: ${m.context ? `[Context: ${m.context}] ` : ''}${m.trigger ? `[Trigger: ${m.trigger}] ` : ''}${m.notes ? `"${m.notes}"` : ''}`
+    })
+  ].slice(-20)
 
   return `
-HABITUDES:
-- ${goodHabits.length} bonnes habitudes: ${goodHabits.map(h => h.name).join(', ')}
-- ${badHabits.length} mauvaises habitudes: ${badHabits.map(h => h.name).join(', ')}
+HISTORIQUE RÉCENT :
+${memoryText}
 
-ACTIVITÉ (30 derniers jours):
-- ${goodActions} bonnes actions
-- ${badActions} mauvaises actions
-- Ratio: ${goodActions > 0 ? Math.round((goodActions / (goodActions + badActions)) * 100) : 0}% de succès
+TRACKABLES ACTIFS :
+- Bonnes habitudes: ${goodHabits.map(h => h.name).join(', ')}
+- Mauvaises à limiter: ${badHabits.map(h => h.name).join(', ')}
+- États suivis: ${states.map(s => s.name).join(', ')}
 
-PATTERNS TEMPORELS:
-- Heures les plus actives: ${mostActiveHours.join(', ') || 'Aucune donnée'}
-- Nombre total d'événements enregistrés: ${logs.length + events.length}
+VOLUME ACTIVITÉ (30j):
+- Réussites: ${goodActions}
+- Difficultés/Craquages: ${badActions}
+- Taux de succès estimé: ${goodActions + badActions > 0 ? Math.round((goodActions / (goodActions + badActions)) * 100) : 0}%
 
-HABITUDES DÉTAILLÉES:
-${habitStreaks.slice(0, 10).map(h => `- ${h.name} (${h.type}, mode: ${h.tracking_mode})`).join('\n')}
+DÉTAILS QUALITATIFS (Notes, Triggers, Contextes):
+${qualitativeData.join('\n') || "Aucune note qualitative ce mois-ci."}
 `
 }
