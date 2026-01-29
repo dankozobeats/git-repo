@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { personality = 'balanced' } = await request.json().catch(() => ({}))
+    const { personality = 'balanced', type = 'general' } = await request.json().catch(() => ({}))
 
     // Récupérer les données utilisateur
     const [habitsRes, logsRes, eventsRes, trackablesRes, trackableEventsRes, lastReportsRes] = await Promise.all([
@@ -70,17 +70,23 @@ export async function POST(request: Request) {
     const context = prepareContextForAI(habits, logs, events, trackables, trackableEvents, lastReport)
 
     // Personality definition
-    const personalityPrompts: Record<string, string> = {
-      balanced: "Tu es un coach expert en changement de comportement et psychologie des habitudes, factuel et direct.",
-      hardcore: "Tu es un sergent instructeur impitoyable. Sois dur, sarcastique, et ne tolère aucune excuse. Pousse l'utilisateur dans ses retranchements.",
-      supportive: "Tu es un mentor bienveillant et empathique. Encourage l'utilisateur, célèbre les petites victoires et propose des solutions douces.",
-      scientist: "Tu es un analyste de données comportementales froid et chirurgical. Utilise des termes techniques, base-toi sur les statistiques et les corrélations.",
+    const typePrompts: Record<string, string> = {
+      general: "Génère un rapport d'insights profonds sur le comportement.",
+      strategic: "Génère un BRIEFING STRATÉGIQUE de haut niveau. Analyse les tendances lourdes et les changements de trajectoire.",
     }
 
+    const personalityPrompts: Record<string, string> = {
+      balanced: "Tu es un coach expert en changement de comportement et psychologie des habitudes, factuel et direct.",
+      hardcore: "Tu es un sergent instructeur impitoyable. Sois dur, sarcastique, et ne tolère aucune excuse.",
+      supportive: "Tu es un mentor bienveillant et empathique. Encourage l'utilisateur.",
+      scientist: "Tu es un analyste de données comportementales froid et chirurgical. Utilise des termes techniques.",
+    }
+
+    const basePrompt = typePrompts[type] || typePrompts.general
     const systemContext = personalityPrompts[personality] || personalityPrompts.balanced
 
     // Préparer le prompt pour l'IA
-    const prompt = `${systemContext} Analyse les données suivantes et génère un rapport JSON structuré.
+    const prompt = `${systemContext} ${basePrompt}
 
 DONNÉES UTILISATEUR ET CONTEXTE:
 ${context}

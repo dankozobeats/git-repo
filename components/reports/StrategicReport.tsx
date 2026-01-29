@@ -11,6 +11,7 @@ import { VictoriesChallengesGrid } from './VictoriesChallengesGrid'
 import { MonthlyEvolutionChart } from './MonthlyEvolutionChart'
 import { GoalsProgressGrid } from './GoalsProgressGrid'
 import { PredictiveTimeline } from './PredictiveTimeline'
+import { StrategyBriefing } from './StrategyBriefing'
 import { useState } from 'react'
 import { Calendar } from 'lucide-react'
 
@@ -22,7 +23,7 @@ export function StrategicReport({ defaultPeriod = 30 }: StrategicReportProps) {
   const [period, setPeriod] = useState(defaultPeriod)
   const report = useStrategicReport(period)
 
-  if (report.isLoading) {
+  if (report.isLoading && !report.healthScore) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
@@ -49,11 +50,10 @@ export function StrategicReport({ defaultPeriod = 30 }: StrategicReportProps) {
             <button
               key={days}
               onClick={() => setPeriod(days)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                period === days
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${period === days
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'text-white/70 hover:bg-white/5 hover:text-white'
-              }`}
+                }`}
             >
               <Calendar className="h-4 w-4" />
               {days}j
@@ -61,6 +61,12 @@ export function StrategicReport({ defaultPeriod = 30 }: StrategicReportProps) {
           ))}
         </div>
       </div>
+
+      {/* Strategy Briefing (AI) */}
+      <StrategyBriefing
+        briefing={report.strategyBriefing}
+        isLoading={report.isLoading}
+      />
 
       {/* Section 1: Hero Score */}
       <HeroScoreCard
@@ -97,13 +103,12 @@ export function StrategicReport({ defaultPeriod = 30 }: StrategicReportProps) {
             {report.patterns.map((pattern, idx) => (
               <div
                 key={idx}
-                className={`rounded-2xl border p-4 ${
-                  pattern.severity === 'high'
+                className={`rounded-2xl border p-4 ${pattern.severity === 'high'
                     ? 'border-red-500/30 bg-red-500/10'
                     : pattern.severity === 'medium'
-                    ? 'border-amber-500/30 bg-amber-500/10'
-                    : 'border-blue-500/30 bg-blue-500/10'
-                }`}
+                      ? 'border-amber-500/30 bg-amber-500/10'
+                      : 'border-blue-500/30 bg-blue-500/10'
+                  }`}
               >
                 <div className="mb-2 flex items-start justify-between">
                   <div>
@@ -116,13 +121,12 @@ export function StrategicReport({ defaultPeriod = 30 }: StrategicReportProps) {
                     <p className="mt-1 text-sm text-white/80">{pattern.description}</p>
                   </div>
                   <div
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                      pattern.severity === 'high'
+                    className={`rounded-full px-2 py-1 text-xs font-semibold ${pattern.severity === 'high'
                         ? 'bg-red-500/20 text-red-300'
                         : pattern.severity === 'medium'
-                        ? 'bg-amber-500/20 text-amber-300'
-                        : 'bg-blue-500/20 text-blue-300'
-                    }`}
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-blue-500/20 text-blue-300'
+                      }`}
                   >
                     {pattern.confidence}% confiance
                   </div>

@@ -47,6 +47,7 @@ export type StrategicReportData = {
   challenges: Challenge[]
   patterns: ReturnType<typeof usePatternDetection>['patterns']
   predictions: Prediction[]
+  strategyBriefing: string | null
   isLoading: boolean
 }
 
@@ -54,6 +55,9 @@ export function useStrategicReport(period: number = 30): StrategicReportData {
   const [habits, setHabits] = useState<Habit[]>([])
   const [logs, setLogs] = useState<Log[]>([])
   const [events, setEvents] = useState<Event[]>([])
+  const [trackables, setTrackables] = useState<any[]>([])
+  const [trackableEvents, setTrackableEvents] = useState<any[]>([])
+  const [strategyBriefing, setStrategyBriefing] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
@@ -66,7 +70,7 @@ export function useStrategicReport(period: number = 30): StrategicReportData {
         return
       }
 
-      const [habitsRes, logsRes, eventsRes] = await Promise.all([
+      const [habitsRes, logsRes, eventsRes, trackablesRes, trackableEventsRes] = await Promise.all([
         supabase
           .from('habits')
           .select('*')
@@ -82,17 +86,45 @@ export function useStrategicReport(period: number = 30): StrategicReportData {
           .select('*')
           .eq('user_id', user.id)
           .order('event_date', { ascending: false }),
+        supabase
+          .from('trackables')
+          .select('*')
+          .eq('user_id', user.id)
+          .is('archived_at', null),
+        supabase
+          .from('trackable_events')
+          .select('*, trackable:trackables(*)')
+          .eq('user_id', user.id)
+          .order('occurred_at', { ascending: false }),
       ])
 
       setHabits(habitsRes.data || [])
       setLogs(logsRes.data || [])
       setEvents(eventsRes.data || [])
+      setTrackables(trackablesRes.data || [])
+      setTrackableEvents(trackableEventsRes.data || [])
+
+      // Fetch AI Strategy Briefing
+      try {
+        const aiRes = await fetch('/api/reports/ai-insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ personality: 'scientist', type: 'strategic', period: `${period}j` })
+        })
+        if (aiRes.ok) {
+          const aiData = await aiRes.json()
+          setStrategyBriefing(aiData.summary || null)
+        }
+      } catch (e) {
+        console.error('Failed to fetch AI strategy briefing', e)
+      }
+
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [period])
 
   useEffect(() => {
     fetchData()
@@ -169,6 +201,7 @@ export function useStrategicReport(period: number = 30): StrategicReportData {
     challenges,
     patterns: patterns.patterns,
     predictions,
+    strategyBriefing,
     isLoading,
   }
 }
