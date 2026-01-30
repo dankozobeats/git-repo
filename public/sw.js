@@ -135,11 +135,15 @@ self.addEventListener('push', (event) => {
             body: notificationData.body,
             icon: notificationData.icon,
             badge: notificationData.badge,
-            tag: 'badhabit-push-' + Date.now(),
+            tag: notificationData.habitId ? `habit-${notificationData.habitId}` : `push-${Date.now()}`,
             renotify: true,
             requireInteraction: true,
             data: notificationData,
-            vibrate: [200, 100, 200],
+            vibrate: [200, 100, 200, 100, 200], // WhatsApp-style
+            actions: [
+                { action: 'done', title: '✅ Fait' },
+                { action: 'open', title: '🔗 Ouvrir' }
+            ]
         }).then(() => {
             console.log('[SW] Notification affichée avec succès')
         }).catch(err => {
@@ -147,42 +151,42 @@ self.addEventListener('push', (event) => {
         })
     )
 })
+
 // ==========================================
 // 👆 CLICK SUR UNE NOTIFICATION
 // ==========================================
 self.addEventListener('notificationclick', (event) => {
-    console.log('[SW] Notification cliquée')
+    console.log('[SW] Notification cliquée, action:', event.action)
 
-    // Ferme la notification
     event.notification.close()
 
-    // Gère les actions (boutons)
-    if (event.action === 'close') {
-        return // Ne fait rien, juste fermer
+    const notificationData = event.notification.data
+    const habitId = notificationData?.habitId || notificationData?.habit_id
+    const targetUrl = notificationData?.url || (habitId ? `/habits/${habitId}` : '/')
+
+    if (event.action === 'done' && habitId) {
+        // Optionnel : Appel API pour marquer comme fait en arrière-plan
+        event.waitUntil(
+            fetch('/api/habits/log-fast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ habitId })
+            }).then(r => console.log('[SW] Log rapide effectué'))
+                .catch(e => console.error('[SW] Erreur log rapide:', e))
+        )
+        return
     }
 
-    // Récupère l'habitId depuis les données de la notification
-    const habitId = event.notification.data?.habitId || event.notification.data?.habit_id
-    const targetUrl = event.notification.data?.url || (habitId ? `/habits/${habitId}` : '/')
-
-    // Détermine l'URL de destination
-    const urlToOpen = targetUrl
-
-    // Ouvre ou focus une fenêtre existante
+    // Par défaut (ou action 'open') : Focus/Ouvrir la fenêtre
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-            // Cherche une fenêtre déjà ouverte avec l'URL cible
             for (let i = 0; i < windowClients.length; i++) {
                 const client = windowClients[i]
-                if (client.url.includes(urlToOpen) && 'focus' in client) {
+                if (client.url.includes(targetUrl) && 'focus' in client) {
                     return client.focus()
                 }
             }
-
-            // Si aucune fenêtre trouvée, ouvre une nouvelle fenêtre
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen)
-            }
+            if (clients.openWindow) return clients.openWindow(targetUrl)
         })
     )
 })
