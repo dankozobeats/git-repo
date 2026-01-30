@@ -85,15 +85,41 @@ export default function PushEnableButton({ userId }: PushEnableButtonProps) {
         }
     };
 
+    const handleUnsubscribe = async () => {
+        if (!confirm('Désactiver toutes vos notifications ?')) return
+        setStatus('loading');
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                await subscription.unsubscribe();
+            }
+            await fetch('/api/test-push', { method: 'DELETE' }); // Optional: clear DB too
+            setStatus('idle');
+            setMsg('Notifications désactivées');
+        } catch (err: any) {
+            setStatus('error');
+            setMsg(err.message);
+        }
+    };
+
     if (status === 'unsupported') {
         return <span className="text-gray-500 text-xs">Notifications non supportées</span>;
     }
 
     if (status === 'success') {
         return (
-            <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1.5 rounded-lg border border-green-400/20">
-                <span className="text-lg">✓</span>
-                <span className="text-sm font-medium">Notifications activées</span>
+            <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1.5 rounded-lg border border-green-400/20">
+                    <span className="text-lg">✓</span>
+                    <span className="text-sm font-medium">Notifications activées</span>
+                </div>
+                <button
+                    onClick={handleUnsubscribe}
+                    className="text-[10px] text-white/20 hover:text-red-400 transition-colors underline"
+                >
+                    Désactiver
+                </button>
             </div>
         );
     }

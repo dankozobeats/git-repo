@@ -173,16 +173,20 @@ export async function POST(req: Request) {
         // 6) Envoi des notifications
         let sentCount = 0;
         const remindersToDisable: string[] = [];
-        const debugLogs: string[] = [];
+        const debugLogs: string[] = [
+            `Found ${remindersToSend.length} reminders to process`,
+            `Found ${typedSubs.length} total subscriptions for involved users`
+        ];
 
         await Promise.all(
             remindersToSend.map(async (reminder) => {
                 const userSubs = subsByUser.get(reminder.user_id);
                 if (!userSubs || userSubs.length === 0) {
-                    debugLogs.push(`User ${reminder.user_id} has no subscriptions`);
+                    debugLogs.push(`User ${reminder.user_id.slice(0, 8)} has NO ACTIVE SUBSCRIPTIONS in DB`);
                     return;
                 }
 
+                debugLogs.push(`Sending to user ${reminder.user_id.slice(0, 8)} (${userSubs.length} devices)`);
                 const habitName = reminder.habit_id ? habitMap.get(reminder.habit_id)?.name : null;
                 const tz = reminder.timezone || 'Europe/Paris';
                 const reminderTime = DateTime.fromISO(reminder.time_local).setZone(tz);
@@ -217,8 +221,10 @@ export async function POST(req: Request) {
                         const msg = `WebPush error for sub ${sub.id.slice(0, 5)}...: [${statusCode}] ${err?.message || err}. Body: ${body}`;
                         console.error(msg);
                         debugLogs.push(msg);
-                        if (statusCode === 410 || statusCode === 404) {
-                            // On pourrait supprimer ici
+                        if (statusCode === 410 || statusCode === 404 || statusCode === 403) {
+                            remindersToDisable.push(sub.id); // Reusing this for deletion logic
+                            debugLogs.push(`Deleting invalid sub: ${sub.id.slice(0, 5)} (Status ${statusCode})`);
+                            await supabase.from('push_subscriptions').delete().eq('id', sub.id);
                         }
                     }
                 });

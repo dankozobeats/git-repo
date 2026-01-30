@@ -32,6 +32,33 @@ export async function GET(
     return NextResponse.json(data)
 }
 
+export async function DELETE(
+    _: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Since we have ON DELETE CASCADE in the database, 
+    // deleting the conversation will auto-delete messages.
+    const { error } = await supabase
+        .from('ai_conversations')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+}
+
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -100,6 +127,9 @@ ${habitsContext}
 
 - Pour créer un rappel : [ACTION: CREATE_REMINDER | habit: ID_UUID_DE_L_HABITUDE | time: HH:mm]
   *IMPORTANT: Utilise toujours l'UUID fourni ci-dessus pour le champ 'habit'. Ne mets JAMAIS le nom.*
+
+- Pour supprimer un rappel : [ACTION: DELETE_REMINDER | id: ID_UUID_DU_RAPPEL]
+  *Utilise l'UUID du rappel trouvé dans la section 'Rappels programmés' du contexte. INTERDIT d'inventer un ID ou d'utiliser le placeholder.*
 `
         const aiReply = await askAI(`${systemInstructions}\n\n${fullPrompt}`, user.id)
 

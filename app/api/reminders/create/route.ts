@@ -49,11 +49,13 @@ export async function POST(request: Request) {
         // 4. Data Validation with Zod
         const validation = CreateReminderSchema.safeParse(body);
         if (!validation.success) {
+            console.error('[API Reminders] Validation failed:', validation.error);
             return NextResponse.json(
                 { error: 'Validation failed', details: (validation.error as any).errors },
                 { status: 400 }
             );
         }
+        console.log('[API Reminders] Validation success:', validation.data);
 
         const { habit_id, time_local, timezone, schedule, channel, active } = validation.data;
 
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
                 schedule,
                 time_local: utcISO,
                 timezone,
-                weekday: validation.data.weekday ?? dt.weekday, // Utilise le jour du mois ou celui spécifié
+                weekday: validation.data.weekday ?? (dt.weekday === 7 ? 0 : dt.weekday),
                 active,
             })
             .select()
@@ -87,8 +89,13 @@ export async function POST(request: Request) {
 
         if (error) {
             console.error('Supabase error:', error);
-            // Ne pas exposer les erreurs brutes de DB en prod idéalement, mais ok pour l'instant
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            // On renvoie l'erreur détaillée pour faciliter le débugging
+            return NextResponse.json({
+                error: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint
+            }, { status: 500 });
         }
 
         return NextResponse.json({ success: true, reminder: data });

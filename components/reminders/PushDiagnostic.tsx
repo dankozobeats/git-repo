@@ -53,6 +53,80 @@ export default function PushDiagnostic() {
         }
     }
 
+    const handleClearAll = async () => {
+        if (!confirm('Voulez-vous supprimer TOUS vos abonnements push enregistrés (DB + Browser) ?')) return
+        setStatus('loading')
+        try {
+            // 1. Browser side
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready
+                const sub = await reg.pushManager.getSubscription()
+                if (sub) await sub.unsubscribe()
+            }
+
+            // 2. Server side
+            const res = await fetch('/api/test-push?clear=all', { method: 'DELETE' })
+            if (res.ok) {
+                setSubCount(0)
+                setSub(null)
+                addLog('Nettoyage complet effectué.')
+                setStatus('success')
+                // Force a page reload or event to notify other components
+                window.location.reload()
+            }
+        } catch (err) {
+            setStatus('error')
+            addLog('Erreur lors du nettoyage')
+        }
+    }
+
+    const handleResync = async () => {
+        if (!sub) return
+        setStatus('loading')
+        addLog('Tentative de resynchronisation...')
+        try {
+            const res = await fetch('/api/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sub.toJSON())
+            })
+            if (res.ok) {
+                addLog('Synchronisation DB réussie !')
+                setStatus('success')
+                // Refresh sub count
+                const r2 = await fetch('/api/test-push')
+                const d2 = await r2.json()
+                if (d2.ok && d2.reports) setSubCount(d2.reports.length)
+            } else {
+                throw new Error('Erreur API')
+            }
+        } catch (err) {
+            setStatus('error')
+            addLog('Échec de la synchronisation')
+        }
+    }
+
+    const handleLocalTest = async () => {
+        addLog('Test local showNotification...')
+        if (!('serviceWorker' in navigator)) {
+            addLog('Service Worker non supporté')
+            return
+        }
+        try {
+            const reg = await navigator.serviceWorker.ready
+            await reg.showNotification('Test Local BadHabit', {
+                body: 'Ceci est un test direct sans passer par le réseau push.',
+                icon: '/web-app-manifest-192x192.png',
+                tag: 'local-test',
+                badge: '/web-app-manifest-192x192.png',
+                vibrate: [200, 100, 200]
+            } as any)
+            addLog('Appel showNotification effectué.')
+        } catch (err) {
+            addLog('Erreur test local : ' + err)
+        }
+    }
+
     if (!isOpen) {
         return (
             <button
@@ -94,6 +168,14 @@ export default function PushDiagnostic() {
 
                 <div className="bg-black/40 rounded-2xl p-4 border border-white/5 space-y-3">
                     <p className="text-[10px] text-white/40 uppercase">Actions de Test</p>
+
+                    <button
+                        onClick={handleLocalTest}
+                        className="w-full py-2 bg-green-500 text-black rounded-xl text-xs font-bold hover:bg-green-400 transition-colors"
+                    >
+                        🎯 Test Local Direct (Sans Push)
+                    </button>
+
                     <button
                         onClick={handleTest}
                         disabled={status === 'loading'}
@@ -113,6 +195,9 @@ export default function PushDiagnostic() {
                                 })
                                 const data = await res.json()
                                 addLog(`Cron result: ${data.processed} dus, ${data.sent} sents`)
+                                if (data.debug && Array.isArray(data.debug)) {
+                                    data.debug.forEach((msg: string) => addLog(`LOG: ${msg}`));
+                                }
                                 setStatus('success')
                             } catch (e) {
                                 addLog('Error triggering cron')
@@ -123,6 +208,23 @@ export default function PushDiagnostic() {
                     >
                         🔄 Simuler le passage du temps (Process Reminders)
                     </button>
+
+                    {sub && subCount === 0 && (
+                        <button
+                            onClick={handleResync}
+                            className="w-full py-2 bg-amber-500 text-black rounded-xl text-xs font-bold hover:bg-amber-400 transition-colors"
+                        >
+                            🔄 Synchroniser avec la DB
+                        </button>
+                    )}
+
+                    <button
+                        onClick={handleClearAll}
+                        className="w-full py-2 bg-red-500/10 text-red-300 border border-red-500/30 rounded-xl text-[10px] font-bold hover:bg-red-500/30 transition-colors"
+                    >
+                        🗑️ Reset complet (Browser + DB)
+                    </button>
+
                     <div className="space-y-1 font-mono text-[9px] text-white/40">
                         {logs.map((l, i) => <p key={i}>{l}</p>)}
                     </div>

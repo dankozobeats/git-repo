@@ -13,6 +13,7 @@ export interface AIContextData {
     trackableEvents: string[]
     previousReportSummary: string
     habitsList: { id: string; name: string; type: string }[]
+    reminders: { id: string; habit_name: string; time: string; schedule: string }[]
 }
 
 /**
@@ -95,6 +96,13 @@ export async function getAIUserContext(userId: string, days: number = 30): Promi
 
     const userFacts = facts?.map(f => f.content) || []
 
+    // 5. Reminders
+    const { data: remindersData } = await supabase
+        .from('reminders')
+        .select('*, habits(name)')
+        .eq('user_id', userId)
+        .eq('active', true)
+
     return {
         period: `${days}j`,
         today: todayStr,
@@ -118,6 +126,12 @@ export async function getAIUserContext(userId: string, days: number = 30): Promi
         }),
         previousReportSummary,
         habitsList: (habits || []).map(h => ({ id: h.id, name: h.name, type: h.type })),
+        reminders: (remindersData || []).map(r => ({
+            id: r.id,
+            habit_name: (r as any).habits?.name || 'Inconnue',
+            time: r.time_local,
+            schedule: r.schedule
+        })),
     }
 }
 
@@ -136,6 +150,9 @@ ${data.yesterdayLogs.length > 0 ? data.yesterdayLogs.join('\n') : "Rien à signa
 --- DONNÉES GLOBALES (${data.period}) ---
 Habitudes actives:
 ${data.habitsList.map(h => `- ${h.name} (${h.type === 'good' ? 'Bonne' : 'Mauvaise'}) [ID: ${h.id}]`).join('\n')}
+
+Rappels programmés:
+${data.reminders.length > 0 ? data.reminders.map(r => `- [ID: ${r.id}] Habitude: "${r.habit_name}" à ${r.time.split(' ')[1] || r.time} (${r.schedule})`).join('\n') : "Aucun rappel actif."}
 
 Statistiques: ${data.habitsCount.good} bonnes, ${data.habitsCount.bad} mauvaises.
 Succès récents:

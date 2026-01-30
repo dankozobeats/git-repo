@@ -38,14 +38,14 @@ export async function POST(req: Request) {
           },
           JSON.stringify({
             title: "Test de Notification",
-            body: "Si vous voyez ceci, les notifications fonctionnent ! 🔥",
+            body: `Test à ${new Date().toLocaleTimeString()} ! Si vous voyez ceci, les notifications fonctionnent ! 🔥`,
             url: "/"
           })
         );
         reports.push({ endpoint: sub.id, status: "sent" });
       } catch (err: any) {
         reports.push({ endpoint: sub.id, status: "error", message: err.message, code: err.statusCode });
-        if (err.statusCode === 410) {
+        if (err.statusCode === 410 || err.statusCode === 403 || err.statusCode === 404) {
           toDelete.push(sub.id);
         }
       }
@@ -58,6 +58,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, reports });
   } catch (err: any) {
     console.error("test-push error:", err);
+    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    const { data: subs, error: subsError } = await supabase
+      .from('push_subscriptions')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (subsError) throw subsError;
+
+    return NextResponse.json({ ok: true, reports: subs || [] });
+  } catch (err: any) {
+    console.error("test-push GET error:", err);
+    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+  }
+}
+export async function DELETE(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error("test-push DELETE error:", err);
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
 }

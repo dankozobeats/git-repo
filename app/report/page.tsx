@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Bot, History, PlusCircle, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Bot, History, PlusCircle, MessageSquare, Trash2 } from 'lucide-react'
 import CoachChat from '@/components/coach/CoachChat'
 
 interface Conversation {
@@ -57,6 +57,25 @@ export default function ReportPage() {
     } catch (err) {
       console.error('Error creating conversation:', err)
       return ''
+    }
+  }
+
+  const handleDeleteConversation = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (!confirm('Supprimer cette conversation définitivement ?')) return
+
+    try {
+      const res = await fetch(`/api/ai/chat/${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.id !== id))
+        if (activeConversationId === id) {
+          setActiveConversationId(null)
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting conversation:', err)
     }
   }
 
@@ -117,17 +136,28 @@ export default function ReportPage() {
               [1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-white/5 animate-pulse rounded-xl" />)
             ) : conversations.length > 0 ? (
               conversations.map(conv => (
-                <button
+                <div
                   key={conv.id}
-                  onClick={() => setActiveConversationId(conv.id)}
-                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all ${activeConversationId === conv.id
+                  className="group relative"
+                >
+                  <button
+                    onClick={() => setActiveConversationId(conv.id)}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all pr-12 ${activeConversationId === conv.id
                       ? 'bg-white/10 text-white ring-1 ring-white/20'
                       : 'text-white/40 hover:bg-white/5 hover:text-white/70'
-                    }`}
-                >
-                  <MessageSquare size={16} className={activeConversationId === conv.id ? 'text-indigo-400' : 'text-white/20'} />
-                  <span className="text-xs font-medium truncate">{conv.title}</span>
-                </button>
+                      }`}
+                  >
+                    <MessageSquare size={16} className={activeConversationId === conv.id ? 'text-indigo-400' : 'text-white/20'} />
+                    <span className="text-xs font-medium truncate">{conv.title}</span>
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteConversation(e, conv.id)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 text-white/20 transition-all"
+                    title="Supprimer la conversation"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               ))
             ) : (
               <p className="text-xs text-white/20 text-center py-4">Aucune discussion</p>

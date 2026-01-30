@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Bot, User, Send, Loader2, RefreshCcw, ArrowLeft } from 'lucide-react'
+import { Bot, User, Send, Loader2, RefreshCcw, ArrowLeft, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { useRouter } from 'next/navigation'
 
@@ -110,7 +110,7 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
     ]
 
     return (
-        <div className="flex flex-col h-full bg-white/[0.02] rounded-[32px] border border-white/5 overflow-hidden shadow-2xl backdrop-blur-md">
+        <div className="flex flex-col h-full bg-white/[0.02] sm:rounded-[32px] border-b sm:border border-white/5 overflow-hidden shadow-2xl backdrop-blur-md">
             {/* Header Discussion */}
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.03]">
                 <div className="flex items-center gap-3">
@@ -128,7 +128,7 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
             </div>
 
             {/* Zone Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6 scrollbar-thin scrollbar-thumb-white/10">
                 {messages.length === 0 && !isLoading && !isTyping && (
                     <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-6">
                         <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center animate-pulse">
@@ -161,7 +161,7 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                                 }`}>
                                 {m.role === 'user' ? <User size={14} /> : <Bot size={14} />}
                             </div>
-                            <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-lg ${m.role === 'user'
+                            <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-sm leading-relaxed shadow-lg ${m.role === 'user'
                                 ? 'bg-indigo-600 text-white rounded-tr-none'
                                 : 'bg-white/5 text-white/90 border border-white/10 rounded-tl-none prose prose-invert max-w-none'
                                 }`}>
@@ -180,6 +180,9 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                                         {/* Action Cards */}
                                         {m.content.includes('[ACTION: CREATE_REMINDER') && (
                                             <ActionReminderCard content={m.content} />
+                                        )}
+                                        {m.content.includes('[ACTION: DELETE_REMINDER') && (
+                                            <ActionDeleteReminderCard content={m.content} />
                                         )}
                                     </div>
                                 )}
@@ -206,7 +209,7 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="p-4 bg-black/20 border-t border-white/5">
+            <form onSubmit={handleSend} className="p-3 sm:p-4 bg-black/20 border-t border-white/5 pb-8 sm:pb-4">
                 <div className="relative flex items-center gap-2">
                     <input
                         type="text"
@@ -246,22 +249,43 @@ function ActionReminderCard({ content }: { content: string }) {
         try {
             const now = new Date()
             const today = now.toISOString().split('T')[0]
-            const fullTimeLocal = `${today} ${time}`
 
-            // Détecter si le tag contient un UUID
+            // Si l'IA a mis une date au format DD-MM-YYYY HH:mm ou similaire, on tente de la normaliser
+            let finalTimeLocal = ''
+            if (time.includes('-') || time.includes('/')) {
+                // On essaie de voir si c'est déjà une date complète. 
+                // Si ça ressemble à YYYY-MM-DD HH:mm, on garde.
+                if (/^\d{4}-\d{2}-\d{2}/.test(time)) {
+                    finalTimeLocal = time
+                } else if (/^\d{2}-\d{2}-\d{4}/.test(time)) {
+                    // Format FR: DD-MM-YYYY -> YYYY-MM-DD
+                    const parts = time.split(' ')
+                    const dateParts = parts[0].split('-')
+                    finalTimeLocal = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]} ${parts[1] || '00:00'}`
+                } else {
+                    finalTimeLocal = time // Tentative directe
+                }
+            } else {
+                finalTimeLocal = `${today} ${time}`
+            }
+
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(habitValue)
+
+            const payload = {
+                habit_id: isUUID ? habitValue : null,
+                time_local: finalTimeLocal,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                schedule: 'daily',
+                channel: 'push',
+                active: true
+            }
+
+            console.log('[CoachChat] Sending Reminder Payload:', payload)
 
             const res = await fetch('/api/reminders/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    habit_id: isUUID ? habitValue : null,
-                    time_local: fullTimeLocal,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    schedule: 'daily',
-                    channel: 'push',
-                    active: true
-                }),
+                body: JSON.stringify(payload),
             })
             if (!res.ok) {
                 const errData = await res.json()
@@ -270,7 +294,7 @@ function ActionReminderCard({ content }: { content: string }) {
             }
             setStatus('success')
         } catch (err) {
-            console.error(err)
+            console.error('Error creating reminder:', err)
             setStatus('error')
         }
     }
@@ -300,6 +324,64 @@ function ActionReminderCard({ content }: { content: string }) {
                 Confirmer le rappel
             </button>
             {status === 'error' && <p className="text-[10px] text-red-400 text-center">Erreur lors de la création</p>}
+        </div>
+    )
+}
+
+function ActionDeleteReminderCard({ content }: { content: string }) {
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+    const actionMatch = content.match(/\[ACTION: DELETE_REMINDER \| id: (.*?)\]/)
+
+    if (!actionMatch) return null
+
+    const reminderId = actionMatch[1]
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reminderId)
+
+    if (!isUUID) return null
+
+    const handleConfirm = async () => {
+        setStatus('loading')
+        try {
+            const res = await fetch(`/api/reminders/${reminderId}`, {
+                method: 'DELETE',
+            })
+            if (!res.ok) {
+                const errData = await res.json()
+                console.error('Delete API error:', errData)
+                throw new Error('Failed')
+            }
+            setStatus('success')
+        } catch (err) {
+            console.error(err)
+            setStatus('error')
+        }
+    }
+
+    if (status === 'success') {
+        return (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center gap-2 text-red-400 text-xs animate-in zoom-in-95">
+                <Bot size={14} />
+                <span>Rappel supprimé avec succès.</span>
+            </div>
+        )
+    }
+
+    return (
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2 text-red-400">
+                <Bot size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Action suggérée</span>
+            </div>
+            <p className="text-sm text-white/80">Voulez-vous vraiment **supprimer** ce rappel ?</p>
+            <button
+                onClick={handleConfirm}
+                disabled={status === 'loading'}
+                className="w-full py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+            >
+                {status === 'loading' ? <Loader2 className="animate-spin" size={14} /> : <X size={14} />}
+                Confirmer la suppression
+            </button>
+            {status === 'error' && <p className="text-[10px] text-red-400 text-center">Erreur lors de la suppression</p>}
         </div>
     )
 }

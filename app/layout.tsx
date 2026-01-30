@@ -85,6 +85,8 @@ const utilityNav: SidebarNavItem[] = [
   { href: '/aide', label: 'Aide & support', icon: 'help' },
 ]
 
+import FloatingCoachWidget from '@/components/coach/FloatingCoachWidget'
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -143,6 +145,8 @@ export default async function RootLayout({
             {children}
           </div>
         </div>
+
+        {isAuthenticated && <FloatingCoachWidget />}
       </body>
     </html>
   )

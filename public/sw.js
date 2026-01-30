@@ -100,69 +100,53 @@ self.addEventListener('fetch', (event) => {
 // 🔔 RÉCEPTION DES NOTIFICATIONS PUSH
 // ==========================================
 self.addEventListener('push', (event) => {
-    console.log('[SW] Push notification reçue')
+    console.log('[SW] Événement PUSH reçu !', event)
 
-    // Données par défaut si le payload est vide
+    // Données par défaut
     let notificationData = {
         title: 'BadHabit Tracker',
-        body: 'Nouvelle notification',
-        icon: '/icon-192x192.png',
-        badge: '/icon-192x192.png',
+        body: 'Nouvelle notification (fallback)',
+        icon: '/web-app-manifest-192x192.png',
+        badge: '/web-app-manifest-192x192.png',
         habitId: null,
         url: '/',
     }
 
-    // Parse les données du push si disponibles
     if (event.data) {
         try {
             const data = event.data.json()
-            console.log('[SW] Payload reçu:', data)
-            notificationData = {
-                title: data.title || notificationData.title,
-                body: data.body || data.message || notificationData.body,
-                icon: data.icon || notificationData.icon,
-                badge: data.badge || notificationData.badge,
-                habitId: data.habitId || data.habit_id || null,
-                url: data.url || (data.habitId ? `/habits/${data.habitId}` : notificationData.url),
-                tag: data.tag || 'badhabit-notification',
-                requireInteraction: data.requireInteraction || false,
-                data: {
-                    ...data,
-                    habitId: data.habitId || data.habit_id || null,
-                    url: data.url || (data.habitId ? `/habits/${data.habitId}` : notificationData.url),
-                },
-            }
+            console.log('[SW] Payload JSON décodé:', data)
+            notificationData.title = data.title || notificationData.title
+            notificationData.body = data.body || data.message || notificationData.body
+            notificationData.habitId = data.habitId || data.habit_id || null
+            notificationData.url = data.url || (notificationData.habitId ? `/habits/${notificationData.habitId}` : '/')
         } catch (error) {
-            console.error('[SW] Erreur de parsing JSON (test simple text?):', error)
-            const textData = event.data.text()
-            notificationData.body = textData || notificationData.body
+            console.warn('[SW] Échec du parsing JSON, tentative en texte...', error)
+            notificationData.body = event.data.text() || notificationData.body
         }
+    } else {
+        console.warn('[SW] Aucun data dans l\'événement push')
     }
 
-    // Affiche la notification
+    console.log('[SW] Affichage de la notification:', notificationData.title)
+
     event.waitUntil(
         self.registration.showNotification(notificationData.title, {
             body: notificationData.body,
             icon: notificationData.icon,
             badge: notificationData.badge,
-            tag: notificationData.tag,
-            requireInteraction: notificationData.requireInteraction,
-            vibrate: [200, 100, 200], // Pattern de vibration
-            data: notificationData.data, // Données accessibles au click
-            actions: [
-                {
-                    action: 'open',
-                    title: 'Ouvrir',
-                },
-                {
-                    action: 'close',
-                    title: 'Fermer',
-                },
-            ],
+            tag: 'badhabit-push-' + Date.now(),
+            renotify: true,
+            requireInteraction: true,
+            data: notificationData,
+            vibrate: [200, 100, 200],
+        }).then(() => {
+            console.log('[SW] Notification affichée avec succès')
+        }).catch(err => {
+            console.error('[SW] Erreur lors de showNotification:', err)
         })
     )
 })
-
 // ==========================================
 // 👆 CLICK SUR UNE NOTIFICATION
 // ==========================================
