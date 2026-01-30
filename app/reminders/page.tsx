@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import ReminderList from '@/components/reminders/ReminderList';
 import PushEnableButton from '@/components/PushEnableButton';
+import PushDiagnostic from '@/components/reminders/PushDiagnostic';
 import { DateTime } from 'luxon';
 
 const isPastReminder = (reminder: any) => {
@@ -86,6 +87,10 @@ export default async function RemindersPage() {
                             <ReminderList reminders={pastOrInactive} emptyLabel="Aucun rappel passé ou inactif." accent="neutral" />
                         </div>
                     </section>
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+                    <PushDiagnostic />
                 </div>
             </div>
         </main>

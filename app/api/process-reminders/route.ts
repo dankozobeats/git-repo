@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         // 2) Init Supabase + WebPush
         const supabase = await createClient();
 
-        const VAPID_PUBLIC_KEY = assertEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY');
+        const VAPID_PUBLIC_KEY = assertEnv('VAPID_PUBLIC_KEY');
         const VAPID_PRIVATE_KEY = assertEnv('VAPID_PRIVATE_KEY');
 
         webpush.setVapidDetails(
@@ -59,14 +59,11 @@ export async function POST(req: Request) {
         );
 
         // 3) Récupération de TOUS les rappels actifs
-        // On ne filtre pas par date SQL ici car on veut faire une comparaison précise en local avec Luxon
-        // (Sauf si la table est énorme, auquel cas on filtrerait grossièrement +/- 24h)
         const { data: reminders, error: remindersError } = await supabase
             .from('reminders')
             .select('*')
             .eq('active', true)
-            .eq('channel', 'push')
-            .in('schedule', ['once', 'daily']);
+            .eq('channel', 'push');
 
         if (remindersError) {
             console.error('Supabase reminders error:', remindersError);
@@ -77,7 +74,7 @@ export async function POST(req: Request) {
         }
 
         if (!reminders || reminders.length === 0) {
-            return NextResponse.json({ sent: 0, message: 'No active reminders' });
+            return NextResponse.json({ sent: 0, processed: 0, message: 'No active reminders' });
         }
 
         const typedReminders = reminders as ReminderRow[];
@@ -85,18 +82,33 @@ export async function POST(req: Request) {
 
         // 4) Filtrage précis avec Luxon
         for (const r of typedReminders) {
-            const tz = r.timezone || 'Europe/Paris'; // Fallback
-
-            // L'heure cible (stockée en UTC, mais on la remet dans son contexte timezone)
-            // time_local est un ISO UTC (ex: 2025-11-30T03:00:00Z)
-            // On le convertit en DateTime Luxon
-            const reminderTime = DateTime.fromISO(r.time_local).setZone(tz);
-
-            // L'heure actuelle dans la timezone de l'utilisateur
+            const tz = r.timezone || 'Europe/Paris';
             const nowLocal = DateTime.now().setZone(tz);
+            const reminderStored = DateTime.fromISO(r.time_local).setZone(tz);
 
-            // On vérifie si l'heure est passée (avec une tolérance de 2 minutes pour ne pas spammer les vieux trucs)
-            // Condition : reminderTime <= nowLocal && reminderTime > nowLocal - 2 minutes
+            let reminderTime = reminderStored;
+
+            if (r.schedule === 'daily') {
+                // Pour le quotidien, on prend l'heure/minute stockée et on l'applique au jour actuel
+                reminderTime = nowLocal.set({
+                    hour: reminderStored.hour,
+                    minute: reminderStored.minute,
+                    second: 0,
+                    millisecond: 0
+                });
+            } else if (r.schedule === 'weekly' && r.weekday !== null) {
+                // Pour l'hebdo, on vérifie si c'est le bon jour
+                if (nowLocal.weekday !== r.weekday) continue;
+                reminderTime = nowLocal.set({
+                    hour: reminderStored.hour,
+                    minute: reminderStored.minute,
+                    second: 0,
+                    millisecond: 0
+                });
+            }
+            // Pour 'once', on utilise la date/heure exacte stockée
+
+            // Vérification si l'heure est venue (fenêtre de 2 minutes)
             const diffInMinutes = nowLocal.diff(reminderTime, 'minutes').minutes;
 
             if (diffInMinutes >= 0 && diffInMinutes < 2) {
@@ -105,7 +117,7 @@ export async function POST(req: Request) {
         }
 
         if (remindersToSend.length === 0) {
-            return NextResponse.json({ sent: 0, message: 'No reminders due now' });
+            return NextResponse.json({ sent: 0, processed: 0, message: 'No reminders due now' });
         }
 
         // 5) Récupérer les subscriptions

@@ -48,10 +48,17 @@ export default function PushEnableButton({ userId }: PushEnableButtonProps) {
                 throw new Error('Permission de notification refusée');
             }
 
-            // 3. Subscribe to Push
+            // 3. Subscribe to Push (Force reset old subs if keys changed)
+            console.log('Cleaning old subscriptions if any...');
+            const existingSub = await registration.pushManager.getSubscription();
+            if (existingSub) {
+                await existingSub.unsubscribe();
+            }
+
             const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
             if (!vapidKey) throw new Error('VAPID Public Key manquante dans la config');
 
+            console.log('Subscribing to new push service...');
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(vapidKey)

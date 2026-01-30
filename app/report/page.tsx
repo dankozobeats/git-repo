@@ -1,226 +1,147 @@
 'use client'
 
-// Premium client page to trigger and display the Gemini-powered report with a Linear-inspired experience.
+/**
+ * Premium Coach IA page transformed into a stateful interactive chat experience.
+ * Users can chat with the AI and trigger reports directly from the discussion.
+ */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BarChart3, Bot } from 'lucide-react'
+import { ArrowLeft, Bot, History, PlusCircle, MessageSquare } from 'lucide-react'
+import CoachChat from '@/components/coach/CoachChat'
 
-import AIReportContent from '@/components/AIReportContent'
-import InlineError from '@/components/InlineError'
-import ReportEmptyState from '@/components/ReportEmptyState'
-import ReportLoadingSkeleton from '@/components/ReportLoadingSkeleton'
-import ReportPeriodSelector, { ReportPeriod } from '@/components/ReportPeriodSelector'
-import ReportStatsSummary, { ReportStats } from '@/components/ReportStatsSummary'
-
-const buildFallbackReport = (reason: string) =>
-  `Voici une capsule perso pendant que l'IA se repose :\n- Rappelle-toi de célébrer les petites victoires.\n- Revois ton plan de récupération et identifie 2 actions immédiates.\n- Note ce qui a déclenché tes craquages pour t'en protéger.\n\n(${reason})`
+interface Conversation {
+  id: string
+  title: string
+  updated_at: string
+}
 
 export default function ReportPage() {
-  const [period, setPeriod] = useState<ReportPeriod>('30j')
-  const [isLoading, setIsLoading] = useState(false)
-  const [report, setReport] = useState<string | null>(null)
-  const [stats, setStats] = useState<ReportStats | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [errorHint, setErrorHint] = useState<string | null>(null)
-  const [fallbackReport, setFallbackReport] = useState<string | null>(null)
-  const [autoRetryMessage, setAutoRetryMessage] = useState<string | null>(null)
-  const retryTimerRef = useRef<number | null>(null)
-  const autoRetryAttemptsRef = useRef(0)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const selectedLabel = useMemo(() => {
-    if (period === '7j') return 'Analyse hebdo'
-    if (period === '90j') return 'Analyse trimestrielle'
-    return 'Analyse mensuelle'
-  }, [period])
-
-  const handlePeriodChange = useCallback((next: ReportPeriod) => {
-    setPeriod(next)
-  }, [])
-
-  const generateReport = useCallback(async () => {
-    setIsLoading(true)
-    setReport(null)
-    setStats(null)
-    setError(null)
-    setErrorHint(null)
-    setFallbackReport(null)
-    setAutoRetryMessage(null)
-
+  const fetchConversations = useCallback(async () => {
     try {
-      const response = await fetch('/api/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period }),
-      })
-
-      const payload = (await response.json().catch(() => null)) as
-        | ({ report?: string; stats?: ReportStats; error?: string; details?: string })
-        | null
-
-      const scheduleAutoRetry = () => {
-        if (retryTimerRef.current) {
-          window.clearTimeout(retryTimerRef.current)
-          retryTimerRef.current = null
+      const res = await fetch('/api/ai/chat')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setConversations(data)
+        // Auto-select latest if none active
+        if (!activeConversationId && data.length > 0) {
+          setActiveConversationId(data[0].id)
         }
-
-        if (autoRetryAttemptsRef.current >= 1) {
-          return
-        }
-
-        autoRetryAttemptsRef.current += 1
-        setAutoRetryMessage('Nouvelle tentative automatique dans 4 secondes...')
-        retryTimerRef.current = window.setTimeout(() => {
-          retryTimerRef.current = null
-          generateReport()
-        }, 4000)
       }
-
-      const handleFailure = (reason: string, detail?: string) => {
-        setIsLoading(false)
-        setError(`Impossible de générer le rapport (${reason}).`)
-        setErrorHint(detail ?? null)
-        setFallbackReport(buildFallbackReport(reason))
-        setStats(null)
-        setReport(null)
-        scheduleAutoRetry()
-      }
-
-      if (!response.ok) {
-        handleFailure(payload?.error ?? 'Erreur serveur', payload?.details)
-        return
-      }
-
-      setReport(payload?.report ?? null)
-      setStats(payload?.stats ?? null)
-      setFallbackReport(null)
-      setAutoRetryMessage(null)
-      autoRetryAttemptsRef.current = 0
     } catch (err) {
-      console.error(err)
-      const reason = err instanceof Error ? err.message : 'Erreur inattendue'
-      setError(`Impossible de générer le rapport (${reason}).`)
-      setErrorHint('Vérifie ta connexion ou la disponibilité du coach IA.')
-      setFallbackReport(buildFallbackReport(reason))
-      if (autoRetryAttemptsRef.current < 1) {
-        autoRetryAttemptsRef.current += 1
-        setAutoRetryMessage('Nouvelle tentative automatique dans 4 secondes...')
-        retryTimerRef.current = window.setTimeout(() => {
-          retryTimerRef.current = null
-          generateReport()
-        }, 4000)
-      }
-      setStats(null)
-      setReport(null)
+      console.error('Error fetching conversations:', err)
     } finally {
       setIsLoading(false)
     }
-  }, [period])
-
-  const triggerGeneration = useCallback(() => {
-    autoRetryAttemptsRef.current = 0
-    if (retryTimerRef.current) {
-      window.clearTimeout(retryTimerRef.current)
-      retryTimerRef.current = null
-    }
-    setAutoRetryMessage(null)
-    setFallbackReport(null)
-    generateReport()
-  }, [generateReport])
+  }, [activeConversationId])
 
   useEffect(() => {
-    return () => {
-      if (retryTimerRef.current) {
-        window.clearTimeout(retryTimerRef.current)
-      }
-    }
+    fetchConversations()
   }, [])
 
-  const showReport = Boolean(report && !isLoading)
+  const handleNewConversation = async () => {
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: `Discussion du ${new Date().toLocaleDateString()}` }),
+      })
+      const newConv = await res.json()
+      setConversations(prev => [newConv, ...prev])
+      setActiveConversationId(newConv.id)
+      return newConv.id
+    } catch (err) {
+      console.error('Error creating conversation:', err)
+      return ''
+    }
+  }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#020712] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.2),transparent_45%),radial-gradient(circle_at_bottom,_rgba(236,72,153,0.12),transparent_40%)]" />
+    <main className="relative h-screen flex flex-col bg-[#020712] text-white overflow-hidden">
+      {/* Background radial effects */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.1),transparent_45%),radial-gradient(circle_at_bottom,_rgba(236,72,153,0.06),transparent_40%)]" />
 
-      <header className="relative border-b border-white/5 bg-gradient-to-br from-white/5 via-white/[0.02] to-transparent backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-white/60">
+      {/* Header compact */}
+      <header className="relative border-b border-white/5 bg-white/[0.02] backdrop-blur-3xl shrink-0">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-white/80 transition hover:border-white/40"
+              className="p-2 rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-all"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Retour dashboard
+              <ArrowLeft size={18} />
             </Link>
-            <span className="text-white/40">/</span>
-            <span>{selectedLabel}</span>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/10 p-2 rounded-xl">
+                <Bot className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight">Coach IA</h1>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/30">Interactive Discipline Suite</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/40">Gemini Insight Suite</p>
-              <h1 className="mt-3 flex items-center gap-3 text-4xl font-semibold">
-                <span className="inline-flex items-center justify-center rounded-3xl bg-white/10 p-3">
-                  <Bot className="h-6 w-6 text-white" />
-                </span>
-                Rapport IA
-              </h1>
-              <p className="mt-3 text-base text-white/70">
-                Génère une synthèse stratégique sur tes habitudes, inspirée du style Linear/Superhuman.
-              </p>
-            </div>
-
+          <div className="flex items-center gap-2">
             <Link
               href="/reports/history"
-              className="inline-flex items-center gap-2 self-start rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium text-white transition hover:border-white/40 hover:bg-white/20"
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs font-medium text-white/70 hover:bg-white/10 transition-all"
             >
-              <BarChart3 className="h-4 w-4" />
-              Historique IA
+              <History size={14} />
+              Bibliothèque
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="relative mx-auto max-w-5xl px-4 py-10 space-y-8">
-        <section className="rounded-[40px] border border-white/5 bg-white/[0.04] p-6 md:p-10 shadow-[0_30px_90px_rgba(2,7,18,0.7)] backdrop-blur-2xl">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/50">Période d'analyse</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">{selectedLabel}</h2>
-              <p className="mt-2 text-sm text-white/60">Choisis l'horizon qui fait sens puis lance l'IA.</p>
-            </div>
-            <button
-              type="button"
-              onClick={triggerGeneration}
-              disabled={isLoading}
-              className="inline-flex items-center justify-center gap-2 rounded-[32px] bg-gradient-to-r from-sky-500 to-indigo-500 px-6 py-3 text-base font-semibold text-white shadow-[0_15px_40px_rgba(14,165,233,0.35)] transition hover:opacity-90 disabled:opacity-50"
-            >
-              {isLoading ? 'Génération en cours...' : 'Générer le rapport'}
-            </button>
-          </div>
+      {/* Main Content (Dashboard style) */}
+      <div className="relative flex-1 flex overflow-hidden max-w-7xl mx-auto w-full px-4 py-6 gap-6">
 
-          <div className="mt-8 space-y-6">
-            <ReportPeriodSelector period={period} onChange={handlePeriodChange} loading={isLoading} />
-            {error && (
-              <div className="space-y-2">
-                <InlineError message={error} onRetry={triggerGeneration} />
-                {errorHint && <p className="text-xs text-white/50">Détail : {errorHint}</p>}
-              </div>
+        {/* Sidebar Historique Chat */}
+        <aside className="hidden lg:flex flex-col w-72 shrink-0 gap-4">
+          <button
+            onClick={handleNewConversation}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold transition-all shadow-lg shadow-indigo-600/20"
+          >
+            <PlusCircle size={18} />
+            Nouvelle discussion
+          </button>
+
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/5">
+            <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest px-2 mb-2">Historique récent</p>
+            {isLoading ? (
+              [1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-white/5 animate-pulse rounded-xl" />)
+            ) : conversations.length > 0 ? (
+              conversations.map(conv => (
+                <button
+                  key={conv.id}
+                  onClick={() => setActiveConversationId(conv.id)}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all ${activeConversationId === conv.id
+                      ? 'bg-white/10 text-white ring-1 ring-white/20'
+                      : 'text-white/40 hover:bg-white/5 hover:text-white/70'
+                    }`}
+                >
+                  <MessageSquare size={16} className={activeConversationId === conv.id ? 'text-indigo-400' : 'text-white/20'} />
+                  <span className="text-xs font-medium truncate">{conv.title}</span>
+                </button>
+              ))
+            ) : (
+              <p className="text-xs text-white/20 text-center py-4">Aucune discussion</p>
             )}
-            {fallbackReport && (
-              <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-4 text-sm text-white/80">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Fallback IA</p>
-                <pre className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/80">{fallbackReport}</pre>
-                {autoRetryMessage && <p className="mt-2 text-xs text-white/60">{autoRetryMessage}</p>}
-              </div>
-            )}
-            <ReportStatsSummary stats={stats} />
           </div>
+        </aside>
+
+        {/* Chat Section */}
+        <section className="flex-1 flex flex-col h-full overflow-hidden">
+          <CoachChat
+            conversationId={activeConversationId}
+            onNewConversation={handleNewConversation}
+          />
         </section>
-
-        {isLoading && <ReportLoadingSkeleton />}
-        {!isLoading && showReport && report && <AIReportContent report={report} />}
-        {!isLoading && !report && <ReportEmptyState cta="Sélectionne une période puis lance le rapport" />}
       </div>
     </main>
   )
