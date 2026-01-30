@@ -82,9 +82,9 @@ UTILISATEUR: ${message}
 `
 
         // 4. Appeler l'IA avec instructions Super-Coach
-        const habitsContext = contextData.recentLogs.length > 0
-            ? `HABITUDES ET LEURS IDs :\n${contextData.recentLogs.map(l => l.split(':')[0]).join('\n')}`
-            : ""
+        const habitsContext = contextData.habitsList.length > 0
+            ? `HABITUDES DISPONIBLES (Utilise STRICTEMENT ces IDs pour les rappels) :\n${contextData.habitsList.map(h => `- ${h.name} : ${h.id}`).join('\n')}`
+            : "Aucune habitude configurée."
 
         const systemInstructions = `
 TU ES LE SUPER-COACH BADHABIT (Mode Action & Mémoire actif).
@@ -97,7 +97,9 @@ TU ES LE SUPER-COACH BADHABIT (Mode Action & Mémoire actif).
 
 --- ACTIONS IA (TOOL CALLING) ---
 ${habitsContext}
-- Pour créer un rappel : [ACTION: CREATE_REMINDER | habit: ID_OU_NOM | time: HH:mm]
+
+- Pour créer un rappel : [ACTION: CREATE_REMINDER | habit: ID_UUID_DE_L_HABITUDE | time: HH:mm]
+  *IMPORTANT: Utilise toujours l'UUID fourni ci-dessus pour le champ 'habit'. Ne mets JAMAIS le nom.*
 `
         const aiReply = await askAI(`${systemInstructions}\n\n${fullPrompt}`, user.id)
 

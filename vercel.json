@@ -3,7 +3,10 @@
     {
       "path": "/api/ai-reports/auto-archive",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/process-reminders",
+      "schedule": "* * * * *"
     }
   ]
 }
-

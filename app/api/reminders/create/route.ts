@@ -79,6 +79,7 @@ export async function POST(request: Request) {
                 schedule,
                 time_local: utcISO,
                 timezone,
+                weekday: validation.data.weekday ?? dt.weekday, // Utilise le jour du mois ou celui spécifié
                 active,
             })
             .select()

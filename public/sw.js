@@ -116,6 +116,7 @@ self.addEventListener('push', (event) => {
     if (event.data) {
         try {
             const data = event.data.json()
+            console.log('[SW] Payload reçu:', data)
             notificationData = {
                 title: data.title || notificationData.title,
                 body: data.body || data.message || notificationData.body,
@@ -129,10 +130,12 @@ self.addEventListener('push', (event) => {
                     ...data,
                     habitId: data.habitId || data.habit_id || null,
                     url: data.url || (data.habitId ? `/habits/${data.habitId}` : notificationData.url),
-                }, // Conserve toutes les données pour notificationclick
+                },
             }
         } catch (error) {
-            console.error('[SW] Erreur lors du parsing des données push:', error)
+            console.error('[SW] Erreur de parsing JSON (test simple text?):', error)
+            const textData = event.data.text()
+            notificationData.body = textData || notificationData.body
         }
     }
 

@@ -12,6 +12,7 @@ export interface AIContextData {
     trackables: string[]
     trackableEvents: string[]
     previousReportSummary: string
+    habitsList: { id: string; name: string; type: string }[]
 }
 
 /**
@@ -116,6 +117,7 @@ export async function getAIUserContext(userId: string, days: number = 30): Promi
             return `- ${(te as any).trackable?.name} (${te.kind}): ${new Date(te.occurred_at).toLocaleDateString()}`
         }),
         previousReportSummary,
+        habitsList: (habits || []).map(h => ({ id: h.id, name: h.name, type: h.type })),
     }
 }
 
@@ -132,7 +134,10 @@ Hier: ${data.yesterday}
 ${data.yesterdayLogs.length > 0 ? data.yesterdayLogs.join('\n') : "Rien à signaler."}
 
 --- DONNÉES GLOBALES (${data.period}) ---
-Habitudes: ${data.habitsCount.good} bonnes, ${data.habitsCount.bad} mauvaises.
+Habitudes actives:
+${data.habitsList.map(h => `- ${h.name} (${h.type === 'good' ? 'Bonne' : 'Mauvaise'}) [ID: ${h.id}]`).join('\n')}
+
+Statistiques: ${data.habitsCount.good} bonnes, ${data.habitsCount.bad} mauvaises.
 Succès récents:
 ${data.recentLogs.slice(0, 5).join('\n') || 'Aucun'}
 Craquages récents:

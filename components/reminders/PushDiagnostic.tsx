@@ -11,11 +11,26 @@ export default function PushDiagnostic() {
 
     const addLog = (m: string) => setLogs(p => [...p.slice(-5), `> ${m}`])
 
+    const [subCount, setSubCount] = useState<number>(0)
+    const [isStandalone, setIsStandalone] = useState<boolean>(false)
+    const [isIOS, setIsIOS] = useState<boolean>(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone)
+            setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent))
+        }
+    }, [])
+
     useEffect(() => {
         if (isOpen && 'serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(reg => {
                 reg.pushManager.getSubscription().then(setSub)
             })
+            // Fetch total subs count for user
+            fetch('/api/test-push').then(r => r.json()).then(data => {
+                if (data.ok && data.reports) setSubCount(data.reports.length)
+            }).catch(() => { })
         }
     }, [isOpen])
 
@@ -59,8 +74,21 @@ export default function PushDiagnostic() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-black/40 rounded-2xl p-4 border border-white/5 space-y-2">
                     <p className="text-[10px] text-white/40 uppercase">Abonnement Actuel</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${sub ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {sub ? 'Locally Active' : 'No Local Subscription'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 text-[9px] font-bold">
+                            {subCount} device(s) in DB
+                        </span>
+                    </div>
+                    {isIOS && !isStandalone && (
+                        <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-500 leading-tight">
+                            ⚠️ iOS détecté : Vous devez "Ajouter à l'écran d'accueil" pour recevoir des notifications.
+                        </div>
+                    )}
                     <div className="text-[10px] font-mono break-all text-white/60 bg-black/20 p-2 rounded-lg max-h-32 overflow-y-auto">
-                        {sub ? JSON.stringify(sub, null, 2) : 'Aucun abonnement détecté'}
+                        {sub ? JSON.stringify(sub, null, 2) : 'Détails indisponibles'}
                     </div>
                 </div>
 

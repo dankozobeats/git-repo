@@ -43,6 +43,11 @@ export async function POST(req: Request) {
         const CRON_SECRET = assertEnv('CRON_SECRET');
 
         if (!token || token !== CRON_SECRET) {
+            console.error('[API] Unauthorized Cron Access Attempt:');
+            console.error(`Received length: ${token.length}, Expected length: ${CRON_SECRET.length}`);
+            if (token.length > 0) {
+                console.error(`Received prefix: ${token.substring(0, 4)}..., Expected prefix: ${CRON_SECRET.substring(0, 4)}...`);
+            }
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -108,10 +113,10 @@ export async function POST(req: Request) {
             }
             // Pour 'once', on utilise la date/heure exacte stockée
 
-            // Vérification si l'heure est venue (fenêtre de 2 minutes)
+            // Vérification si l'heure est venue (fenêtre de 5 minutes pour plus de fiabilité)
             const diffInMinutes = nowLocal.diff(reminderTime, 'minutes').minutes;
 
-            if (diffInMinutes >= 0 && diffInMinutes < 2) {
+            if (diffInMinutes >= 0 && diffInMinutes < 5) {
                 remindersToSend.push(r);
             }
         }
@@ -207,11 +212,13 @@ export async function POST(req: Request) {
                         );
                         sentCount += 1;
                     } catch (err: any) {
-                        const msg = `WebPush error for sub ${sub.id.slice(0, 5)}...: ${err?.message || err}`;
+                        const statusCode = err?.statusCode || err?.response?.statusCode;
+                        const body = err?.body || 'No body';
+                        const msg = `WebPush error for sub ${sub.id.slice(0, 5)}...: [${statusCode}] ${err?.message || err}. Body: ${body}`;
                         console.error(msg);
                         debugLogs.push(msg);
-                        if (err.statusCode === 410) {
-                            // Subscription invalide, on pourrait la supprimer ici
+                        if (statusCode === 410 || statusCode === 404) {
+                            // On pourrait supprimer ici
                         }
                     }
                 });
