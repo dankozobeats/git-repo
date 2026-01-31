@@ -58,7 +58,7 @@ export default function HabitValidateButton({ initial = false, onToggle, variant
         onToggle?.(next)
       }}
       className={`
-        inline-flex items-center gap-2 rounded-full transition-all duration-200 backdrop-blur
+        inline-flex items-center gap-2 rounded-xl transition-all duration-200 backdrop-blur
         ${variant === 'compact' ? 'h-9 w-9 justify-center px-0 py-0 text-xs' : 'px-4 py-2 text-sm font-semibold'}
         ${classes}
         ${validated ? 'shadow-[0_0_12px_rgba(74,222,128,0.25)]' : 'shadow-[0_0_12px_rgba(59,130,246,0.25)]'}

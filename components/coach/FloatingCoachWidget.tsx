@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Bot, X, MessageSquare, Maximize2, Minimize2 } from 'lucide-react'
 import CoachChat from './CoachChat'
 
 export default function FloatingCoachWidget() {
+    const pathname = usePathname()
     const [isOpen, setIsOpen] = useState(false)
     const [isMinimized, setIsMinimized] = useState(false)
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
@@ -52,11 +54,16 @@ export default function FloatingCoachWidget() {
         }
     }
 
+    // Hide if on dashboard-old
+    if (pathname === '/dashboard-old') {
+        return null
+    }
+
     if (!isOpen) {
         return (
             <button
                 onClick={toggleOpen}
-                className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-2xl shadow-indigo-600/40 transition-all hover:scale-110 active:scale-95 group"
+                className="fixed bottom-6 right-6 z-[2000] p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-2xl shadow-indigo-600/40 transition-all hover:scale-110 active:scale-95 group"
                 aria-label="Ouvrir le Coach IA"
             >
                 <MessageSquare className="w-6 h-6 group-hover:hidden" />
@@ -67,7 +74,7 @@ export default function FloatingCoachWidget() {
 
     return (
         <div
-            className={`fixed z-50 flex flex-col transition-all duration-300 ease-out shadow-[0_20px_60px_rgba(0,0,0,0.5)] border-white/10 bg-[#020712] overflow-hidden 
+            className={`fixed z-[2000] flex flex-col transition-all duration-300 ease-out shadow-[0_20px_60px_rgba(0,0,0,0.5)] border-white/10 bg-[#020712] overflow-hidden 
                 ${isMinimized
                     ? 'bottom-6 right-6 h-16 w-64 border rounded-3xl'
                     : 'bottom-0 right-0 h-full w-full sm:bottom-6 sm:right-6 sm:h-[600px] sm:w-[400px] sm:max-w-[calc(100vw-3rem)] sm:border sm:rounded-[32px]'

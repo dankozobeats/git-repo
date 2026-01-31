@@ -354,6 +354,8 @@ export default function HabitSectionsClient({
             onHabitValidated={handleHabitValidated}
             showDescriptions={showHabitDescriptions}
             viewMode={viewMode}
+            habitColor={habit.color}
+            habitIcon={habit.icon}
           />
         ))
       )}
@@ -572,6 +574,8 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
             showDescriptions={showDescriptions}
             viewMode={viewMode}
             highlightHabitId={highlightHabitId}
+            habitColor={habit.color}
+            habitIcon={habit.icon}
           />
         ))}
       </div>
@@ -587,10 +591,12 @@ type HabitRowCardProps = {
   showDescriptions: boolean
   viewMode: 'card' | 'list'
   highlightHabitId?: string | null
+  habitColor?: string | null
+  habitIcon?: string | null
 }
 
 // Carte principale d'une habitude avec un lien vers le détail et les actions rapides en style glassmorphism premium.
-function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions, viewMode, highlightHabitId }: HabitRowCardProps) {
+function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions, viewMode, highlightHabitId, habitColor, habitIcon }: HabitRowCardProps) {
   // Calcule l'état courant pour afficher le badge restant sans attendre un refresh serveur.
   const counterState = buildCounterState(habit, todayCount)
   const showCounterBadge = counterState.required > 1
@@ -612,7 +618,7 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
             {habit.icon || (type === 'bad' ? '🔥' : '✨')}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{habit.name}</p>
+            <p className="text-sm font-semibold text-white line-clamp-2 leading-tight">{habit.name}</p>
           </div>
           {showCounterBadge && (
             <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
@@ -630,6 +636,8 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
             counterRequired={counterState.required}
             habitName={habit.name}
             habitDescription={habit.description}
+            habitColor={habit.color}
+            habitIcon={habit.icon}
             streak={habit.current_streak ?? 0}
             totalLogs={habit.total_logs ?? undefined}
             totalCraquages={habit.total_craquages ?? undefined}
@@ -645,14 +653,14 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
   return (
     <div
       id={`habit-card-${habit.id}`}
-      className={`group flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-lg transition hover:bg-white/[0.07]
-      ${isHighlighted ? 'ring-2 ring-[#C084FC]' : ''}`}
+      className={`group flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] pl-3 pr-2 py-3 text-white shadow-xl shadow-black/40 backdrop-blur-3xl transition duration-300 hover:bg-white/[0.07]
+      ${isHighlighted ? 'ring-2 ring-[#C084FC] bg-white/[0.08]' : ''}`}
     >
       {/* Icône */}
       <div className="shrink-0">
         <div
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-xl shadow-inner shadow-black/40"
-          style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-lg shadow-inner shadow-black/40 border border-white/5 transition-transform duration-300 group-hover:scale-110"
+          style={{ backgroundColor: `${habit.color || '#6b7280'}20` }}
         >
           {habit.icon || (type === 'bad' ? '🔥' : '✨')}
         </div>
@@ -661,10 +669,10 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
       {/* Texte */}
       <Link
         href={`/habits/${habit.id}`}
-        className="flex-1 min-w-0"
+        className="flex-1 min-w-0 ml-1"
       >
         <p
-          className="text-sm font-semibold leading-tight truncate sm:text-base"
+          className="text-sm font-semibold leading-tight line-clamp-2 sm:text-base"
           title={habit.name}
         >
           {habit.name}
@@ -708,6 +716,8 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
           counterRequired={counterState.required}
           habitName={habit.name}
           habitDescription={habit.description}
+          habitColor={habit.color}
+          habitIcon={habit.icon}
           streak={habit.current_streak ?? 0}
           totalLogs={habit.total_logs ?? undefined}
           totalCraquages={habit.total_craquages ?? undefined}

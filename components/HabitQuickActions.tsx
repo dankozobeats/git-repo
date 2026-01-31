@@ -5,10 +5,10 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreVertical, ExternalLink, Target } from 'lucide-react'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { MoreVertical, ExternalLink, Target, Pencil, BarChart3, Eye, Trash2, X } from 'lucide-react'
 import { Portal } from '@radix-ui/react-portal'
 import HabitValidateButton from '@/components/HabitValidateButton'
+
 type HabitQuickActionsProps = {
   habitId: string
   habitType: 'good' | 'bad'
@@ -17,6 +17,8 @@ type HabitQuickActionsProps = {
   counterRequired?: number | null
   habitName: string
   habitDescription?: string | null
+  habitColor?: string | null
+  habitIcon?: string | null
   streak?: number
   totalLogs?: number
   totalCraquages?: number
@@ -32,6 +34,8 @@ export default function HabitQuickActions({
   counterRequired,
   habitName,
   habitDescription,
+  habitColor,
+  habitIcon,
   streak = 0,
   totalLogs = 0,
   totalCraquages = 0,
@@ -45,17 +49,19 @@ export default function HabitQuickActions({
   const [isPending, startTransition] = useTransition()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isFocusToggling, setIsFocusToggling] = useState(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
-  // Empêche le scroll arrière-plan lorsque le modal d'aperçu est ouvert.
+  // Empêche le scroll arrière-plan lorsque le tiroir ou l'aperçu est ouvert.
   useEffect(() => {
-    if (isPreviewOpen) {
+    if (isPreviewOpen || isDrawerOpen) {
       const original = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       return () => {
         document.body.style.overflow = original
       }
     }
-  }, [isPreviewOpen])
+  }, [isPreviewOpen, isDrawerOpen])
+
   // Cible dynamique permettant de savoir quand un compteur est considéré comme terminé.
   const [requiredCount, setRequiredCount] = useState(() => {
     if (typeof counterRequired === 'number' && counterRequired > 0) {
@@ -143,146 +149,227 @@ export default function HabitQuickActions({
     }
   }
 
-  // Rend le bouton principal (check-in) et un menu Radix pour les actions secondaires.
   return (
     <>
-      <div
-  data-prevent-toggle="true"
-      className="ml-auto flex items-center justify-end gap-2 sm:gap-3 min-w-[64px]"
->
-        {/* Focus button */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {/* Primary Action (Check-in) */}
+        <HabitValidateButton
+          variant="compact"
+          initial={isFullyValidated}
+          onToggle={handleAction}
+        />
+
+        {/* Secondary Micro-Actions (Minimized) */}
         <button
           type="button"
-          data-prevent-toggle="true"
           onClick={(e) => {
             e.stopPropagation()
             handleToggleFocus()
           }}
           disabled={isFocusToggling}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
-            isFocused
-              ? 'border-purple-500/60 bg-purple-500/30 text-purple-200 hover:bg-purple-500/40'
-              : 'border-white/15 bg-white/5 text-white/50 hover:border-white/40 hover:text-white'
-          } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40`}
-          title={isFocused ? 'Retirer du mode Focus' : 'Activer le mode Focus'}
+          className={`flex items-center justify-center h-8 w-8 rounded-full transition-all duration-300 ${isFocused ? 'bg-purple-500/20 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-white/30 hover:text-white/70 hover:bg-white/5'}`}
+          title={isFocused ? 'Mode Focus activé' : 'Activer le mode Focus'}
         >
-          <Target className="h-5 w-5" />
+          <Target className={`h-4.5 w-4.5 ${isFocused ? 'animate-pulse scale-110' : ''}`} />
         </button>
 
-        {/* Compact validation CTA keeps a consistent touch target without dominating the row. */}
-        <HabitValidateButton
-          variant="compact"
-          initial={isFullyValidated}
-          onToggle={() => {
-            handleAction()
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsDrawerOpen(true)
           }}
-        />
-        <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              data-prevent-toggle="true"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white transition hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-              onClick={event => event.stopPropagation()}
-            >
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            side="bottom"
-            align="end"
-            sideOffset={10}
-            className="z-[10050] w-[208px] rounded-2xl border border-white/10 bg-[#0d0f17]/95 p-2 text-sm text-white shadow-2xl shadow-black/60 backdrop-blur-lg data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
-            collisionPadding={12}
-          >
-            <DropdownMenu.Item
-              onSelect={event => {
-                event.preventDefault()
-                setIsPreviewOpen(true)
-                }}
-                className="rounded-lg px-3 py-2 text-left text-white/90 transition hover:bg-white/10 focus:bg-white/10"
-              >
-                Voir l'habitude
-              </DropdownMenu.Item>
-              <MenuLink href={`/habits/${habitId}/edit`} label="Modifier" />
-              <MenuLink href={`/habits/${habitId}?view=stats`} label="Statistiques" />
-              <DropdownMenu.Item
-                onSelect={event => {
-                  event.preventDefault()
-                  handleDelete()
-                }}
-                className="rounded-lg px-3 py-2 text-left text-red-500 transition hover:bg-white/10 focus:bg-white/10"
-              >
-                {isDeleting ? 'Suppression…' : 'Supprimer'}
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white/30 transition hover:bg-white/5 hover:text-white active:scale-95"
+          title="Plus d'actions"
+        >
+          <MoreVertical className="h-4.5 w-4.5" />
+        </button>
       </div>
-      {isPreviewOpen && (
-        <Portal>
-          <div
-            className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
-            onClick={() => setIsPreviewOpen(false)}
-          />
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4 py-6">
+
+      {/* Premium Drawer (Bottom Sheet on Mobile, Modal on Desktop) */}
+      {
+        isDrawerOpen && (
+          <Portal>
             <div
-              className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#0b0f1d]/95 p-6 text-white shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="absolute right-4 top-4 rounded-full border border-white/15 px-2 py-1 text-white/70 transition hover:text-white"
-                onClick={() => setIsPreviewOpen(false)}
-                aria-label="Fermer"
+              className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm animate-in fade-in"
+              onClick={() => setIsDrawerOpen(false)}
+            />
+            <div className="fixed inset-0 z-[10001] pointer-events-none flex items-end sm:items-center justify-center p-0 sm:p-6">
+              <div
+                className="pointer-events-auto relative w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-white/10 bg-[#0d0f17]/98 p-6 sm:p-10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] sm:shadow-[0_40px_100px_rgba(0,0,0,0.7)] backdrop-blur-3xl animate-in slide-in-from-bottom sm:zoom-in duration-300 ease-out"
+                onClick={e => e.stopPropagation()}
               >
-                ✕
-              </button>
-              <div className="space-y-2 pr-8">
-                <p className="text-xs uppercase tracking-[0.35em] text-white/50">Aperçu habitude</p>
-                <h3 className="text-2xl font-semibold">{habitName}</h3>
-                {habitDescription ? (
-                  <p className="text-sm text-white/70 leading-relaxed">{habitDescription}</p>
-                ) : (
-                  <p className="text-sm text-white/40 italic">Aucune description fournie.</p>
-                )}
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Link
-                  href={`/habits/${habitId}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-white text-black px-4 py-2 text-sm font-semibold shadow-[0_12px_30px_rgba(255,255,255,0.25)] transition hover:opacity-90"
-                >
-                  Voir la fiche détaillée
-                  <ExternalLink className="h-4 w-4" />
-                </Link>
+                {/* Decorative Handle */}
+                <div className="mx-auto mb-8 h-1 w-12 rounded-full bg-white/20 sm:hidden" />
+
                 <button
-                  type="button"
-                  onClick={() => setIsPreviewOpen(false)}
-                  className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white"
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="absolute right-6 top-6 sm:right-8 sm:top-8 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 hover:text-white hover:border-white/20 transition-all active:scale-90"
                 >
-                  Fermer
+                  <X className="h-5 w-5" />
                 </button>
+
+                {/* Drawer Header */}
+                <div className="mb-8 flex items-center gap-5">
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-xl text-3xl shadow-2xl border border-white/10"
+                    style={{ backgroundColor: `${habitColor || '#6b7280'}20` }}
+                  >
+                    {habitIcon || (habitType === 'bad' ? '🔥' : '✨')}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-2xl font-bold text-white tracking-tight truncate">{habitName}</h3>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Paramètres de l'habitude</p>
+                  </div>
+                </div>
+
+                {/* Action Tiles Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <DrawerTile
+                    icon={<Eye />}
+                    label="Voir"
+                    sub="Fiche détaillée"
+                    color="#A855F7"
+                    onClick={() => { setIsDrawerOpen(false); setIsPreviewOpen(true); }}
+                  />
+                  <DrawerTile
+                    icon={<Pencil />}
+                    label="Modifier"
+                    sub="Nom, icône, réglages"
+                    color="#3B82F6"
+                    isLink
+                    href={`/habits/${habitId}/edit`}
+                  />
+                  <DrawerTile
+                    icon={<BarChart3 />}
+                    label="Stats"
+                    sub="Evolution & logs"
+                    color="#F59E0B"
+                    isLink
+                    href={`/habits/${habitId}?view=stats`}
+                  />
+                  <DrawerTile
+                    icon={<Trash2 />}
+                    label="Supprimer"
+                    sub="Action irréversible"
+                    color="#EF4444"
+                    onClick={handleDelete}
+                    loading={isDeleting}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        </Portal>
-      )}
+          </Portal>
+        )
+      }
+
+      {/* Habit Preview Modal */}
+      {
+        isPreviewOpen && (
+          <Portal>
+            <div
+              className="fixed inset-0 z-[10002] bg-black/80 backdrop-blur-md animate-in fade-in"
+              onClick={() => setIsPreviewOpen(false)}
+            />
+            <div className="fixed inset-0 z-[10003] pointer-events-none flex items-center justify-center p-4">
+              <div
+                className="pointer-events-auto relative w-full max-w-lg rounded-[2.5rem] border border-white/10 bg-[#0b0f1d]/95 p-8 sm:p-10 text-white shadow-[0_40px_120px_rgba(0,0,0,0.8)] backdrop-blur-2xl animate-in zoom-in duration-300"
+                onClick={e => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 hover:text-white hover:border-white/20 transition-all"
+                  onClick={() => setIsPreviewOpen(false)}
+                  aria-label="Fermer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.4em] text-white/30 mb-2">Aperçu rapide</p>
+                    <h3 className="text-3xl font-bold tracking-tight">{habitName}</h3>
+                  </div>
+
+                  {habitDescription ? (
+                    <p className="text-base text-white/60 leading-relaxed font-medium">{habitDescription}</p>
+                  ) : (
+                    <p className="text-sm text-white/25 italic">Aucune description disponible.</p>
+                  )}
+
+                  <div className="flex flex-col gap-3 pt-4">
+                    <Link
+                      href={`/habits/${habitId}`}
+                      className="flex items-center justify-center gap-3 rounded-2xl bg-white text-black h-14 text-base font-bold shadow-[0_15px_40px_rgba(255,255,255,0.15)] hover:opacity-90 transition-all active:scale-95"
+                    >
+                      Voir la fiche complète
+                      <ExternalLink className="h-5 w-5" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setIsPreviewOpen(false)}
+                      className="h-14 rounded-2xl border border-white/10 bg-white/5 text-sm font-bold text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Portal>
+        )
+      }
     </>
   )
 }
 
-// Wrapper simplifié pour les entrées de menu de navigation Radix.
-function MenuLink({ href, label }: { href: string; label: string }) {
-  return (
-    <DropdownMenu.Item asChild>
-      <Link
-        href={href}
-        className="block rounded-lg px-3 py-2 text-white/90 transition hover:bg-white/10 focus:bg-white/10"
-        onClick={event => event.stopPropagation()}
+function DrawerTile({
+  icon,
+  label,
+  sub,
+  color,
+  onClick,
+  isLink,
+  href,
+  loading
+}: {
+  icon: React.ReactNode,
+  label: string,
+  sub: string,
+  color: string,
+  onClick?: () => void,
+  isLink?: boolean,
+  href?: string,
+  loading?: boolean
+}) {
+  const content = (
+    <>
+      <div
+        className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl shadow-xl border border-white/5 transition-transform group-hover:scale-110 duration-300"
+        style={{ backgroundColor: `${color}20`, color }}
       >
-        {label}
+        {loading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : icon}
+      </div>
+      <div className="text-left w-full min-w-0">
+        <p className="text-sm font-bold text-white tracking-tight">{label}</p>
+        <p className="text-[10px] text-white/30 leading-snug line-clamp-2 truncate">{sub}</p>
+      </div>
+    </>
+  )
+
+  const className = "flex flex-col items-start gap-4 rounded-[28px] border border-white/5 bg-white/[0.03] p-5 transition-all duration-300 hover:bg-white/[0.08] hover:border-white/10 active:scale-95 group overflow-hidden"
+
+  if (isLink && href) {
+    return (
+      <Link href={href} onClick={onClick} className={className}>
+        {content}
       </Link>
-    </DropdownMenu.Item>
+    )
+  }
+
+  return (
+    <button onClick={onClick} className={className} disabled={loading}>
+      {content}
+    </button>
   )
 }

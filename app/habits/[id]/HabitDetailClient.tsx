@@ -4,7 +4,7 @@
  * Client component avec navigation par onglets pour la page détail habitude
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import HabitDetailHeader from './HabitDetailHeader'
 import OverviewTab from './tabs/OverviewTab'
@@ -67,16 +67,15 @@ export default function HabitDetailClient({
 }: Props) {
   const router = useRouter()
 
-  // Charger le dernier onglet visité depuis localStorage, sinon 'overview'
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`habit-detail-tab-${habit.id}`)
-      if (saved === 'overview' || saved === 'calendar' || saved === 'coach' || saved === 'history' || saved === 'settings') {
-        return saved
-      }
+  const [activeTab, setActiveTab] = useState<TabType>('overview')
+
+  // Charger le dernier onglet visité depuis localStorage après le premier rendu (Client Only)
+  useEffect(() => {
+    const saved = localStorage.getItem(`habit-detail-tab-${habit.id}`)
+    if (saved && ['overview', 'calendar', 'coach', 'history', 'notes', 'tasks', 'settings'].includes(saved)) {
+      setActiveTab(saved as TabType)
     }
-    return 'overview'
-  })
+  }, [habit.id])
 
   const [count, setCount] = useState(stats.todayCount)
   const [isValidating, setIsValidating] = useState(false)

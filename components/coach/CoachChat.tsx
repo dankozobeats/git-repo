@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Bot, User, Send, Loader2, RefreshCcw, ArrowLeft, X } from 'lucide-react'
+import { Bot, User, Send, Loader2, RefreshCcw, ArrowLeft, X, Plus } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { useRouter } from 'next/navigation'
 
@@ -23,6 +23,7 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
     const [isLoading, setIsLoading] = useState(false)
     const [isTyping, setIsTyping] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
     const router = useRouter()
 
     const scrollToBottom = () => {
@@ -38,6 +39,20 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
     }, [conversationId])
 
     useEffect(scrollToBottom, [messages, isTyping])
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+        }
+    }, [input])
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            handleSend()
+        }
+    }
 
     const fetchMessages = async () => {
         if (!conversationId) return
@@ -73,7 +88,12 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
         }
 
         setMessages(prev => [...prev, tempUserMsg])
-        if (!customMessage) setInput('')
+        if (!customMessage) {
+            setInput('')
+            if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto'
+            }
+        }
         setIsTyping(true)
 
         try {
@@ -110,20 +130,30 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
     ]
 
     return (
-        <div className="flex flex-col h-full bg-white/[0.02] sm:rounded-[32px] border-b sm:border border-white/5 overflow-hidden shadow-2xl backdrop-blur-md">
-            {/* Header Discussion */}
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.03]">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-sky-500/20 rounded-xl">
-                        <Bot className="w-5 h-5 text-sky-400" />
+        <div className="flex flex-col h-full bg-white/[0.02] sm:rounded-2xl border-b sm:border border-white/5 overflow-hidden shadow-2xl backdrop-blur-md">
+            {/* Header Discussion (Premium Messaging Style) */}
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.04] backdrop-blur-3xl sticky top-0 z-10">
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <div className="w-12 h-12 bg-sky-500/20 rounded-lg flex items-center justify-center border border-sky-400/30 shadow-[0_8px_20px_rgba(56,189,248,0.2)]">
+                            <Bot className="w-6 h-6 text-sky-400" />
+                        </div>
+                        <div className="absolute -right-1 -bottom-1 w-4 h-4 bg-[#0d0f17] rounded-full flex items-center justify-center border-2 border-[#0d0f17]">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        </div>
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold">Coach Interactif</h3>
-                        <p className="text-[10px] text-white/40 uppercase tracking-widest">IA Discipline Assistant</p>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-white tracking-tight">Coach IA</h3>
+                            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded-md">Online</span>
+                        </div>
+                        <p className="text-[11px] text-white/40 font-medium">Assistant Personnel de Discipline</p>
                     </div>
                 </div>
                 {!conversationId && (
-                    <span className="text-[10px] px-2 py-1 rounded-full bg-white/10 text-white/60">Nouvelle session</span>
+                    <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest bg-white/5 text-white/40 px-3 py-1.5 rounded-full border border-white/5">Auto-Reflect</span>
+                    </div>
                 )}
             </div>
 
@@ -140,12 +170,12 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                                 Je peux analyser tes habitudes, préparer un rapport ou te motiver à garder le cap.
                             </p>
                         </div>
-                        <div className="flex flex-wrap justify-center gap-2">
+                        <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto">
                             {quickPrompts.map(p => (
                                 <button
                                     key={p.label}
                                     onClick={() => handleSend(undefined, p.text)}
-                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs transition-all hover:scale-105 active:scale-95"
+                                    className="px-5 py-2.5 bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95 backdrop-blur-md shadow-lg"
                                 >
                                     {p.label}
                                 </button>
@@ -154,53 +184,66 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                     </div>
                 )}
 
-                {messages.map((m) => (
-                    <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} group animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                        <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                            <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs ${m.role === 'user' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                                }`}>
-                                {m.role === 'user' ? <User size={14} /> : <Bot size={14} />}
-                            </div>
-                            <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-sm leading-relaxed shadow-lg ${m.role === 'user'
-                                ? 'bg-indigo-600 text-white rounded-tr-none'
-                                : 'bg-white/5 text-white/90 border border-white/10 rounded-tl-none prose prose-invert max-w-none'
-                                }`}>
-                                {m.role === 'user' ? (
-                                    m.content
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="markdown-content space-y-3 prose prose-invert prose-sm max-w-none 
-                        [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 
-                        [&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-sky-400
-                        [&_p]:mb-2 [&_strong]:text-sky-300">
-                                            <ReactMarkdown>
-                                                {m.content.replace(/\[ACTION:.*?\]/g, '')}
-                                            </ReactMarkdown>
-                                        </div>
-                                        {/* Action Cards */}
-                                        {m.content.includes('[ACTION: CREATE_REMINDER') && (
-                                            <ActionReminderCard content={m.content} />
-                                        )}
-                                        {m.content.includes('[ACTION: DELETE_REMINDER') && (
-                                            <ActionDeleteReminderCard content={m.content} />
-                                        )}
+                {messages.map((m, idx) => {
+                    const isLastFromRole = idx === messages.length - 1 || messages[idx + 1].role !== m.role
+                    const isFirstFromRole = idx === 0 || messages[idx - 1].role !== m.role
+
+                    return (
+                        <div
+                            key={m.id}
+                            className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300 ${isLastFromRole ? 'mb-4' : 'mb-1'}`}
+                        >
+                            <div className={`flex gap-3 max-w-[88%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-end`}>
+                                {/* Avatar (only shown on last message of a group for assistant, or first for user if needed, but keeping it clean for now) */}
+                                {m.role === 'assistant' && isLastFromRole ? (
+                                    <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center bg-sky-500/10 text-sky-400 border border-sky-400/20 mb-1">
+                                        <Bot size={14} />
                                     </div>
+                                ) : (
+                                    <div className="w-8 h-8 flex-shrink-0" />
                                 )}
+
+                                <div className={`px-4 py-3 rounded-xl text-sm leading-relaxed shadow-xl transition-all ${m.role === 'user'
+                                    ? `bg-gradient-to-br from-sky-600 to-indigo-600 text-white shadow-indigo-500/10 ${isLastFromRole ? 'rounded-tr-none' : ''}`
+                                    : `bg-white/[0.05] text-white/90 border border-white/10 backdrop-blur-xl ${isLastFromRole ? 'rounded-tl-none' : ''}`
+                                    }`}>
+                                    {m.role === 'user' ? (
+                                        m.content
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="markdown-content space-y-3 prose prose-invert prose-sm max-w-none 
+                            [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 
+                            [&_h2]:text-base [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-sky-400
+                            [&_p]:mb-2 [&_strong]:text-sky-300">
+                                                <ReactMarkdown>
+                                                    {m.content.replace(/\[ACTION:.*?\]/g, '')}
+                                                </ReactMarkdown>
+                                            </div>
+                                            {/* Action Cards */}
+                                            {m.content.includes('[ACTION: CREATE_REMINDER') && (
+                                                <ActionReminderCard content={m.content} />
+                                            )}
+                                            {m.content.includes('[ACTION: DELETE_REMINDER') && (
+                                                <ActionDeleteReminderCard content={m.content} />
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
 
                 {isTyping && (
-                    <div className="flex justify-start animate-in fade-in duration-300">
-                        <div className="flex gap-3 max-w-[85%]">
-                            <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                    <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex gap-3 items-end max-w-[85%]">
+                            <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center bg-sky-500/10 text-sky-400 border border-sky-400/20 mb-1">
                                 <Bot size={14} />
                             </div>
-                            <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce"></span>
+                            <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-none px-4 py-3.5 flex items-center gap-1.5 backdrop-blur-xl">
+                                <span className="w-1.5 h-1.5 bg-sky-400/80 rounded-full animate-bounce [animation-delay:-0.3S]"></span>
+                                <span className="w-1.5 h-1.5 bg-sky-400/80 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                <span className="w-1.5 h-1.5 bg-sky-400/80 rounded-full animate-bounce"></span>
                             </div>
                         </div>
                     </div>
@@ -208,29 +251,43 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSend} className="p-3 sm:p-4 bg-black/20 border-t border-white/5 pb-8 sm:pb-4">
-                <div className="relative flex items-center gap-2">
-                    <input
-                        type="text"
+            {/* Input (Premium Pill Design) */}
+            <div className="p-4 sm:p-6 bg-gradient-to-t from-[#0d0f17] via-[#0d0f17]/80 to-transparent pb-10 sm:pb-6">
+                <form
+                    onSubmit={handleSend}
+                    className="relative max-w-2xl mx-auto flex items-end gap-2 bg-white/[0.03] border border-white/10 rounded-2xl p-1.5 pr-2 focus-within:bg-white/[0.05] focus-within:border-white/20 transition-all duration-300 shadow-2xl backdrop-blur-2xl"
+                >
+                    <button
+                        type="button"
+                        className="p-3 text-white/30 hover:text-sky-400 transition-colors"
+                    >
+                        <Plus size={20} />
+                    </button>
+
+                    <textarea
+                        ref={textareaRef}
+                        rows={1}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Pose-moi une question ou demande un rapport..."
-                        className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all placeholder:text-white/20"
+                        onKeyDown={handleKeyDown}
+                        placeholder="Message Coach..."
+                        className="flex-1 bg-transparent border-none px-2 py-3 text-sm focus:outline-none focus:ring-0 transition-all placeholder:text-white/20 resize-none max-h-32 overflow-y-auto scrollbar-none"
                         disabled={isTyping}
                     />
+
                     <button
                         type="submit"
                         disabled={!input.trim() || isTyping}
-                        className="p-3 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 disabled:hover:bg-sky-500 rounded-xl transition-all shadow-lg shadow-sky-500/20 active:scale-95"
+                        className={`p-3 rounded-full transition-all duration-300 shadow-lg active:scale-95 ${input.trim() && !isTyping ? 'bg-sky-500 text-white shadow-sky-500/20 scale-100' : 'bg-white/5 text-white/20 scale-90'
+                            }`}
                     >
-                        <Send size={18} className="text-white" />
+                        <Send size={18} />
                     </button>
-                </div>
-                <p className="mt-2 text-[10px] text-center text-white/30">
-                    L'IA peut faire des erreurs. Vérifie les informations importantes.
+                </form>
+                <p className="mt-3 text-[10px] text-center text-white/20 font-medium tracking-wide">
+                    IA Discipline · Réponses instantanées
                 </p>
-            </form>
+            </div>
         </div>
     )
 }
@@ -309,21 +366,31 @@ function ActionReminderCard({ content }: { content: string }) {
     }
 
     return (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+        <div className="bg-white/[0.03] backdrop-blur-2xl border border-sky-500/20 rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 shadow-2xl overflow-hidden relative group">
+            <div className="absolute top-0 left-0 w-1 h-full bg-sky-500 group-hover:w-2 transition-all" />
+
             <div className="flex items-center gap-2 text-sky-400">
-                <Bot size={16} />
-                <span className="text-xs font-bold uppercase tracking-wider">Action suggérée</span>
+                <div className="p-1.5 bg-sky-500/20 rounded-lg">
+                    <Bot size={16} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Proposition d'Action</span>
             </div>
-            <p className="text-sm text-white/80">Programmer un rappel pour **{habitValue}** à **{time}** ?</p>
+
+            <div className="space-y-1">
+                <p className="text-sm text-white/90 leading-relaxed font-medium">
+                    Programmer un rappel pour <span className="text-sky-400 font-bold">{habitValue}</span> à <span className="text-sky-400 font-bold">{time}</span> ?
+                </p>
+            </div>
+
             <button
                 onClick={handleConfirm}
                 disabled={status === 'loading'}
-                className="w-full py-2 bg-sky-500 hover:bg-sky-400 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-sky-500 hover:bg-sky-400 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg shadow-sky-500/20 active:scale-[0.98]"
             >
-                {status === 'loading' ? <Loader2 className="animate-spin" size={14} /> : <Send size={14} />}
+                {status === 'loading' ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
                 Confirmer le rappel
             </button>
-            {status === 'error' && <p className="text-[10px] text-red-400 text-center">Erreur lors de la création</p>}
+            {status === 'error' && <p className="text-[10px] text-red-400 text-center font-bold">⚠️ Erreur lors de la création</p>}
         </div>
     )
 }
@@ -367,21 +434,31 @@ function ActionDeleteReminderCard({ content }: { content: string }) {
     }
 
     return (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2 text-red-400">
-                <Bot size={16} />
-                <span className="text-xs font-bold uppercase tracking-wider">Action suggérée</span>
+        <div className="bg-white/[0.03] backdrop-blur-2xl border border-red-500/20 rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 shadow-2xl overflow-hidden relative group">
+            <div className="absolute top-0 left-0 w-1 h-full bg-red-600 group-hover:w-2 transition-all" />
+
+            <div className="flex items-center gap-2 text-red-500">
+                <div className="p-1.5 bg-red-500/10 rounded-lg">
+                    <Bot size={16} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Action suggérée</span>
             </div>
-            <p className="text-sm text-white/80">Voulez-vous vraiment **supprimer** ce rappel ?</p>
+
+            <div className="space-y-1">
+                <p className="text-sm text-white/90 leading-relaxed font-medium">
+                    Voulez-vous vraiment <span className="text-red-500 font-bold uppercase tracking-tight">supprimer</span> ce rappel ?
+                </p>
+            </div>
+
             <button
                 onClick={handleConfirm}
                 disabled={status === 'loading'}
-                className="w-full py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg shadow-red-500/20 active:scale-[0.98]"
             >
-                {status === 'loading' ? <Loader2 className="animate-spin" size={14} /> : <X size={14} />}
+                {status === 'loading' ? <Loader2 className="animate-spin" size={16} /> : <X size={16} />}
                 Confirmer la suppression
             </button>
-            {status === 'error' && <p className="text-[10px] text-red-400 text-center">Erreur lors de la suppression</p>}
+            {status === 'error' && <p className="text-[10px] text-red-400 text-center font-bold">⚠️ Erreur lors de la suppression</p>}
         </div>
     )
 }
