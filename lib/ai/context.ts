@@ -14,6 +14,12 @@ export interface AIContextData {
     previousReportSummary: string
     habitsList: { id: string; name: string; type: string }[]
     reminders: { id: string; habit_name: string; time: string; schedule: string }[]
+    stats: {
+        habit_id: string
+        name: string
+        count_30d: number
+        count_7d: number
+    }[]
 }
 
 /**
@@ -43,29 +49,29 @@ export async function getAIUserContext(userId: string, days: number = 30): Promi
     startDate.setDate(startDate.getDate() - days)
     const startDateStr = startDate.toISOString().split('T')[0]
 
-    // 2. Habits & Logs
-    const { data: habits } = await supabase
-        .from('habits')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_archived', false)
+    // 2. Parallel Data Fetching
+    const [
+        { data: habits },
+        { data: logs },
+        { data: events },
+        { data: trackables },
+        { data: trackableEvents },
+        { data: facts },
+        { data: remindersData }
+    ] = await Promise.all([
+        supabase.from('habits').select('*').eq('user_id', userId).eq('is_archived', false),
+        supabase.from('logs').select('*').eq('user_id', userId).gte('completed_date', startDateStr),
+        supabase.from('habit_events').select('*').eq('user_id', userId).gte('event_date', startDateStr),
+        supabase.from('trackables').select('*').eq('user_id', userId).is('archived_at', null),
+        supabase.from('trackable_events').select('*, trackable:trackables(name, type)').eq('user_id', userId).gte('occurred_at', startDateStr).order('occurred_at', { ascending: true }),
+        supabase.from('user_ai_facts').select('content').eq('user_id', userId).limit(20),
+        supabase.from('reminders').select('*, habits(name)').eq('user_id', userId).eq('active', true)
+    ])
 
     const goodHabits = habits?.filter(h => h.type === 'good') || []
     const badHabits = habits?.filter(h => h.type === 'bad') || []
 
-    const { data: logs } = await supabase
-        .from('logs')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('completed_date', startDateStr)
-
-    const { data: events } = await supabase
-        .from('habit_events')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('event_date', startDateStr)
-
-    const goodLogsList = logs?.filter(l => goodHabits.find(h => h.id === l.habit_id)) || []
+    const goodLogsList = (logs || []).filter(l => goodHabits.find(h => h.id === l.habit_id))
     const badLogsList = (events || []).filter(e => badHabits.find(h => h.id === e.habit_id))
 
     const yesterdayLogs = [
@@ -73,35 +79,25 @@ export async function getAIUserContext(userId: string, days: number = 30): Promi
         ...badLogsList.filter(e => e.event_date === yesterdayStr).map(e => `[CRAQUAGE] ${badHabits.find(h => h.id === e.habit_id)?.name}`),
     ]
 
-    // 3. Trackables
-    const { data: trackables } = await supabase
-        .from('trackables')
-        .select('*')
-        .eq('user_id', userId)
-        .is('archived_at', null)
-
-    const { data: trackableEvents } = await supabase
-        .from('trackable_events')
-        .select('*, trackable:trackables(name, type)')
-        .eq('user_id', userId)
-        .gte('occurred_at', startDateStr)
-        .order('occurred_at', { ascending: true })
-
-    // 4. Facts
-    const { data: facts } = await supabase
-        .from('user_ai_facts')
-        .select('content')
-        .eq('user_id', userId)
-        .limit(20)
-
     const userFacts = facts?.map(f => f.content) || []
 
-    // 5. Reminders
-    const { data: remindersData } = await supabase
-        .from('reminders')
-        .select('*, habits(name)')
-        .eq('user_id', userId)
-        .eq('active', true)
+    // 6. Detailed Stats
+    const sevenDaysAgo = new Date(now)
+    sevenDaysAgo.setDate(now.getDate() - 7)
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+
+    const stats = (habits || []).map(h => {
+        const hLogs = logs?.filter(l => l.habit_id === h.id) || []
+        const hEvents = events?.filter(e => e.habit_id === h.id) || []
+        const allEntries = [...hLogs.map(l => l.completed_date), ...hEvents.map(e => e.event_date)]
+
+        return {
+            habit_id: h.id,
+            name: h.name,
+            count_30d: allEntries.length,
+            count_7d: allEntries.filter(d => d >= sevenDaysAgoStr).length
+        }
+    })
 
     return {
         period: `${days}j`,
@@ -132,6 +128,7 @@ export async function getAIUserContext(userId: string, days: number = 30): Promi
             time: r.time_local,
             schedule: r.schedule
         })),
+        stats,
     }
 }
 
@@ -155,6 +152,10 @@ Rappels programmés:
 ${data.reminders.length > 0 ? data.reminders.map(r => `- [ID: ${r.id}] Habitude: "${r.habit_name}" à ${r.time.split(' ')[1] || r.time} (${r.schedule})`).join('\n') : "Aucun rappel actif."}
 
 Statistiques: ${data.habitsCount.good} bonnes, ${data.habitsCount.bad} mauvaises.
+
+--- ANALYSE DE PERFORMANCE (30j) ---
+${data.stats.map(s => `- ${s.name}: ${s.count_30d} fois (dont ${s.count_7d} ces 7 derniers jours)`).join('\n')}
+
 Succès récents:
 ${data.recentLogs.slice(0, 5).join('\n') || 'Aucun'}
 Craquages récents:

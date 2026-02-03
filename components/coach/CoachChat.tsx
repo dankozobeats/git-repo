@@ -24,6 +24,7 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
     const [isTyping, setIsTyping] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const [showActions, setShowActions] = useState(false)
     const router = useRouter()
 
     const scrollToBottom = () => {
@@ -120,6 +121,21 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
             ])
         } finally {
             setIsTyping(false)
+        }
+    }
+
+    const handleClearHistory = async () => {
+        if (!conversationId) return
+        if (!confirm("Effacer tout l'historique de cette discussion ?")) return
+
+        try {
+            const res = await fetch(`/api/ai/chat/${conversationId}`, { method: 'DELETE' })
+            if (res.ok) {
+                setMessages([])
+                setShowActions(false)
+            }
+        } catch (err) {
+            console.error('Error clearing history:', err)
         }
     }
 
@@ -226,6 +242,9 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                                             {m.content.includes('[ACTION: DELETE_REMINDER') && (
                                                 <ActionDeleteReminderCard content={m.content} />
                                             )}
+                                            {m.content.includes('[ACTION: SHOW_HABIT') && (
+                                                <ActionHabitCard content={m.content} />
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -257,12 +276,43 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                     onSubmit={handleSend}
                     className="relative max-w-2xl mx-auto flex items-end gap-2 bg-white/[0.03] border border-white/10 rounded-2xl p-1.5 pr-2 focus-within:bg-white/[0.05] focus-within:border-white/20 transition-all duration-300 shadow-2xl backdrop-blur-2xl"
                 >
-                    <button
-                        type="button"
-                        className="p-3 text-white/30 hover:text-sky-400 transition-colors"
-                    >
-                        <Plus size={20} />
-                    </button>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowActions(!showActions)}
+                            className={`p-3 transition-colors ${showActions ? 'text-sky-400' : 'text-white/30 hover:text-sky-400'}`}
+                        >
+                            <Plus size={20} className={`transition-transform duration-300 ${showActions ? 'rotate-45' : ''}`} />
+                        </button>
+
+                        {showActions && (
+                            <div className="absolute bottom-full left-0 mb-4 w-56 bg-[#1a1c26] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200 backdrop-blur-3xl z-50">
+                                <div className="p-2 space-y-1">
+                                    {quickPrompts.map(p => (
+                                        <button
+                                            key={p.label}
+                                            onClick={() => {
+                                                handleSend(undefined, p.text)
+                                                setShowActions(false)
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 rounded-xl transition-colors flex items-center gap-3"
+                                        >
+                                            <span className="text-base leading-none">{p.label.split(' ')[0]}</span>
+                                            {p.label.split(' ').slice(1).join(' ')}
+                                        </button>
+                                    ))}
+                                    <div className="h-px bg-white/5 my-1" />
+                                    <button
+                                        onClick={handleClearHistory}
+                                        className="w-full text-left px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-3"
+                                    >
+                                        <RefreshCcw size={14} />
+                                        Effacer l'historique
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     <textarea
                         ref={textareaRef}
@@ -459,6 +509,86 @@ function ActionDeleteReminderCard({ content }: { content: string }) {
                 Confirmer la suppression
             </button>
             {status === 'error' && <p className="text-[10px] text-red-400 text-center font-bold">⚠️ Erreur lors de la suppression</p>}
+        </div>
+    )
+}
+
+function ActionHabitCard({ content }: { content: string }) {
+    const [habitData, setHabitData] = useState<any>(null)
+    const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+    const actionMatch = content.match(/\[ACTION: SHOW_HABIT \| habit: (.*?)\]/)
+
+    useEffect(() => {
+        if (actionMatch) {
+            fetchHabit(actionMatch[1])
+        }
+    }, [content])
+
+    const fetchHabit = async (id: string) => {
+        setStatus('loading')
+        try {
+            const res = await fetch(`/api/habits/${id}/quick-view`)
+            if (!res.ok) throw new Error('Failed to fetch')
+            const data = await res.json()
+            setHabitData(data)
+            setStatus('success')
+        } catch (err) {
+            console.error('Error fetching habit for card:', err)
+            setStatus('error')
+        }
+    }
+
+    if (status === 'loading') return (
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-center">
+            <Loader2 className="animate-spin text-sky-400" size={20} />
+        </div>
+    )
+
+    if (status === 'error' || !habitData) return (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-xs">
+            Impossible d'afficher les détails de l'habitude.
+        </div>
+    )
+
+    const { habit, stats } = habitData
+
+    return (
+        <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 shadow-2xl overflow-hidden relative group">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg border border-white/10" style={{ backgroundColor: `${habit.color}20`, color: habit.color }}>
+                        {habit.icon || '✨'}
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-white">{habit.name}</h4>
+                        <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">
+                            {habit.type === 'good' ? 'Bonne Habitude' : 'Défi Discipline'}
+                        </p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <span className="text-2xl font-black text-white">{stats.currentStreak}</span>
+                    <p className="text-[8px] text-white/30 uppercase tracking-tighter font-black">Jours de série</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                    <p className="text-[9px] text-white/30 uppercase font-black mb-1">Total (30j)</p>
+                    <p className="text-sm font-bold text-white">{stats.last30DaysCount} fois</p>
+                </div>
+                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                    <p className="text-[9px] text-white/30 uppercase font-black mb-1">Taux Réussite</p>
+                    <p className="text-sm font-bold text-sky-400">{stats.completionRate}%</p>
+                </div>
+            </div>
+
+            <div className="pt-2 flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${stats.todayCount > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-white/10'}`} />
+                <p className="text-[10px] text-white/50 font-medium">
+                    {stats.todayCount > 0 ? 'Complété aujourd\'hui' : 'En attente pour aujourd\'hui'}
+                </p>
+            </div>
         </div>
     )
 }

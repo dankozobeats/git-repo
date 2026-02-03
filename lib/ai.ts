@@ -12,8 +12,12 @@ export async function askAI(prompt: string, userId: string): Promise<string> {
   }
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60000) // 60s timeout
+
     const response = await fetch(`${baseUrl}/chat`, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
@@ -23,6 +27,8 @@ export async function askAI(prompt: string, userId: string): Promise<string> {
         message: prompt,
       }),
     })
+
+    clearTimeout(timeout)
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Erreur inconnue')

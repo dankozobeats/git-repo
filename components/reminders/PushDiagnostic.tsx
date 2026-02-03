@@ -184,6 +184,59 @@ export default function PushDiagnostic() {
                         {status === 'loading' ? 'Envoi...' : '⚡ Envoyer une notification de test'}
                     </button>
 
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            onClick={async () => {
+                                if (status === 'loading') return
+                                setStatus('loading')
+                                addLog('Triggering Proactive Coach AI...')
+                                try {
+                                    const res = await fetch('/api/ai/proactive', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer b61230a43fb5b3dfdf8cdcf6c94c22b06228a717395b256e51f371cc643fae4f' },
+                                        body: JSON.stringify({ force: true })
+                                    })
+                                    const data = await res.json()
+                                    if (!res.ok) throw new Error(data.error || 'Err')
+                                    addLog(`Engine: ${data.processed ?? 0} users / Sent: ${data.results?.length ?? 0}`)
+                                    setStatus('success')
+                                } catch (e: any) {
+                                    addLog(`Error: ${e.message}`)
+                                    setStatus('error')
+                                }
+                            }}
+                            disabled={status === 'loading'}
+                            className="py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl text-[10px] font-bold hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+                        >
+                            {status === 'loading' ? '🧠 AI...' : '🧠 Coach (IA)'}
+                        </button>
+
+                        <button
+                            onClick={async () => {
+                                if (status === 'loading') return
+                                setStatus('loading')
+                                addLog('Triggering Force Mock Test...')
+                                try {
+                                    const res = await fetch('/api/ai/proactive', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer b61230a43fb5b3dfdf8cdcf6c94c22b06228a717395b256e51f371cc643fae4f' },
+                                        body: JSON.stringify({ force: true, mock: true, forceTrigger: true })
+                                    })
+                                    const data = await res.json()
+                                    addLog(`Forced Sent: ${data.results?.length ?? 0}`)
+                                    setStatus('success')
+                                } catch (e: any) {
+                                    addLog(`Error: ${e.message}`)
+                                    setStatus('error')
+                                }
+                            }}
+                            disabled={status === 'loading'}
+                            className="py-2 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-xl text-[10px] font-bold hover:bg-sky-500/30 transition-colors disabled:opacity-50"
+                        >
+                            {status === 'loading' ? '⚡ Envoi...' : '⚡ Forcer Test (Mock)'}
+                        </button>
+                    </div>
+
                     <button
                         onClick={async () => {
                             setStatus('loading')
