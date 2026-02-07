@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { askAI } from '@/lib/ai'
 
+// Vercel Hobby max = 10s, Pro = 60s
+export const maxDuration = 10
+
 const DAY_MS = 1000 * 60 * 60 * 24
 
 export async function POST(request: NextRequest) {

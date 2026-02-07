@@ -1,10 +1,12 @@
 // app/api/process-reminders/route.ts
+// Cron unifié : reminders + auto-archive des anciens rapports AI
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@/lib/supabase/server';
 import { DateTime } from 'luxon';
 
 export const runtime = 'nodejs';
+export const maxDuration = 10;
 
 type ReminderRow = {
     id: string;
@@ -56,6 +58,15 @@ export async function POST(req: Request) {
 
         // Ping DB pour éviter la pause automatique Supabase (free tier)
         await supabase.from('habits').select('id').limit(1);
+
+        // Auto-archive des rapports AI > 30 jours (anciennement /api/ai-reports/auto-archive)
+        const threshold = new Date();
+        threshold.setDate(threshold.getDate() - 30);
+        await supabase
+            .from('ai_reports')
+            .update({ archived_at: new Date().toISOString() })
+            .lte('created_at', threshold.toISOString())
+            .is('archived_at', null);
 
         const VAPID_PUBLIC_KEY = assertEnv('VAPID_PUBLIC_KEY');
         const VAPID_PRIVATE_KEY = assertEnv('VAPID_PRIVATE_KEY');

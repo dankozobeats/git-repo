@@ -4,6 +4,9 @@ import { askAI } from '@/lib/ai'
 import { getAIUserContext, formatAIContextPrompt } from '@/lib/ai/context'
 import { getTodayDateISO } from '@/lib/date-utils'
 
+// Vercel Hobby max = 10s, Pro = 60s
+export const maxDuration = 10
+
 /**
  * GET: Récupère l'historique des messages d'une conversation.
  * POST: Envoie un nouveau message et génère une réponse IA.
@@ -302,7 +305,20 @@ CONSIGNE CRITIQUE : Toujours prioriser les faits de la "MÉMOIRE BIOGRAPHIQUE" p
 
         return NextResponse.json(aiMsg)
     } catch (error: any) {
-        console.error('[Chat API Error]:', error)
-        return NextResponse.json({ error: 'Erreur lors de la réponse IA' }, { status: 500 })
+        console.error('[Chat API Error]:', error?.message || error)
+
+        // Message d'erreur plus utile pour le debugging
+        let errorMessage = 'Erreur lors de la réponse IA'
+        if (error?.message?.includes('AI_API_URL') || error?.message?.includes('AI_API_KEY')) {
+            errorMessage = 'Configuration IA manquante (AI_API_URL ou AI_API_KEY)'
+        } else if (error?.message?.includes('timeout') || error?.message?.includes('Timeout') || error?.name === 'AbortError') {
+            errorMessage = 'Timeout - Le serveur IA met trop de temps à répondre'
+        } else if (error?.message?.includes('fetch')) {
+            errorMessage = 'Impossible de contacter le serveur IA'
+        } else if (error?.message) {
+            errorMessage = error.message
+        }
+
+        return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
 }

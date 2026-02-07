@@ -6,6 +6,8 @@ import { getAIUserContext, formatAIContextPrompt } from '@/lib/ai/context'
 import { DateTime } from 'luxon'
 
 export const runtime = 'nodejs'
+// Vercel Hobby max = 10s, Pro = 60s
+export const maxDuration = 10
 
 function assertEnv(name: string): string {
     const value = process.env[name]
