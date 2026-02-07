@@ -54,6 +54,9 @@ export async function POST(req: Request) {
         // 2) Init Supabase + WebPush
         const supabase = await createClient();
 
+        // Ping DB pour éviter la pause automatique Supabase (free tier)
+        await supabase.from('habits').select('id').limit(1);
+
         const VAPID_PUBLIC_KEY = assertEnv('VAPID_PUBLIC_KEY');
         const VAPID_PRIVATE_KEY = assertEnv('VAPID_PRIVATE_KEY');
 
