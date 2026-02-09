@@ -42,6 +42,20 @@ export default function TrackablePriorityCard({
     ? Math.round((resistances / totalDecisions) * 100)
     : 0
 
+  // Missions logic
+  const hasMissions = trackable.missions && trackable.missions.length > 0
+  const totalMissions = hasMissions ? trackable.missions!.length : 0
+
+  // Get currently completed missions from newest event (check or observe)
+  const lastMissionEvent = [...trackable.today_events]
+    .filter(e => isHabit ? e.kind === 'check' : e.kind === 'observe')
+    .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())[0]
+
+  const completedMissionsCount = lastMissionEvent?.meta_json?.completed_mission_ids?.length || 0
+  const missionsPercentage = totalMissions > 0
+    ? Math.round((completedMissionsCount / totalMissions) * 100)
+    : 0
+
   const handleClick = () => {
     if (isHabit && onCheck) {
       onCheck()
@@ -59,13 +73,12 @@ export default function TrackablePriorityCard({
 
   return (
     <div
-      className={`group relative w-full overflow-hidden rounded-2xl p-5 transition-all hover:scale-105 ${
-        isHabit
-          ? isCompleted
-            ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 ring-2 ring-green-500/50'
-            : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 ring-2 ring-blue-500/30'
-          : 'bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/30'
-      }`}
+      className={`group relative w-full overflow-hidden rounded-2xl p-5 transition-all hover:scale-105 ${isHabit
+        ? isCompleted
+          ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 ring-2 ring-green-500/50'
+          : 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10 ring-2 ring-blue-500/30'
+        : 'bg-gradient-to-br from-orange-500/10 to-red-500/10 ring-2 ring-orange-500/30'
+        }`}
       style={{
         backgroundColor: trackable.color
           ? `${trackable.color}15`
@@ -89,6 +102,11 @@ export default function TrackablePriorityCard({
           </div>
         </button>
         <div className="flex items-center gap-2">
+          {hasMissions && (
+            <div className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-1 text-[10px] font-bold text-blue-400">
+              {completedMissionsCount}/{totalMissions}
+            </div>
+          )}
           {isCompleted && (
             <CheckCircle2 size={24} className="text-green-400" />
           )}
@@ -163,7 +181,11 @@ export default function TrackablePriorityCard({
 
       {/* Action hint */}
       <div className="mt-4 text-center text-xs text-gray-500 opacity-0 transition-opacity group-hover:opacity-100">
-        {isHabit ? 'Cliquer pour marquer comme fait' : 'Cliquer pour observer cet état'}
+        {hasMissions
+          ? 'Cliquer pour voir les missions'
+          : isHabit
+            ? 'Cliquer pour marquer comme fait'
+            : 'Cliquer pour observer cet état'}
       </div>
     </div>
   )

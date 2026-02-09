@@ -15,6 +15,7 @@ type Habit = {
   created_at: string
   user_id: string
   is_archived: boolean
+  missions?: any[] | null
 }
 
 type Log = {
@@ -24,6 +25,7 @@ type Log = {
   completed_date: string
   value: number | null
   created_at: string
+  meta_json?: any | null
 }
 
 type Event = {
@@ -34,6 +36,7 @@ type Event = {
   occurred_at: string
   notes: string | null
   created_at: string
+  meta_json?: any | null
 }
 
 export function computeDashboardStats(habits: Habit[], logs: Log[], events: Event[]) {
@@ -69,7 +72,7 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
 
     const last7DaysCount = usesEvents
       ? habitEvents.filter(e => last7Days.includes(e.event_date)).length +
-        badLogDates.filter(d => last7Days.includes(d)).length
+      badLogDates.filter(d => last7Days.includes(d)).length
       : habitLogs.filter(l => last7Days.includes(l.completed_date)).length
 
     // Last 30 days for completion rate
@@ -81,7 +84,7 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
 
     const last30DaysCount = usesEvents
       ? habitEvents.filter(e => last30Days.includes(e.event_date)).length +
-        badLogDates.filter(d => last30Days.includes(d)).length
+      badLogDates.filter(d => last30Days.includes(d)).length
       : habitLogs.filter(l => last30Days.includes(l.completed_date)).length
 
     const monthCompletionRate = Math.round((last30DaysCount / 30) * 100)
@@ -155,6 +158,18 @@ export function computeDashboardStats(habits: Habit[], logs: Log[], events: Even
       lastActionDate,
       lastActionTimestamp,
       riskLevel,
+      missions: habit.missions || [],
+      todayMissionsProgress: (() => {
+        const lastAction = usesEvents
+          ? habitEvents
+            .filter(e => e.event_date === today)
+            .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())[0]
+          : habitLogs
+            .filter(l => l.completed_date === today)
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+
+        return lastAction?.meta_json?.completed_mission_ids || []
+      })()
     }
   })
 

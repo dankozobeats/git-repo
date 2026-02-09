@@ -21,6 +21,7 @@ export type Database = {
           goal_description: string | null
           category_id: string | null
           is_focused: boolean
+          missions: any[] | null
         }
         Insert: {
           id?: string
@@ -39,6 +40,7 @@ export type Database = {
           goal_description?: string | null
           category_id?: string | null
           is_focused?: boolean
+          missions?: any[] | null
         }
       }
       logs: {
@@ -51,6 +53,7 @@ export type Database = {
           notes: string | null
           created_at: string
           type?: string
+          meta_json: any | null
         }
         Insert: {
           id?: string
@@ -60,6 +63,7 @@ export type Database = {
           value?: number | null
           notes?: string | null
           type?: string
+          meta_json?: any | null
         }
       }
       habit_events: {
@@ -69,6 +73,7 @@ export type Database = {
           user_id: string
           event_date: string
           occurred_at: string
+          meta_json: any | null
         }
         Insert: {
           id?: string
@@ -76,6 +81,7 @@ export type Database = {
           user_id: string
           event_date: string
           occurred_at?: string
+          meta_json?: any | null
         }
       }
       categories: {

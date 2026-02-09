@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   // 1. Récupérer toutes les habitudes actives
   const { data: habits, error: habitsError } = await supabase
     .from('habits')
-    .select('id, name, type, tracking_mode, icon, color, description, daily_goal_value, is_archived')
+    .select('id, name, type, tracking_mode, icon, color, description, daily_goal_value, is_archived, missions')
     .eq('user_id', user.id)
     .eq('is_archived', false)
     .order('created_at', { ascending: false })
@@ -59,6 +59,34 @@ export async function GET(request: NextRequest) {
         lastActionDate: stats?.lastActionDate || null,
         lastActionTimestamp: stats?.lastActionTimestamp || null,
         riskLevel: stats?.riskLevel || 'good',
+        missions: habit.missions || [],
+        todayMissionsProgress: await (async () => {
+          const today = new Date().toISOString().split('T')[0]
+          const isCounter = habit.tracking_mode === 'counter'
+          const usesEvents = habit.type === 'bad' || isCounter
+
+          if (usesEvents) {
+            const { data } = await supabase
+              .from('habit_events')
+              .select('meta_json')
+              .eq('habit_id', habit.id)
+              .eq('event_date', today)
+              .order('occurred_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            return data?.meta_json?.completed_mission_ids || []
+          } else {
+            const { data } = await supabase
+              .from('logs')
+              .select('meta_json')
+              .eq('habit_id', habit.id)
+              .eq('completed_date', today)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            return data?.meta_json?.completed_mission_ids || []
+          }
+        })()
       }
     })
   )

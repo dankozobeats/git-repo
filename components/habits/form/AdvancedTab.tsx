@@ -30,6 +30,8 @@ type AdvancedTabProps = {
     dailyGoal?: string
     category?: string
   }
+  missions: any[]
+  onMissionsChange: (missions: any[]) => void
 }
 
 export default function AdvancedTab({
@@ -45,6 +47,8 @@ export default function AdvancedTab({
   isSuspended = false,
   onSuspendedChange,
   errors = {},
+  missions,
+  onMissionsChange,
 }: AdvancedTabProps) {
   return (
     <div className="space-y-6 p-6">
@@ -70,11 +74,10 @@ export default function AdvancedTab({
               key={option.key}
               type="button"
               onClick={() => onTrackingModeChange(option.key)}
-              className={`rounded-2xl border px-4 py-4 text-left transition hover:scale-[1.02] ${
-                trackingMode === option.key
+              className={`rounded-2xl border px-4 py-4 text-left transition hover:scale-[1.02] ${trackingMode === option.key
                   ? 'border-sky-500/40 bg-gradient-to-br from-sky-500/30 to-transparent text-white'
                   : 'border-white/10 bg-black/30 text-white/70 hover:border-white/20'
-              }`}
+                }`}
             >
               <p className="text-sm font-semibold">{option.label}</p>
               <p className="text-xs text-white/60 mt-1">{option.helper}</p>
@@ -132,6 +135,58 @@ export default function AdvancedTab({
         <FormMessage type="error" message={errors.category} />
       </div>
 
+      {/* Missions Management */}
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-5">
+        <div>
+          <p className="text-xs uppercase tracking-[0.35em] text-white/60">Objectifs précis</p>
+          <h3 className="text-base font-semibold text-white">Missions quotidiennes</h3>
+        </div>
+
+        <div className="space-y-2">
+          {missions.map((mission: any, idx: number) => (
+            <div key={mission.id || idx} className="flex gap-2">
+              <input
+                type="text"
+                value={mission.title}
+                onChange={(e) => {
+                  const newMissions = [...missions]
+                  newMissions[idx].title = e.target.value
+                  onMissionsChange(newMissions)
+                }}
+                placeholder="Ex: Pas d'écran 1h avant"
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const newMissions = missions.filter((_, i) => i !== idx)
+                  onMissionsChange(newMissions)
+                }}
+                className="rounded-xl bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20"
+              >
+                🗑️
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              onMissionsChange([
+                ...missions,
+                { id: crypto.randomUUID(), title: '', is_active: true }
+              ])
+            }}
+            className="w-full rounded-xl border border-dashed border-white/20 bg-white/5 py-3 text-sm text-white/60 transition hover:border-white/40 hover:bg-white/10"
+          >
+            + Ajouter une mission
+          </button>
+        </div>
+        <p className="text-xs text-white/60">
+          Défini des sous-tâches pour valider réellement cette habitude.
+        </p>
+      </div>
+
       {/* Suspend toggle (edit only) */}
       {mode === 'edit' && onSuspendedChange && (
         <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
@@ -145,11 +200,10 @@ export default function AdvancedTab({
             <button
               type="button"
               onClick={() => onSuspendedChange(!isSuspended)}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                isSuspended
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${isSuspended
                   ? 'border-green-500/40 bg-green-500/10 text-green-200 hover:bg-green-500/20'
                   : 'border-orange-500/40 bg-orange-500/10 text-orange-200 hover:bg-orange-500/20'
-              }`}
+                }`}
             >
               {isSuspended ? (
                 <>

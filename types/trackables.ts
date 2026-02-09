@@ -9,6 +9,12 @@ export type EventKind = 'check' | 'observe'
 
 export type DecisionType = 'resist' | 'relapse' | 'delay' | 'replace' | 'other'
 
+export interface Mission {
+  id: string
+  title: string
+  is_active: boolean
+}
+
 // ============================================
 // 1. TRACKABLE (Habitude ou État)
 // ============================================
@@ -25,6 +31,7 @@ export interface Trackable {
   target_per_day?: number | null
   unit?: string | null
   tags?: string[] | null
+  missions?: Mission[] | null
   created_at: string
   updated_at: string
   archived_at?: string | null
@@ -40,6 +47,7 @@ export interface CreateTrackablePayload {
   target_per_day?: number
   unit?: string
   tags?: string[]
+  missions?: Mission[]
 }
 
 // ============================================

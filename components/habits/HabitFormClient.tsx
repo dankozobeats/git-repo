@@ -35,6 +35,7 @@ type HabitFormClientProps = {
     daily_goal_value: number | null
     daily_goal_type: 'minimum' | 'maximum' | null
     category_id: string | null
+    missions: any[] | null
   }
   categories?: Category[]
 }
@@ -87,6 +88,7 @@ export default function HabitFormClient({
   )
   const [dailyGoalValue, setDailyGoalValue] = useState(initialHabit?.daily_goal_value || 3)
   const [categoryId, setCategoryId] = useState(initialHabit?.category_id || '')
+  const [missions, setMissions] = useState<any[]>(initialHabit?.missions || [])
 
   // Categories + Coach
   const [categories, setCategories] = useState<Category[]>(initialCategories)
@@ -161,6 +163,7 @@ export default function HabitFormClient({
       type: habitType,
       tracking_mode: trackingMode,
       category_id: categoryId || null,
+      missions: missions.length > 0 ? missions : [],
     }
 
     if (trackingMode === 'counter') {
@@ -202,6 +205,7 @@ export default function HabitFormClient({
     trackingMode,
     dailyGoalValue,
     categoryId,
+    missions,
     router,
   ])
 
@@ -244,6 +248,8 @@ export default function HabitFormClient({
             onTrackingModeChange={setTrackingMode}
             onDailyGoalValueChange={setDailyGoalValue}
             onCategoryIdChange={setCategoryId}
+            missions={missions}
+            onMissionsChange={setMissions}
           />
         )}
 

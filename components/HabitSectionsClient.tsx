@@ -7,7 +7,8 @@ import Link from 'next/link'
 import HabitQuickActions from '@/components/HabitQuickActions'
 import CategoryManager from '@/components/CategoryManager'
 import HabitToast from '@/components/HabitToast'
-import AICoachMessage from '@/components/AICoachMessage' // Design unifié pour bulles IA tempo et toasts premium.
+import AICoachMessage from '@/components/AICoachMessage'
+import CheckHabitMissionsSheet from '@/components/trackables/CheckHabitMissionsSheet'
 import { Search as SearchIcon, ChevronDown, LayoutGrid, List } from 'lucide-react'
 import { HABIT_SEARCH_EVENT, scrollToSearchSection } from '@/lib/ui/scroll'
 import SearchOverlay from '@/components/SearchOverlay'
@@ -26,6 +27,7 @@ type HabitSectionsClientProps = {
   badHabits: HabitRow[]
   categories: CategoryRow[]
   todayCounts: Record<string, number>
+  todayMissionsProgress: Record<string, string[]>
   categoryStats: CategoryStat[]
   showBadHabits?: boolean
   showGoodHabits?: boolean
@@ -65,6 +67,7 @@ export default function HabitSectionsClient({
   badHabits,
   categories,
   todayCounts,
+  todayMissionsProgress,
   categoryStats,
   showBadHabits = true,
   showGoodHabits = true,
@@ -92,6 +95,8 @@ export default function HabitSectionsClient({
   const feedbackRef = useRef<HTMLDivElement | null>(null)
   const coachContainerRef = useRef<HTMLDivElement | null>(null)
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(highlightHabitId ?? null)
+  const [selectedHabitForMissions, setSelectedHabitForMissions] = useState<any | null>(null)
+  const [missionsSheetOpen, setMissionsSheetOpen] = useState(false)
   const categoriesList = categories ?? []
   const todayCountsMap = useMemo(
     // Convertit l'objet provenant du serveur en Map pour des lookups rapides.
@@ -235,6 +240,49 @@ export default function HabitSectionsClient({
     setToastMessage({ message, variant })
   }, [])
 
+  // Handler pour les missions (similaire à DashboardMobileClientNew)
+  const handleOpenMissions = useCallback((habit: any) => {
+    setSelectedHabitForMissions({
+      ...habit,
+      today_events: todayMissionsProgress[habit.id]
+        ? [{ kind: 'check', occurred_at: new Date().toISOString(), meta_json: { completed_mission_ids: todayMissionsProgress[habit.id] } }]
+        : []
+    })
+    setMissionsSheetOpen(true)
+  }, [todayMissionsProgress])
+
+  const handleSubmitMissions = async (completedMissionIds: string[]) => {
+    if (!selectedHabitForMissions) return
+
+    try {
+      const res = await fetch(`/api/habits/${selectedHabitForMissions.id}/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta_json: {
+            completed_mission_ids: completedMissionIds,
+            total_missions: selectedHabitForMissions.missions?.length || 0,
+            completion_rate: Math.round(
+              (completedMissionIds.length / (selectedHabitForMissions.missions?.length || 1)) * 100
+            ),
+          }
+        })
+      })
+
+      if (!res.ok) throw new Error('Missions submission failed')
+
+      handleHabitValidated('Missions enregistrées !')
+      // Refresh
+      window.location.reload()
+    } catch (error) {
+      console.error('Erreur missions:', error)
+      handleHabitValidated('Impossible de valider les missions', 'error')
+    } finally {
+      setMissionsSheetOpen(false)
+      setSelectedHabitForMissions(null)
+    }
+  }
+
   const clearCoachTimers = useCallback(() => {
     if (coachHideTimerRef.current) {
       window.clearTimeout(coachHideTimerRef.current)
@@ -351,7 +399,9 @@ export default function HabitSectionsClient({
             habit={habit}
             type={habit.type as 'good' | 'bad'}
             todayCount={todayCountsMap.get(habit.id) ?? 0}
+            todayMissionIds={todayMissionsProgress[habit.id] || []}
             onHabitValidated={handleHabitValidated}
+            onOpenMissions={handleOpenMissions}
             showDescriptions={showHabitDescriptions}
             viewMode={viewMode}
             habitColor={habit.color}
@@ -359,6 +409,7 @@ export default function HabitSectionsClient({
           />
         ))
       )}
+
     </div>
   ) : null
 
@@ -370,6 +421,7 @@ export default function HabitSectionsClient({
         onClose={() => setIsSearchOpen(false)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        results={searchResults}
       />
 
       {feedbackSection}
@@ -397,6 +449,8 @@ export default function HabitSectionsClient({
               todayCountsMap={todayCountsMap}
               containerId="goodHabitsList"
               onHabitValidated={handleHabitValidated}
+              onOpenMissions={handleOpenMissions}
+              todayMissionsProgress={todayMissionsProgress}
               showDescriptions={showHabitDescriptions}
               viewMode={viewMode}
               highlightHabitId={activeHighlightId}
@@ -422,6 +476,8 @@ export default function HabitSectionsClient({
               todayCountsMap={todayCountsMap}
               containerId="badHabitsList"
               onHabitValidated={handleHabitValidated}
+              onOpenMissions={handleOpenMissions}
+              todayMissionsProgress={todayMissionsProgress}
               showDescriptions={showHabitDescriptions}
               viewMode={viewMode}
               highlightHabitId={activeHighlightId}
@@ -448,6 +504,19 @@ export default function HabitSectionsClient({
           </div>
         )}
       </div>
+
+      {/* Missions Sheet - Toujours rendu ici pour être accessible partout */}
+      {selectedHabitForMissions && (
+        <CheckHabitMissionsSheet
+          habit={selectedHabitForMissions}
+          isOpen={missionsSheetOpen}
+          onClose={() => {
+            setMissionsSheetOpen(false)
+            setSelectedHabitForMissions(null)
+          }}
+          onSubmit={handleSubmitMissions}
+        />
+      )}
     </section>
   )
 }
@@ -546,13 +615,15 @@ type HabitListProps = {
   todayCountsMap: Map<string, number>
   containerId: string
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
+  onOpenMissions: (habit: any) => void
+  todayMissionsProgress: Record<string, string[]>
   showDescriptions: boolean
   viewMode: 'card' | 'list'
   highlightHabitId?: string | null
 }
 
 // Affiche toutes les cartes d'une section en conservant une grille full-width, ou un message vide si aucune correspondance.
-function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated, showDescriptions, viewMode, highlightHabitId }: HabitListProps) {
+function HabitList({ habits, type, todayCountsMap, todayMissionsProgress, containerId, onHabitValidated, onOpenMissions, showDescriptions, viewMode, highlightHabitId }: HabitListProps) {
   if (habits.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-white/60">
@@ -570,7 +641,9 @@ function HabitList({ habits, type, todayCountsMap, containerId, onHabitValidated
             habit={habit}
             type={type}
             todayCount={todayCountsMap.get(habit.id) ?? 0}
+            todayMissionIds={todayMissionsProgress[habit.id] || []}
             onHabitValidated={onHabitValidated}
+            onOpenMissions={onOpenMissions}
             showDescriptions={showDescriptions}
             viewMode={viewMode}
             highlightHabitId={highlightHabitId}
@@ -587,7 +660,9 @@ type HabitRowCardProps = {
   habit: HabitRow
   type: 'good' | 'bad'
   todayCount: number
+  todayMissionIds: string[]
   onHabitValidated: (message: string, variant?: 'success' | 'error') => void
+  onOpenMissions: (habit: any) => void
   showDescriptions: boolean
   viewMode: 'card' | 'list'
   highlightHabitId?: string | null
@@ -596,11 +671,13 @@ type HabitRowCardProps = {
 }
 
 // Carte principale d'une habitude avec un lien vers le détail et les actions rapides en style glassmorphism premium.
-function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescriptions, viewMode, highlightHabitId, habitColor, habitIcon }: HabitRowCardProps) {
+function HabitRowCard({ habit, type, todayCount, todayMissionIds, onHabitValidated, onOpenMissions, showDescriptions, viewMode, highlightHabitId, habitColor, habitIcon }: HabitRowCardProps) {
   // Calcule l'état courant pour afficher le badge restant sans attendre un refresh serveur.
   const counterState = buildCounterState(habit, todayCount)
   const showCounterBadge = counterState.required > 1
   const isHighlighted = highlightHabitId === habit.id
+
+  const hasMissions = habit.missions && (habit.missions as any[]).length > 0
 
   // Vue liste compacte
   if (viewMode === 'list') {
@@ -619,6 +696,13 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white line-clamp-2 leading-tight">{habit.name}</p>
+            {hasMissions && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="text-[10px] font-bold text-blue-400/80">
+                  {todayMissionIds.length}/{(habit.missions as any[]).length} missions
+                </span>
+              </div>
+            )}
           </div>
           {showCounterBadge && (
             <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${counterState.isCompleted ? 'border-emerald-400/50 text-emerald-300' : 'border-sky-400/40 text-sky-200'
@@ -642,7 +726,9 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
             totalLogs={habit.total_logs ?? undefined}
             totalCraquages={habit.total_craquages ?? undefined}
             isFocused={habit.is_focused ?? false}
+            missions={habit.missions}
             onHabitValidated={onHabitValidated}
+            onOpenMissions={() => onOpenMissions(habit)}
           />
         </div>
       </div>
@@ -677,6 +763,16 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
         >
           {habit.name}
         </p>
+        {hasMissions && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500/20 text-[10px] text-blue-400">
+              m
+            </span>
+            <span className="text-[11px] font-bold text-blue-400/80">
+              {todayMissionIds.length}/{(habit.missions as any[]).length}
+            </span>
+          </div>
+        )}
         {showCounterBadge && (
           <div className="mt-2 space-y-1">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
@@ -722,7 +818,9 @@ function HabitRowCard({ habit, type, todayCount, onHabitValidated, showDescripti
           totalLogs={habit.total_logs ?? undefined}
           totalCraquages={habit.total_craquages ?? undefined}
           isFocused={habit.is_focused ?? false}
+          missions={habit.missions}
           onHabitValidated={onHabitValidated}
+          onOpenMissions={() => onOpenMissions(habit)}
         />
       </div>
     </div>

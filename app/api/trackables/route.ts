@@ -85,6 +85,7 @@ export async function POST(request: Request) {
         target_per_day: payload.target_per_day || null,
         unit: payload.unit || null,
         tags: payload.tags || null,
+        missions: payload.missions || [],
       })
       .select()
       .single()

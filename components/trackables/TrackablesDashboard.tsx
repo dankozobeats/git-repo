@@ -9,6 +9,7 @@ import DecisionSheet from './DecisionSheet'
 import CreateTrackableModal from './CreateTrackableModal'
 import EditTrackableModal from './EditTrackableModal'
 import InsightsPanel from './InsightsPanel'
+import CheckHabitMissionsSheet from './CheckHabitMissionsSheet'
 import { TrackableWithToday, StateEventMeta, TrackableEvent } from '@/types/trackables'
 import { TrendingUp, TrendingDown, Target, Shield, AlertCircle, Plus } from 'lucide-react'
 
@@ -23,6 +24,7 @@ export default function TrackablesDashboard() {
   const [selectedTrackable, setSelectedTrackable] = useState<TrackableWithToday | null>(null)
   const [editingTrackable, setEditingTrackable] = useState<TrackableWithToday | null>(null)
   const [pendingStateEvent, setPendingStateEvent] = useState<TrackableEvent | null>(null)
+  const [checkMissionsSheetOpen, setCheckMissionsSheetOpen] = useState(false)
 
   // Separate habits and states
   const habits = trackables.filter((t) => t.type === 'habit')
@@ -32,6 +34,12 @@ export default function TrackablesDashboard() {
 
   // Handle checking a habit
   const handleCheckHabit = async (trackable: TrackableWithToday) => {
+    if (trackable.missions && trackable.missions.length > 0) {
+      setSelectedTrackable(trackable)
+      setCheckMissionsSheetOpen(true)
+      return
+    }
+
     try {
       await logEvent({
         trackable_id: trackable.id,
@@ -46,8 +54,52 @@ export default function TrackablesDashboard() {
 
   // Handle observing a state
   const handleObserveState = (trackable: TrackableWithToday) => {
+    if (trackable.missions && trackable.missions.length > 0) {
+      setSelectedTrackable(trackable)
+      setCheckMissionsSheetOpen(true)
+      return
+    }
+
     setSelectedTrackable(trackable)
     setObserveSheetOpen(true)
+  }
+
+  // Handle missions submission (Habit OR State)
+  const handleSubmitMissions = async (completedMissionIds: string[]) => {
+    if (!selectedTrackable) return
+
+    try {
+      const isHabit = selectedTrackable.type === 'habit'
+
+      const meta = {
+        completed_mission_ids: completedMissionIds,
+        total_missions: selectedTrackable.missions?.length || 0,
+        completion_rate: Math.round(
+          (completedMissionIds.length / (selectedTrackable.missions?.length || 1)) * 100
+        ),
+      }
+
+      if (isHabit) {
+        await logEvent({
+          trackable_id: selectedTrackable.id,
+          kind: 'check',
+          value_int: 1,
+          meta_json: meta,
+        })
+        refresh()
+      } else {
+        const event = await logEvent({
+          trackable_id: selectedTrackable.id,
+          kind: 'observe',
+          meta_json: meta,
+        })
+        setCheckMissionsSheetOpen(false)
+        setPendingStateEvent(event)
+        setObserveSheetOpen(true)
+      }
+    } catch (error) {
+      console.error('Error submitting missions:', error)
+    }
   }
 
   // Submit state observation
@@ -61,7 +113,6 @@ export default function TrackablesDashboard() {
         meta_json: meta,
       })
 
-      // Open decision sheet immediately after observation
       setPendingStateEvent(event)
       setObserveSheetOpen(false)
       setDecisionSheetOpen(true)
@@ -121,7 +172,6 @@ export default function TrackablesDashboard() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {/* Habits Completed */}
           <div className="rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 p-5 ring-2 ring-blue-500/30">
             <div className="mb-2 flex items-center justify-between">
               <Target size={24} className="text-blue-400" />
@@ -130,51 +180,34 @@ export default function TrackablesDashboard() {
             <div className="text-3xl font-bold text-white">
               {stats.today.habits_completed}
             </div>
-            <div className="text-sm text-gray-400">
-              Habitudes complétées
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              Objectif: {stats.today.habits_target}
-            </div>
+            <div className="text-sm text-gray-400">Habitudes complétées</div>
+            <div className="mt-2 text-xs text-gray-500">Objectif: {stats.today.habits_target}</div>
           </div>
 
-          {/* Resistances */}
           <div className="rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-5 ring-2 ring-green-500/30">
             <div className="mb-2 flex items-center justify-between">
               <Shield size={24} className="text-green-400" />
             </div>
-            <div className="text-3xl font-bold text-white">
-              {stats.today.resistances}
-            </div>
+            <div className="text-3xl font-bold text-white">{stats.today.resistances}</div>
             <div className="text-sm text-gray-400">Résistances</div>
-            <div className="mt-2 text-xs text-gray-500">
-              Cette semaine: {stats.week.resistances}
-            </div>
+            <div className="mt-2 text-xs text-gray-500">Cette semaine: {stats.week.resistances}</div>
           </div>
 
-          {/* Relapses */}
           <div className="rounded-xl bg-gradient-to-br from-red-500/20 to-rose-500/20 p-5 ring-2 ring-red-500/30">
             <div className="mb-2 flex items-center justify-between">
               <AlertCircle size={24} className="text-red-400" />
               <TrendingDown size={16} className="text-red-400" />
             </div>
-            <div className="text-3xl font-bold text-white">
-              {stats.today.relapses}
-            </div>
+            <div className="text-3xl font-bold text-white">{stats.today.relapses}</div>
             <div className="text-sm text-gray-400">Craquages</div>
-            <div className="mt-2 text-xs text-gray-500">
-              Cette semaine: {stats.week.relapses}
-            </div>
+            <div className="mt-2 text-xs text-gray-500">Cette semaine: {stats.week.relapses}</div>
           </div>
 
-          {/* Resistance Rate */}
           <div className="rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 p-5 ring-2 ring-purple-500/30">
             <div className="mb-2 flex items-center justify-between">
               <Shield size={24} className="text-purple-400" />
             </div>
-            <div className="text-3xl font-bold text-white">
-              {stats.week.avg_resistance_rate}%
-            </div>
+            <div className="text-3xl font-bold text-white">{stats.week.avg_resistance_rate}%</div>
             <div className="text-sm text-gray-400">Taux de résistance</div>
             <div className="mt-2 text-xs text-gray-500">Cette semaine</div>
           </div>
@@ -189,9 +222,7 @@ export default function TrackablesDashboard() {
       {/* Priority Habits */}
       {priorityHabits.length > 0 && (
         <section>
-          <h2 className="mb-4 text-2xl font-bold text-white">
-            Habitudes Prioritaires
-          </h2>
+          <h2 className="mb-4 text-2xl font-bold text-white">Habitudes Prioritaires</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {priorityHabits.map((habit) => (
               <TrackablePriorityCard
@@ -211,9 +242,7 @@ export default function TrackablesDashboard() {
       {/* Priority States */}
       {priorityStates.length > 0 && (
         <section>
-          <h2 className="mb-4 text-2xl font-bold text-white">
-            États à Surveiller
-          </h2>
+          <h2 className="mb-4 text-2xl font-bold text-white">États à Surveiller</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {priorityStates.map((state) => (
               <TrackablePriorityCard
@@ -233,9 +262,7 @@ export default function TrackablesDashboard() {
       {/* All Habits */}
       {habits.filter((h) => !h.is_priority).length > 0 && (
         <section>
-          <h2 className="mb-4 text-2xl font-bold text-white">
-            Autres Habitudes
-          </h2>
+          <h2 className="mb-4 text-2xl font-bold text-white">Autres Habitudes</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {habits
               .filter((h) => !h.is_priority)
@@ -276,26 +303,6 @@ export default function TrackablesDashboard() {
         </section>
       )}
 
-      {/* Empty State */}
-      {trackables.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="mb-4 text-6xl">📊</div>
-          <h3 className="mb-2 text-2xl font-bold text-white">
-            Aucun trackable
-          </h3>
-          <p className="mb-6 text-gray-400">
-            Commence par créer une habitude ou un état à surveiller
-          </p>
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-3 font-bold text-white shadow-lg transition-all hover:scale-105"
-          >
-            <Plus size={20} />
-            Créer un trackable
-          </button>
-        </div>
-      )}
-
       {/* Modals */}
       {selectedTrackable && (
         <ObserveStateSheet
@@ -326,14 +333,12 @@ export default function TrackablesDashboard() {
         />
       )}
 
-      {/* Create Trackable Modal */}
       <CreateTrackableModal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onSubmit={createTrackable}
       />
 
-      {/* Edit Trackable Modal */}
       <EditTrackableModal
         trackable={editingTrackable}
         isOpen={editModalOpen}
@@ -344,6 +349,18 @@ export default function TrackablesDashboard() {
         onSubmit={updateTrackable}
         onDelete={archiveTrackable}
       />
+
+      {selectedTrackable && (
+        <CheckHabitMissionsSheet
+          habit={selectedTrackable}
+          isOpen={checkMissionsSheetOpen}
+          onClose={() => {
+            setCheckMissionsSheetOpen(false)
+            setSelectedTrackable(null)
+          }}
+          onSubmit={handleSubmitMissions}
+        />
+      )}
     </div>
   )
 }

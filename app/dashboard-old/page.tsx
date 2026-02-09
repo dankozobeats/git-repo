@@ -69,14 +69,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
   // Récupère les logs de la journée (mode classique).
   const { data: todayLogs } = await supabase
     .from('logs')
-    .select('habit_id')
+    .select('habit_id, meta_json')
     .eq('user_id', user.id)
     .eq('completed_date', today)
 
   // Récupère les événements du mode compteur (multi-incréments).
   const { data: todayEvents } = await supabase
     .from('habit_events')
-    .select('habit_id')
+    .select('habit_id, meta_json')
     .eq('user_id', user.id)
     .eq('event_date', today)
 
@@ -91,6 +91,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
     })
     ; (todayEvents || []).forEach(event => {
       todayCounts.set(event.habit_id, (todayCounts.get(event.habit_id) || 0) + 1)
+    })
+
+  // Map [habitId -> completedMissionIds]
+  const todayMissionsRecord: Record<string, string[]> = {}
+    ;[...(todayLogs || []), ...(todayEvents || [])].forEach(item => {
+      if (item.meta_json?.completed_mission_ids) {
+        todayMissionsRecord[item.habit_id] = item.meta_json.completed_mission_ids
+      }
     })
 
   const badHabitsLoggedToday =
@@ -202,6 +210,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
         goodHabits={safeGoodHabits}
         categories={categoriesList}
         todayCounts={todayCountsRecord}
+        todayMissionsProgress={todayMissionsRecord}
         categoryStats={categoryStats}
         showBadHabits={showBadHabits}
         showGoodHabits={showGoodHabits}

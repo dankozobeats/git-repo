@@ -38,6 +38,14 @@ export async function POST(
     return NextResponse.json({ error: "ID invalide" }, { status: 400 })
   }
 
+  let body = {}
+  try {
+    body = await request.json()
+  } catch (e) {
+    // Body is empty or not JSON, which is fine for quick check-ins
+  }
+  const { meta_json } = (body as any) || {}
+
   const supabase = await createClient()
   const { data: auth, error: authError } = await supabase.auth.getUser()
 
@@ -91,6 +99,7 @@ export async function POST(
         user_id: user.id,
         event_date: completedDate,
         occurred_at: new Date().toISOString(),
+        meta_json: meta_json || null,
       })
 
       if (insertError) {
@@ -142,6 +151,7 @@ export async function POST(
       user_id: user.id,
       event_date: completedDate,
       occurred_at: new Date().toISOString(),
+      meta_json: meta_json || null,
     })
 
     if (insertError) {
@@ -178,6 +188,7 @@ export async function POST(
         completed_date: completedDate,
         value: 1,
         notes: null,
+        meta_json: meta_json || null,
       },
       {
         onConflict: "habit_id,completed_date",

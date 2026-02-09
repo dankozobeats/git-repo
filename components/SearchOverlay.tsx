@@ -2,16 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
+import Link from 'next/link'
 import { HABIT_SEARCH_EVENT } from '@/lib/ui/scroll'
+
+type SearchResult = {
+    id: string
+    name: string
+    type: string | null
+    icon?: string | null
+    color?: string | null
+}
 
 type SearchOverlayProps = {
     searchQuery: string
     setSearchQuery: (query: string) => void
     isOpen: boolean
     onClose: () => void
+    results?: SearchResult[]
 }
 
-export default function SearchOverlay({ searchQuery, setSearchQuery, isOpen, onClose }: SearchOverlayProps) {
+export default function SearchOverlay({ searchQuery, setSearchQuery, isOpen, onClose, results = [] }: SearchOverlayProps) {
     const inputRef = useRef<HTMLInputElement>(null)
     const [isVisible, setIsVisible] = useState(false)
 
@@ -37,6 +47,8 @@ export default function SearchOverlay({ searchQuery, setSearchQuery, isOpen, onC
     }, [onClose])
 
     if (!isVisible && !isOpen) return null
+
+    const hasQuery = searchQuery.trim().length > 0
 
     return (
         <div
@@ -78,9 +90,36 @@ export default function SearchOverlay({ searchQuery, setSearchQuery, isOpen, onC
                         </button>
                     </div>
 
-                    {/* Hint ou résultats rapides si besoin plus tard */}
-                    <div className="bg-black/20 px-4 py-2 text-xs text-white/30">
-                        Appuyez sur Echap pour fermer
+                    {/* Résultats de recherche */}
+                    <div className="max-h-80 overflow-y-auto">
+                        {hasQuery && results.length > 0 ? (
+                            <div className="divide-y divide-white/5">
+                                {results.map((habit) => (
+                                    <Link
+                                        key={habit.id}
+                                        href={`/habits/${habit.id}`}
+                                        onClick={onClose}
+                                        className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5 sm:px-6"
+                                    >
+                                        <div
+                                            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-lg"
+                                            style={{ backgroundColor: `${habit.color || '#6b7280'}33` }}
+                                        >
+                                            {habit.icon || (habit.type === 'bad' ? '🔥' : '✨')}
+                                        </div>
+                                        <span className="text-sm font-medium text-white">{habit.name}</span>
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : hasQuery ? (
+                            <div className="px-4 py-6 text-center text-sm text-white/40 sm:px-6">
+                                Aucun résultat pour &laquo; {searchQuery} &raquo;
+                            </div>
+                        ) : (
+                            <div className="bg-black/20 px-4 py-2 text-xs text-white/30">
+                                Appuyez sur Echap pour fermer
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

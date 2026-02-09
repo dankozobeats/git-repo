@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
-import { CreateTrackablePayload, TrackableType } from '@/types/trackables'
+import { X, Plus, Trash2, Target } from 'lucide-react'
+import { CreateTrackablePayload, TrackableType, Mission } from '@/types/trackables'
 
 interface CreateTrackableModalProps {
   isOpen: boolean
@@ -39,6 +39,8 @@ export default function CreateTrackableModal({
   const [isPriority, setIsPriority] = useState(false)
   const [targetPerDay, setTargetPerDay] = useState<string>('')
   const [unit, setUnit] = useState('fois')
+  const [missions, setMissions] = useState<Mission[]>([])
+  const [newMissionTitle, setNewMissionTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (!isOpen) return null
@@ -62,6 +64,7 @@ export default function CreateTrackableModal({
         is_priority: isPriority,
         target_per_day: type === 'habit' && targetPerDay ? parseInt(targetPerDay) : undefined,
         unit: type === 'habit' && unit ? unit : undefined,
+        missions: missions.length > 0 ? missions : undefined,
       }
 
       await onSubmit(payload)
@@ -75,6 +78,7 @@ export default function CreateTrackableModal({
       setIsPriority(false)
       setTargetPerDay('')
       setUnit('fois')
+      setMissions([])
       onClose()
     } catch (error) {
       console.error('Error creating trackable:', error)
@@ -87,7 +91,7 @@ export default function CreateTrackableModal({
   const emojiList = type === 'habit' ? EMOJI_SUGGESTIONS.habit : EMOJI_SUGGESTIONS.state
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -112,11 +116,10 @@ export default function CreateTrackableModal({
               <button
                 type="button"
                 onClick={() => setType('habit')}
-                className={`rounded-lg p-4 text-center font-medium transition-all ${
-                  type === 'habit'
+                className={`rounded-lg p-4 text-center font-medium transition-all ${type === 'habit'
                     ? 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg'
                     : 'bg-white/5 text-white/80 hover:bg-white/10'
-                }`}
+                  }`}
               >
                 <div className="mb-2 text-3xl">✅</div>
                 <div className="font-bold">Habitude</div>
@@ -125,11 +128,10 @@ export default function CreateTrackableModal({
               <button
                 type="button"
                 onClick={() => setType('state')}
-                className={`rounded-lg p-4 text-center font-medium transition-all ${
-                  type === 'state'
+                className={`rounded-lg p-4 text-center font-medium transition-all ${type === 'state'
                     ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg'
                     : 'bg-white/5 text-white/80 hover:bg-white/10'
-                }`}
+                  }`}
               >
                 <div className="mb-2 text-3xl">⚠️</div>
                 <div className="font-bold">État</div>
@@ -178,11 +180,10 @@ export default function CreateTrackableModal({
                   key={emoji}
                   type="button"
                   onClick={() => setIcon(emoji)}
-                  className={`flex h-12 w-12 items-center justify-center rounded-lg text-2xl transition-all ${
-                    icon === emoji
+                  className={`flex h-12 w-12 items-center justify-center rounded-lg text-2xl transition-all ${icon === emoji
                       ? 'bg-blue-500 scale-110 shadow-lg'
                       : 'bg-white/5 hover:bg-white/10 hover:scale-105'
-                  }`}
+                    }`}
                 >
                   {emoji}
                 </button>
@@ -208,11 +209,10 @@ export default function CreateTrackableModal({
                   key={colorOption.value}
                   type="button"
                   onClick={() => setColor(colorOption.value)}
-                  className={`h-10 w-10 rounded-lg transition-all ${
-                    color === colorOption.value
+                  className={`h-10 w-10 rounded-lg transition-all ${color === colorOption.value
                       ? 'scale-110 shadow-lg ring-2 ring-white'
                       : 'hover:scale-105'
-                  }`}
+                    }`}
                   style={{ backgroundColor: colorOption.value }}
                   title={colorOption.name}
                 />
@@ -231,14 +231,12 @@ export default function CreateTrackableModal({
             <button
               type="button"
               onClick={() => setIsPriority(!isPriority)}
-              className={`relative h-8 w-14 rounded-full transition-all ${
-                isPriority ? 'bg-blue-500' : 'bg-white/20'
-              }`}
+              className={`relative h-8 w-14 rounded-full transition-all ${isPriority ? 'bg-blue-500' : 'bg-white/20'
+                }`}
             >
               <div
-                className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-md transition-all ${
-                  isPriority ? 'left-7' : 'left-1'
-                }`}
+                className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-md transition-all ${isPriority ? 'left-7' : 'left-1'
+                  }`}
               />
             </button>
           </div>
@@ -278,6 +276,87 @@ export default function CreateTrackableModal({
               </div>
             </div>
           )}
+
+          {/* Missions Checklist Management */}
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="flex items-center gap-2 font-bold text-white">
+                  <Target size={18} className="text-blue-400" />
+                  Missions quotidiennes
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Sous-objectifs à accomplir
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {missions.map((mission) => (
+                <div
+                  key={mission.id}
+                  className="flex items-center gap-2 rounded-lg bg-white/5 p-2 transition-all hover:bg-white/10"
+                >
+                  <input
+                    type="text"
+                    value={mission.title}
+                    onChange={(e) => {
+                      setMissions(
+                        missions.map((m) =>
+                          m.id === mission.id ? { ...m, title: e.target.value } : m
+                        )
+                      )
+                    }}
+                    className="flex-1 bg-transparent text-sm text-white outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMissions(missions.filter((m) => m.id !== mission.id))}
+                    className="text-gray-500 hover:text-red-400"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMissionTitle}
+                  onChange={(e) => setNewMissionTitle(e.target.value)}
+                  placeholder="Ajouter une mission..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (newMissionTitle.trim()) {
+                        setMissions([
+                          ...missions,
+                          { id: crypto.randomUUID(), title: newMissionTitle.trim(), is_active: true },
+                        ])
+                        setNewMissionTitle('')
+                      }
+                    }
+                  }}
+                  className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newMissionTitle.trim()) {
+                      setMissions([
+                        ...missions,
+                        { id: crypto.randomUUID(), title: newMissionTitle.trim(), is_active: true },
+                      ])
+                      setNewMissionTitle('')
+                    }
+                  }}
+                  className="rounded-lg bg-blue-500 px-3 py-2 text-white hover:bg-blue-600"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Submit Buttons */}
           <div className="flex gap-3 pt-4">

@@ -23,7 +23,9 @@ type HabitQuickActionsProps = {
   totalLogs?: number
   totalCraquages?: number
   isFocused?: boolean
+  missions?: any[] | null
   onHabitValidated?: (message: string, variant?: 'success' | 'error') => void
+  onOpenMissions?: () => void
 }
 
 export default function HabitQuickActions({
@@ -40,7 +42,9 @@ export default function HabitQuickActions({
   totalLogs = 0,
   totalCraquages = 0,
   isFocused = false,
+  missions = [],
   onHabitValidated,
+  onOpenMissions,
 }: HabitQuickActionsProps) {
   const router = useRouter()
   const [count, setCount] = useState(initialCount)
@@ -84,7 +88,14 @@ export default function HabitQuickActions({
 
   // Effectue un check-in rapide et rafraîchit les données locales/serveur.
   const handleAction = async () => {
+    // Si missions existent, ouvrir le sheet au lieu de valider directement
+    if (missions && (missions as any[]).length > 0 && onOpenMissions) {
+      onOpenMissions()
+      return
+    }
+
     if (disablePrimary) return
+
     setIsSubmitting(true)
     try {
       const res = await fetch(`/api/habits/${habitId}/check-in`, { method: 'POST' })

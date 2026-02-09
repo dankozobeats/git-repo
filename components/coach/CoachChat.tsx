@@ -104,18 +104,22 @@ export default function CoachChat({ conversationId, onNewConversation }: CoachCh
                 body: JSON.stringify({ message: messageToSend }),
             })
 
-            if (!res.ok) throw new Error('Failed to send message')
+            const data = await res.json()
 
-            const aiMsg = await res.json()
-            setMessages(prev => [...prev, aiMsg])
-        } catch (err) {
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to send message')
+            }
+
+            setMessages(prev => [...prev, data])
+        } catch (err: any) {
             console.error('Error sending message:', err)
+            const errorMessage = err?.message || "Erreur inconnue"
             setMessages(prev => [
                 ...prev,
                 {
                     id: 'error',
                     role: 'assistant',
-                    content: "Désolé, j'ai rencontré une erreur. Peux-tu réessayer ?",
+                    content: `⚠️ **Erreur IA** : ${errorMessage}\n\nVérifie que le serveur IA est accessible ou réessaie dans quelques secondes.`,
                     created_at: new Date().toISOString(),
                 },
             ])

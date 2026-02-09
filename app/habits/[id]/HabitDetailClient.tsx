@@ -14,6 +14,7 @@ import SettingsTab from './tabs/SettingsTab'
 import HistoryTab from './tabs/HistoryTab'
 import NotesTab from './tabs/NotesTab'
 import TasksTab from './tabs/TasksTab'
+import CheckHabitMissionsSheet from '@/components/trackables/CheckHabitMissionsSheet'
 import type { HabitCalendarMap, HabitStats } from '@/lib/habits/computeHabitStats'
 
 type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'notes' | 'tasks' | 'settings'
@@ -50,11 +51,13 @@ type Habit = {
   daily_goal_value: number | null
   daily_goal_type: 'minimum' | 'maximum' | null
   user_id: string
+  missions?: any[] | null
 }
 
 type Props = {
   habit: Habit
   calendarData: HabitCalendarMap
+  todayMissionsProgress: string[]
   stats: HabitStats
   reminders?: Reminder[]
 }
@@ -62,6 +65,7 @@ type Props = {
 export default function HabitDetailClient({
   habit,
   calendarData,
+  todayMissionsProgress,
   stats,
   reminders = [],
 }: Props) {
@@ -79,6 +83,7 @@ export default function HabitDetailClient({
 
   const [count, setCount] = useState(stats.todayCount)
   const [isValidating, setIsValidating] = useState(false)
+  const [missionsSheetOpen, setMissionsSheetOpen] = useState(false)
 
   const isBadHabit = habit.type === 'bad'
 
@@ -121,6 +126,38 @@ export default function HabitDetailClient({
     }
   }
 
+  const handleOpenMissions = () => {
+    setMissionsSheetOpen(true)
+  }
+
+  const handleSubmitMissions = async (completedMissionIds: string[]) => {
+    setIsValidating(true)
+    try {
+      const res = await fetch(`/api/habits/${habit.id}/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta_json: {
+            completed_mission_ids: completedMissionIds,
+            total_missions: habit.missions?.length || 0,
+            completion_rate: Math.round(
+              (completedMissionIds.length / (habit.missions?.length || 1)) * 100
+            ),
+          }
+        })
+      })
+
+      if (!res.ok) throw new Error('Missions submission failed')
+
+      router.refresh()
+    } catch (error) {
+      console.error('Erreur missions:', error)
+    } finally {
+      setIsValidating(false)
+      setMissionsSheetOpen(false)
+    }
+  }
+
   return (
     <div className="space-y-0">
       {/* Header avec tabs */}
@@ -144,6 +181,8 @@ export default function HabitDetailClient({
           }}
           calendarData={calendarData}
           onValidate={handleQuickValidate}
+          onOpenMissions={handleOpenMissions}
+          todayMissionsProgress={todayMissionsProgress}
           isValidating={isValidating}
         />
       )}
@@ -191,6 +230,21 @@ export default function HabitDetailClient({
           habit={habit}
           userId={habit.user_id}
           reminders={reminders}
+        />
+      )}
+
+      {/* Missions Sheet */}
+      {missionsSheetOpen && (
+        <CheckHabitMissionsSheet
+          habit={{
+            ...habit,
+            today_events: (todayMissionsProgress
+              ? [{ kind: 'check', occurred_at: new Date().toISOString(), meta_json: { completed_mission_ids: todayMissionsProgress } }]
+              : []) as any
+          } as any}
+          isOpen={missionsSheetOpen}
+          onClose={() => setMissionsSheetOpen(false)}
+          onSubmit={handleSubmitMissions}
         />
       )}
     </div>

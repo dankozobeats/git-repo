@@ -16,6 +16,7 @@ import { ChevronDown, ChevronUp, MoreVertical, Loader2, Info, Check, Plus, Trend
 import Link from 'next/link'
 import { useDashboard } from '@/lib/habits/useDashboard'
 import HabitQuickViewModal from './HabitQuickViewModal'
+import CheckHabitMissionsSheet from '@/components/trackables/CheckHabitMissionsSheet'
 
 type FilterType = 'all' | 'validated' | 'not_validated' | 'to_do'
 
@@ -39,6 +40,8 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showPatterns, setShowPatterns] = useState(false)
   const [highlightHabitId, setHighlightHabitId] = useState<string | null>(null)
+  const [missionsSheetOpen, setMissionsSheetOpen] = useState(false)
+  const [selectedHabitForMissions, setSelectedHabitForMissions] = useState<any | null>(null)
 
   // Handler pour supprimer une habitude
   const handleDelete = async (habitId: string, habitName: string) => {
@@ -185,10 +188,26 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
 
   // Handler de validation rapide
   const handleQuickValidate = async (habitId: string, habitType: string) => {
+    const habit = habits.find(h => h.id === habitId)
+
+    // Si missions existent, ouvrir la checklist d'abord
+    if (habit && habit.missions && habit.missions.length > 0) {
+      setSelectedHabitForMissions({
+        ...habit,
+        today_events: [] // Mocked for compatibility with the Generic sheet
+      })
+      setMissionsSheetOpen(true)
+      return
+    }
+
     setLoadingHabit(habitId)
 
     try {
-      const res = await fetch(`/api/habits/${habitId}/check-in`, { method: 'POST' })
+      const res = await fetch(`/api/habits/${habitId}/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
       const data = await res.json()
 
       if (!res.ok) {
@@ -208,6 +227,39 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
       alert('Impossible de valider l\'habitude')
     } finally {
       setLoadingHabit(null)
+    }
+  }
+
+  // Handler pour soumettre les missions d'une habitude classique
+  const handleSubmitMissions = async (completedMissionIds: string[]) => {
+    if (!selectedHabitForMissions) return
+
+    setLoadingHabit(selectedHabitForMissions.id)
+    try {
+      const res = await fetch(`/api/habits/${selectedHabitForMissions.id}/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta_json: {
+            completed_mission_ids: completedMissionIds,
+            total_missions: selectedHabitForMissions.missions?.length || 0,
+            completion_rate: Math.round(
+              (completedMissionIds.length / (selectedHabitForMissions.missions?.length || 1)) * 100
+            ),
+          }
+        })
+      })
+
+      if (!res.ok) throw new Error('Missions submission failed')
+
+      await mutate()
+      router.refresh()
+    } catch (error) {
+      console.error('Erreur missions:', error)
+      alert('Impossible de valider les missions')
+    } finally {
+      setLoadingHabit(null)
+      setSelectedHabitForMissions(null)
     }
   }
 
@@ -254,11 +306,10 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
           <button
             key={value}
             onClick={() => handleFilterChange(value)}
-            className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-              filter === value
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
-                : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:scale-105'
-            }`}
+            className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${filter === value
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+              : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:scale-105'
+              }`}
           >
             <span className="mr-1.5">{emoji}</span>
             {label} <span className="ml-1 opacity-60">({count})</span>
@@ -386,6 +437,28 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
           onClose={() => setQuickViewHabit(null)}
         />
       )}
+
+      {/* Missions Checklist Sheet */}
+      {selectedHabitForMissions && (
+        <CheckHabitMissionsSheet
+          habit={{
+            ...selectedHabitForMissions,
+            today_events: habits.find(h => h.id === selectedHabitForMissions.id)?.todayMissionsProgress
+              ? [{
+                kind: 'check',
+                occurred_at: new Date().toISOString(),
+                meta_json: { completed_mission_ids: habits.find(h => h.id === selectedHabitForMissions.id)?.todayMissionsProgress }
+              } as any]
+              : []
+          }}
+          isOpen={missionsSheetOpen}
+          onClose={() => {
+            setMissionsSheetOpen(false)
+            setSelectedHabitForMissions(null)
+          }}
+          onSubmit={handleSubmitMissions}
+        />
+      )}
     </div>
   )
 }
@@ -447,22 +520,19 @@ function HabitCard({
     <div
       id={`habit-card-${habit.id}`}
       onClick={() => router.push(`/habits/${habit.id}`)}
-      className={`group relative rounded-2xl border transition-all duration-200 cursor-pointer overflow-visible ${
-        isMenuOpen ? 'z-[102]' : 'z-0'
-      } ${isHighlighted ? 'ring-2 ring-[#C084FC] shadow-[0_0_0_4px_rgba(192,132,252,0.2)]' : ''} ${
-        habit.riskLevel === 'danger'
+      className={`group relative rounded-2xl border transition-all duration-200 cursor-pointer overflow-visible ${isMenuOpen ? 'z-[102]' : 'z-0'
+        } ${isHighlighted ? 'ring-2 ring-[#C084FC] shadow-[0_0_0_4px_rgba(192,132,252,0.2)]' : ''} ${habit.riskLevel === 'danger'
           ? 'border-red-500/30 bg-gradient-to-br from-red-500/10 to-red-500/5 shadow-lg shadow-red-500/10'
           : habit.riskLevel === 'warning'
             ? 'border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-yellow-500/5'
             : 'border-white/10 bg-gradient-to-br from-white/10 to-white/5 hover:border-white/20'
-      }`}
+        }`}
     >
       {/* Barre de statut gauche */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-        habit.riskLevel === 'danger' ? 'bg-gradient-to-b from-red-500 to-red-600' :
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${habit.riskLevel === 'danger' ? 'bg-gradient-to-b from-red-500 to-red-600' :
         habit.riskLevel === 'warning' ? 'bg-gradient-to-b from-yellow-500 to-yellow-600' :
-        isDone ? 'bg-gradient-to-b from-green-500 to-green-600' : 'bg-gradient-to-b from-blue-500/50 to-blue-600/50'
-      }`} />
+          isDone ? 'bg-gradient-to-b from-green-500 to-green-600' : 'bg-gradient-to-b from-blue-500/50 to-blue-600/50'
+        }`} />
 
       {/* Contenu principal */}
       <div className="p-4 pl-5">
@@ -487,9 +557,8 @@ function HabitCard({
                   <div className="mt-2 flex items-center gap-2">
                     <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-500 rounded-full ${
-                          isDone ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'
-                        }`}
+                        className={`h-full transition-all duration-500 rounded-full ${isDone ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'
+                          }`}
                         style={{
                           width: `${Math.min((habit.todayCount / habit.daily_goal_value) * 100, 100)}%`
                         }}
@@ -502,21 +571,27 @@ function HabitCard({
                 )}
 
                 {/* Message de statut */}
-                <p className={`mt-1.5 text-sm font-medium ${
-                  habit.riskLevel === 'danger' ? 'text-red-300' :
+                <p className={`mt-1.5 text-sm font-medium ${habit.riskLevel === 'danger' ? 'text-red-300' :
                   habit.riskLevel === 'warning' ? 'text-yellow-300' :
-                  isDone ? 'text-green-300' : 'text-white/50'
-                }`}>
+                    isDone ? 'text-green-300' : 'text-white/50'
+                  }`}>
                   {getRiskMessage()}
                 </p>
               </div>
 
               {/* Badge de validation */}
-              {isDone && !isBadHabit && (
-                <div className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 shadow-lg shadow-green-500/30">
-                  <Check className="h-4 w-4 text-white" />
-                </div>
-              )}
+              <div className="flex-shrink-0 flex items-center gap-2">
+                {habit.missions?.length > 0 && (
+                  <div className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-1 text-[10px] font-bold text-blue-400">
+                    {habit.todayMissionsProgress?.length || 0}/{habit.missions.length}
+                  </div>
+                )}
+                {isDone && !isBadHabit && (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 shadow-lg shadow-green-500/30">
+                    <Check className="h-4 w-4 text-white" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -539,13 +614,12 @@ function HabitCard({
                 onValidate()
               }}
               disabled={isLoading || (isBadHabit ? false : isDone)}
-              className={`flex h-10 w-10 items-center justify-center rounded-xl font-semibold shadow-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-                isBadHabit
-                  ? 'bg-gradient-to-br from-red-600 to-red-700 hover:shadow-red-500/30 text-white'
-                  : isDone
-                    ? 'bg-gradient-to-br from-green-600 to-green-700 shadow-green-500/30 text-white'
-                    : 'bg-gradient-to-br from-blue-600 to-blue-700 hover:shadow-blue-500/30 text-white'
-              }`}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl font-semibold shadow-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${isBadHabit
+                ? 'bg-gradient-to-br from-red-600 to-red-700 hover:shadow-red-500/30 text-white'
+                : isDone
+                  ? 'bg-gradient-to-br from-green-600 to-green-700 shadow-green-500/30 text-white'
+                  : 'bg-gradient-to-br from-blue-600 to-blue-700 hover:shadow-blue-500/30 text-white'
+                }`}
               title={isBadHabit ? 'Signaler un craquage' : isDone ? 'Validé' : 'Valider'}
             >
               {isLoading ? (

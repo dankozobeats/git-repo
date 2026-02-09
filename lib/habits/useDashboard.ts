@@ -31,6 +31,8 @@ type HabitWithStats = {
   lastActionDate: string | null
   lastActionTimestamp: string | null
   riskLevel: 'good' | 'warning' | 'danger'
+  missions: any[]
+  todayMissionsProgress: string[]
 }
 
 type DashboardSummary = {

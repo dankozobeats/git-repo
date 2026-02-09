@@ -35,13 +35,13 @@ export default async function HabitDetailPage({ params }: PageProps) {
   }
 
   const todayISO = getTodayDateISO()
-  const { calendarData, todayCount } = await getHabitCalendar({
+  const { calendarData, todayCount, todayMissionsProgress } = await getHabitCalendar({
     client: supabase,
     habitId: id,
     habitType: habit.type,
     trackingMode: habit.tracking_mode,
     todayISO,
-    rangeInDays: 365, // Plus de données pour le calendrier mensuel
+    rangeInDays: 28,
   })
 
   const stats = computeHabitStats({
@@ -76,6 +76,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
           user_id: user.id,
         }}
         calendarData={calendarData}
+        todayMissionsProgress={todayMissionsProgress}
         stats={stats}
         reminders={reminders || []}
       />
