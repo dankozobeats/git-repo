@@ -106,8 +106,13 @@ export default function OverviewTab({
           </div>
 
           <div className="space-y-3">
-            {(habit.missions as any[]).map((mission) => {
-              const info = typeof mission === 'string' ? { id: mission, text: mission } : mission
+            {(habit.missions as any[]).map((mission, idx) => {
+              const info = typeof mission === 'string'
+                ? { id: mission, title: mission }
+                : {
+                  id: mission.id || mission.text || mission.title || idx.toString(),
+                  title: mission.title || mission.text || mission.description || mission.id || `Mission ${idx + 1}`
+                }
               const isCompleted = todayMissionsProgress.includes(info.id)
 
               return (
@@ -145,7 +150,7 @@ export default function OverviewTab({
                     className={`text-sm font-medium ${isCompleted ? 'text-white' : 'text-white/70'
                       }`}
                   >
-                    {info.text}
+                    {info.title}
                   </span>
                 </button>
               )
