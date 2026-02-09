@@ -147,7 +147,7 @@ export default function OverviewTab({
                     )}
                   </div>
                   <span
-                    className={`text-sm font-medium ${isCompleted ? 'text-white' : 'text-white/70'
+                    className={`text-sm font-medium leading-relaxed line-clamp-2 ${isCompleted ? 'text-white' : 'text-white/70'
                       }`}
                   >
                     {info.title}
