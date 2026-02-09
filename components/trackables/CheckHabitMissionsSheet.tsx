@@ -94,12 +94,15 @@ export default function CheckHabitMissionsSheet({
 
                 {/* Missions List - Scrollable */}
                 <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3 custom-scrollbar">
-                    {missions.map((mission) => {
-                        const isCompleted = completedIds.includes(mission.id)
+                    {missions.map((mission: any, idx: number) => {
+                        const info = typeof mission === 'string'
+                            ? { id: mission, title: mission }
+                            : { id: mission.id || (mission as any).text || idx.toString(), title: mission.title || (mission as any).text || mission.id }
+                        const isCompleted = completedIds.includes(info.id)
                         return (
                             <button
-                                key={mission.id}
-                                onClick={() => toggleMission(mission.id)}
+                                key={info.id}
+                                onClick={() => toggleMission(info.id)}
                                 className={`group flex w-full items-start gap-4 rounded-2xl p-4 transition-all duration-200 ${isCompleted
                                     ? 'bg-blue-600/10 border border-blue-500/30'
                                     : 'bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] hover:border-white/10'
@@ -115,7 +118,7 @@ export default function CheckHabitMissionsSheet({
                                     )}
                                 </div>
                                 <span className={`flex-1 text-left text-sm leading-relaxed sm:text-base font-medium ${isCompleted ? 'text-white' : 'text-white/70'}`}>
-                                    {mission.title}
+                                    {info.title}
                                 </span>
                             </button>
                         )
