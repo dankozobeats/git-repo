@@ -191,12 +191,11 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
     const habit = habits.find(h => h.id === habitId)
 
     // Si missions existent, ouvrir la checklist d'abord
-    if (habit && habit.missions && habit.missions.length > 0) {
-      setSelectedHabitForMissions({
-        ...habit,
-        today_events: [] // Mocked for compatibility with the Generic sheet
-      })
+    if (habit && habit.missions && (habit.missions as any[]).length > 0) {
+      setLoadingHabit(habitId)
+      setSelectedHabitForMissions(habit)
       setMissionsSheetOpen(true)
+      setLoadingHabit(null)
       return
     }
 
@@ -221,7 +220,6 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
       }
 
       await mutate()
-      router.refresh()
     } catch (error) {
       console.error('Erreur validation:', error)
       alert('Impossible de valider l\'habitude')
@@ -253,7 +251,7 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
       if (!res.ok) throw new Error('Missions submission failed')
 
       await mutate()
-      router.refresh()
+      setMissionsSheetOpen(false)
     } catch (error) {
       console.error('Erreur missions:', error)
       alert('Impossible de valider les missions')
@@ -443,11 +441,11 @@ export default function DashboardMobileClientNew({ userId, initialData }: Dashbo
         <CheckHabitMissionsSheet
           habit={{
             ...selectedHabitForMissions,
-            today_events: habits.find(h => h.id === selectedHabitForMissions.id)?.todayMissionsProgress
+            today_events: (selectedHabitForMissions.todayMissionsProgress && selectedHabitForMissions.todayMissionsProgress.length > 0)
               ? [{
                 kind: 'check',
                 occurred_at: new Date().toISOString(),
-                meta_json: { completed_mission_ids: habits.find(h => h.id === selectedHabitForMissions.id)?.todayMissionsProgress }
+                meta_json: { completed_mission_ids: selectedHabitForMissions.todayMissionsProgress }
               } as any]
               : []
           }}

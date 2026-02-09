@@ -85,6 +85,17 @@ export async function POST(
         .maybeSingle()
 
       if (existingEvent) {
+        if (meta_json) {
+          const { error: updateError } = await supabase
+            .from("habit_events")
+            .update({ meta_json })
+            .eq("id", existingEvent.id)
+
+          if (updateError) {
+            return NextResponse.json({ error: "Impossible de mettre à jour les missions" }, { status: 500 })
+          }
+        }
+
         return NextResponse.json({
           success: true,
           count: 1,
@@ -192,7 +203,6 @@ export async function POST(
       },
       {
         onConflict: "habit_id,completed_date",
-        ignoreDuplicates: true,
       }
     )
 
