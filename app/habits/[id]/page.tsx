@@ -51,6 +51,19 @@ export default async function HabitDetailPage({ params }: PageProps) {
     rangeInDays: 28,
   })
 
+  // Récupérer la liste ordonnée des habitudes pour la navigation
+  const { data: allHabits } = await supabase
+    .from('habits')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+
+  const habitIds = (allHabits || []).map(h => h.id)
+  const currentIndex = habitIds.indexOf(id)
+  const prevHabitId = currentIndex > 0 ? habitIds[currentIndex - 1] : null
+  const nextHabitId = currentIndex < habitIds.length - 1 ? habitIds[currentIndex + 1] : null
+
   // Récupérer les rappels pour l'onglet Settings
   const { data: reminders } = await supabase
     .from('reminders')
@@ -79,6 +92,8 @@ export default async function HabitDetailPage({ params }: PageProps) {
         todayMissionsProgress={todayMissionsProgress}
         stats={stats}
         reminders={reminders || []}
+        prevHabitId={prevHabitId}
+        nextHabitId={nextHabitId}
       />
     </main>
   )

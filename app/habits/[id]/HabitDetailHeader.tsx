@@ -5,7 +5,7 @@
  */
 
 import Link from 'next/link'
-import { ArrowLeft, MoreVertical } from 'lucide-react'
+import { ArrowLeft, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 type TabType = 'overview' | 'calendar' | 'coach' | 'history' | 'notes' | 'tasks' | 'settings'
@@ -21,12 +21,16 @@ type HabitDetailHeaderProps = {
   }
   activeTab: TabType
   onTabChange: (tab: TabType) => void
+  prevHabitId?: string | null
+  nextHabitId?: string | null
 }
 
 export default function HabitDetailHeader({
   habit,
   activeTab,
   onTabChange,
+  prevHabitId,
+  nextHabitId,
 }: HabitDetailHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -79,39 +83,66 @@ export default function HabitDetailHeader({
           </div>
         </div>
 
-        {/* Right: Menu actions */}
-        <div className="relative flex-shrink-0">
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
+        {/* Right: Navigation + Menu actions */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Navigation Arrows */}
+          <div className="flex items-center rounded-lg border border-white/10 bg-white/5 overflow-hidden">
+            <Link
+              href={prevHabitId ? `/habits/${prevHabitId}` : '#'}
+              className={`flex h-9 w-9 items-center justify-center transition ${prevHabitId
+                  ? 'text-white/70 hover:bg-white/10 hover:text-white'
+                  : 'text-white/10 cursor-not-allowed'
+                }`}
+              onClick={(e) => !prevHabitId && e.preventDefault()}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+            <div className="w-px h-4 bg-white/10" />
+            <Link
+              href={nextHabitId ? `/habits/${nextHabitId}` : '#'}
+              className={`flex h-9 w-9 items-center justify-center transition ${nextHabitId
+                  ? 'text-white/70 hover:bg-white/10 hover:text-white'
+                  : 'text-white/10 cursor-not-allowed'
+                }`}
+              onClick={(e) => !nextHabitId && e.preventDefault()}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Link>
+          </div>
 
-          {isMenuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setIsMenuOpen(false)}
-              />
-              <div className="absolute right-0 top-12 z-20 w-48 rounded-xl border border-white/10 bg-[#0d0f17]/95 p-2 shadow-2xl backdrop-blur">
-                <Link
-                  href={`/habits/${habit.id}/edit`}
-                  className="block rounded-lg px-3 py-2 text-sm text-white/90 transition hover:bg-white/10"
+          <div className="relative">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+
+            {isMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
                   onClick={() => setIsMenuOpen(false)}
-                >
-                  ✏️ Modifier
-                </Link>
-                <Link
-                  href="/"
-                  className="block rounded-lg px-3 py-2 text-sm text-white/90 transition hover:bg-white/10"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  ← Retour dashboard
-                </Link>
-              </div>
-            </>
-          )}
+                />
+                <div className="absolute right-0 top-12 z-20 w-48 rounded-xl border border-white/10 bg-[#0d0f17]/95 p-2 shadow-2xl backdrop-blur">
+                  <Link
+                    href={`/habits/${habit.id}/edit`}
+                    className="block rounded-lg px-3 py-2 text-sm text-white/90 transition hover:bg-white/10"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    ✏️ Modifier
+                  </Link>
+                  <Link
+                    href="/"
+                    className="block rounded-lg px-3 py-2 text-sm text-white/90 transition hover:bg-white/10"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    ← Retour dashboard
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -121,11 +152,10 @@ export default function HabitDetailHeader({
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`flex-shrink-0 flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${
-              activeTab === tab.id
+            className={`flex-shrink-0 flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${activeTab === tab.id
                 ? 'border-white text-white'
                 : 'border-transparent text-white/50 hover:text-white/80'
-            }`}
+              }`}
           >
             <span>{tab.icon}</span>
             <span className="hidden sm:inline">{tab.label}</span>

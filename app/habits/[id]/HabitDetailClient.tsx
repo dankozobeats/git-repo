@@ -60,6 +60,8 @@ type Props = {
   todayMissionsProgress: string[]
   stats: HabitStats
   reminders?: Reminder[]
+  prevHabitId?: string | null
+  nextHabitId?: string | null
 }
 
 export default function HabitDetailClient({
@@ -68,6 +70,8 @@ export default function HabitDetailClient({
   todayMissionsProgress,
   stats,
   reminders = [],
+  prevHabitId,
+  nextHabitId,
 }: Props) {
   const router = useRouter()
 
@@ -165,6 +169,8 @@ export default function HabitDetailClient({
         habit={habit}
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        prevHabitId={prevHabitId}
+        nextHabitId={nextHabitId}
       />
 
       {/* Contenu selon l'onglet actif */}
